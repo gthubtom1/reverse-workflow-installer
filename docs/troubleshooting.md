@@ -1,0 +1,21 @@
+# 故障排查
+
+| 现象 | 处理 |
+|---|---|
+| auto 没有证据/宿主证据冲突 | 明确 `--client pi` 或 `--client codex` 并指定配置根；不输出环境值 |
+| Node engine 不满足 | 读 plan 的 node_engine；准备含 npm 的官方 Node 分发包，用 --node 指定可执行文件 |
+| 找不到 npm-cli.js/semver | 当前安装器支持官方 Node 分发布局；不混用另一个 Node 的 PATH npm |
+| GitHub 404 | 增强仓库可能尚无 main 或权限不可见；release 404 可回退解析 main，main 404 会明确失败 |
+| HTTP 403/429/网络错误 | 修复网络或等待限流；不会把失败当作“没有 release”静默回退 |
+| 配置或 reverse 漂移 | 旧计划不会覆盖新文件；审阅变化后重新 plan |
+| 首次成果目录非空 | 使用独立空项目；不会用 --force 吞掉旧文件 |
+| 官方 setup/init 接口不匹配 | 保留事务目录；按冻结版本核实际官方帮助/输出，再更新适配；不手改原包 |
+| 复用版本不符 | 准备确切版本的新独立 prefix/tool dirs，或省略复用参数让安装器自行安装 |
+| transaction.lock 残留 | 先确认没有活动安装/恢复进程，再删除该锁；按 journal 恢复中断事务 |
+| restore conflict | 已保留后续用户修改，逐项审阅冲突路径；不重复强制恢复 |
+| verify 通过但宿主没有技能/工具 | 确认启动所用 agent/CODEX_HOME、项目工作目录和信任设置；Pi /reload，核实际资源与 MCP，不把静态通过当加载通过 |
+| Pi 旧 REA 技能仍竞争 | 按宿主资源清单找准 SKILL 路径，重新 plan --exclude-rea-skill 精确排除；不编辑官方原文 |
+
+官方命令非零时，安装器输出命令入口与退出码，不回显可能含凭据的任意 stdout/stderr。可按事务 plan 中的路径在同一隔离环境手动执行官方命令查看具体诊断。成功 setup 的完整 JSON 保存在事务目录，仅供本机查看。安装器的日志不是操作系统隔离沙箱；它只限定自己配置和包管理器的目录。
+
+首次失败后没有活动 receipt 时，可用失败目录名运行 `restore --root <root> --transaction <ID>`。如果仍有旧活动 receipt，失败事务的即时回退已保留旧活动版本；先检查失败 journal 状态，再手工处理进程中断留下的冲突。不要为了让 installed 字段变绿而修改回执。

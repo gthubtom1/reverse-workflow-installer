@@ -1,0 +1,13 @@
+{
+  "name": "reverse-workflow-pi",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": [],
+    "themes": [],
+    "skills": ["./skills/reverse-workflow"],
+    "prompts": ["./prompts/reverse-workflow.md"]
+  }
+}

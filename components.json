@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "rea": {
+    "repository": "https://github.com/morluto/rea",
+    "package": "rea-agents",
+    "metadata": "https://registry.npmjs.org/rea-agents/latest",
+    "policy": "latest-stable",
+    "install": "npm install --prefix <isolated-prefix> rea-agents@<version>"
+  },
+  "spec_kit": {
+    "repository": "https://github.com/github/spec-kit",
+    "package": "specify-cli",
+    "metadata": "https://pypi.org/pypi/specify-cli/json",
+    "policy": "latest-stable-non-yanked",
+    "install": "uv tool install specify-cli==<version>"
+  },
+  "reverse": {
+    "repository": "https://github.com/gthubtom1/reverse-skill",
+    "api": "https://api.github.com/repos/gthubtom1/reverse-skill",
+    "policy": "latest-release-or-main-resolved-commit"
+  }
+}
