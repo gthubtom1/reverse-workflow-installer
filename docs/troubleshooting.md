@@ -14,6 +14,10 @@
 | transaction.lock 残留 | 先确认没有活动安装/恢复进程，再删除该锁；按 journal 恢复中断事务 |
 | restore conflict | 已保留后续用户修改，逐项审阅冲突路径；不重复强制恢复 |
 | verify 通过但宿主没有技能/工具 | 确认启动所用 agent/CODEX_HOME、项目工作目录和信任设置；Pi /reload，核实际资源与 MCP，不把静态通过当加载通过 |
+| accept 的 REA 检查失败 | 先看 receipt 中的 Node、REA package 和环境；accept 使用官方 `rea mcp doctor`，不重复安装或修改官方包 |
+| REA Android/资源工具提示 provider 缺失 | 这是目标域 provider 前提，不等于 MCP 断开；例如 Android 代码分析需要用户提供指定版本的 JADX MCP JAR，资源解码需要 Apktool launcher。安装器记录缺口，不下载、猜测或把普通 jadx JAR 冒充官方 provider |
+| accept 的 reverse router 检查失败 | 先检查 reverse 工作副本 dirty/commit 和原生 master-route；不要在 installer 中复制第二套路由 |
+| accept 的 Spec Kit init 检查失败 | 检查官方 specify 版本、client integration 和临时目录权限；不要把失败模板写入用户成果项目 |
 | Pi 旧 REA 技能仍竞争 | 按宿主资源清单找准 SKILL 路径，重新 plan --exclude-rea-skill 精确排除；不编辑官方原文 |
 
 官方命令非零时，安装器输出命令入口与退出码，不回显可能含凭据的任意 stdout/stderr。可按事务 plan 中的路径在同一隔离环境手动执行官方命令查看具体诊断。成功 setup 的完整 JSON 保存在事务目录，仅供本机查看。安装器的日志不是操作系统隔离沙箱；它只限定自己配置和包管理器的目录。

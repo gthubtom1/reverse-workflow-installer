@@ -15,9 +15,10 @@ import workflow
 
 def parser():
     result = argparse.ArgumentParser(description="官方 REA + Spec Kit + reverse-skill 安装与恢复；默认只预览")
-    result.add_argument("command", choices=("plan", "install", "verify", "update", "restore"))
+    result.add_argument("command", choices=("plan", "install", "verify", "accept", "update", "restore"))
     result.add_argument("--root", required=True, help="组件及本机 receipt 根；必须在安装器源码仓库之外")
-    result.add_argument("--client", choices=("pi", "codex", "auto"), default="auto")
+    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit；范围冻结在 plan")
+    result.add_argument("--client", choices=("pi", "codex", "auto", "none"), default="auto")
     result.add_argument("--agent-dir", help="显式 Pi agent 目录或 Codex HOME；不默写用户 profile")
     result.add_argument("--client-config", help="显式 Pi mcp.json 或 Codex config.toml；与 --agent-dir 必须一致")
     result.add_argument("--project", help="独立成果项目；首次 init 必须为空/不存在")
@@ -47,6 +48,9 @@ def main(argv=None):
         if arguments.command == "verify":
             result = workflow.verify(workflow.abs_path(arguments.root))
             code = 0 if result["ok"] else 1
+        elif arguments.command == "accept":
+            result = workflow.accept(workflow.abs_path(arguments.root))
+            code = 0 if result["ok"] else 1
         elif arguments.command == "restore":
             result = workflow.restore(workflow.abs_path(arguments.root), arguments.transaction, arguments.apply)
             code = 1 if any(f["conflicts"] for f in result["files"]) else 0
@@ -62,6 +66,8 @@ def main(argv=None):
                         raise InstallError(f"--{flag.replace('_', '-')} 与冻结 plan 不一致")
                 if arguments.client != "auto" and arguments.client != result["scope"]["client"]:
                     raise InstallError("--client 与冻结 plan 不一致")
+                if arguments.components != "all" and workflow.selected_components(arguments.components) != result["scope"]["components"]:
+                    raise InstallError("--components 与冻结 plan 不一致")
                 if arguments.rea_manual or arguments.exclude_rea_skill:
                     raise InstallError("资源选择已冻结在 plan 中；请重新 plan 后再使用 --plan-file")
                 workflow.validate_plan(result)

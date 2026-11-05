@@ -1,6 +1,6 @@
 # 兼容与验证状态
 
-安装器 0.1.0；Python 3.11+ 标准库。最新稳定版本在每次 plan 解析，不把研究基线永久固定成安装目标。
+安装器 0.2.0；Python 3.11+ 标准库。最新稳定版本在每次 plan 解析，不把研究基线永久固定成安装目标。
 
 | 项目 | 已核官方文档/源码 | 本仓离线验证 | 宿主真实加载/任务 |
 |---|---|---|---|
@@ -9,6 +9,7 @@
 | 增强 reverse release/main | 固定用户仓库；RULES → 原 master-route → PRIMARY；已有薄 Codex 插件 | 本地工作副本只读身份检查、回执定位 | 专业路由/端到端任务由主流程验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | Pi CLI/Web/SDK 分别待验 |
 | Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并与项目薄技能夹具测试 | 实际 Codex 版本与加载待验 |
+| 本机 accept 验收 | 官方 REA doctor、原 router 临时路由、官方 Spec Kit 临时 init | 当前 receipt 选定组件的真实本机验收 | 未运行即保持未验证 |
 
 本地已执行 Windows/Python 3.12 的 unittest。CI 配置提供 Windows/Ubuntu × Python 3.11/3.12/3.13，未触发的 job 不计通过。没有对 macOS 或其他宿主作实测声明。
 

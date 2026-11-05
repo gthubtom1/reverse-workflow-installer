@@ -367,6 +367,35 @@ class Fixture(unittest.TestCase):
         manifest = load_json(Path(receipt["adapter"]["root"]) / "package.json")
         self.assertEqual(manifest["pi"]["extensions"], [])
         self.assertEqual(manifest["pi"]["themes"], [])
+    def test_selected_reverse_can_install_without_host_or_spec_kit(self):
+        self.args.components = "reverse"
+        self.args.client = "none"
+        self.args.agent_dir = None
+        self.args.client_config = None
+        self.args.project = None
+        receipt = self.install()
+        self.assertEqual(receipt["scope"]["components"], ["reverse"])
+        self.assertIsNone(receipt["managed_rea_config"])
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_selected_rea_can_install_without_reverse_or_spec_kit(self):
+        self.args.components = "rea"
+        self.args.project = None
+        self.args.reverse_root = None
+        receipt = self.install()
+        self.assertEqual(receipt["scope"]["components"], ["rea"])
+        self.assertTrue(receipt["managed_rea_config"])
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_selected_spec_kit_can_install_without_reverse_or_rea(self):
+        self.args.components = "spec-kit"
+        self.args.agent_dir = None
+        self.args.client_config = None
+        self.args.reverse_root = None
+        receipt = self.install()
+        self.assertEqual(receipt["scope"]["components"], ["spec_kit"])
+        self.assertTrue((self.project / ".specify/memory/constitution.md").is_file())
+        self.assertTrue(w.verify(self.root)["ok"])
 
 
 class VersionsAndIdentity(unittest.TestCase):

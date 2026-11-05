@@ -4,7 +4,23 @@
 
 REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务。本仓库负责安装、范围明确的配置、更新与恢复，不保存领域关键词或知识正文，不修改两个官方工具。
 
-## 第一次使用
+安装器默认按三件套处理，但组件范围可以显式缩小。`reverse-skill`、REA 和 Spec Kit 可以分别安装；未选择的组件不会被解析、安装、注册或在 verify 中要求存在：
+
+```text
+# 只装 reverse-skill；不需要宿主配置
+python scripts/install.py plan --components reverse --client none --root ../reverse-only --reverse-root ../reverse-skill --output .local/reverse-plan.json
+python scripts/install.py install --components reverse --client none --root ../reverse-only --reverse-root ../reverse-skill --plan-file .local/reverse-plan.json --apply
+python scripts/install.py verify --root ../reverse-only
+
+# 只装官方 REA 到 Pi
+python scripts/install.py plan --components rea --client pi --agent-dir ../rea-agent --root ../rea-only --node ../runtime/node.exe --output .local/rea-plan.json
+
+# 只初始化官方 Spec Kit 成果项目
+python scripts/install.py plan --components spec-kit --client pi --project ../spec-project --root ../spec-only --output .local/spec-plan.json
+```
+
+`--components all` 是默认值，保持原三件套安装行为。只有选择了多个组件，安装器才会在同一事务中组合它们；组合验收也按 receipt 中的选择范围执行。REA 和 Spec Kit 的源码、包和行为始终由官方发行提供，安装器只负责范围、配置、版本、回滚和验收。
+
 
 已经有 AI 助手时，可以把本仓库链接发给它并说：
 
@@ -69,7 +85,14 @@ python scripts/install.py restore --root ../workflow --apply
 
 restore 默认撤销最近活动事务；按字段/资源进行条件恢复，用户后续改动保留并列为 conflict。项目中已由你编辑的文件不会覆盖。旧包、缓存和备份保留，不自动卸载/删目录。详见 [更新与恢复](docs/updates.md)、[故障排查](docs/troubleshooting.md)。
 
-## 装好后怎么说
+安装完成后，`verify` 只检查身份、hash、配置和 receipt。要做本机真实验收，运行：
+
+```text
+python scripts/install.py accept --root ../workflow
+```
+
+`accept` 按 receipt 中的组件范围执行：REA 使用官方 `rea mcp doctor` 检查 stdio 启动、initialize、完整 tools/prompts catalog 和 request flow；reverse 在临时目录运行原生 master-router；Spec Kit 在临时目录执行官方 `specify init` 并检查原生模板。验收不会修改活动宿主配置、官方包或用户成果项目。
+
 
 > 分析这个程序，把选定功能做成独立项目，并和原版对比；证据不足的地方保留 unknown。
 
