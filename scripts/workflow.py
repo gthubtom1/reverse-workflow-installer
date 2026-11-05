@@ -645,14 +645,16 @@ def _install(plan, args):
                 if manual not in skills:
                     skills.append(manual)
             journal.write(settings_path, encode_json(settings), "json")
-        elif selected["client"] == "codex":
-            # Codex uses a project skill to supply the local path to upstream's plugin skill.
-            skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8")
-            skill = skill.replace("{{RECEIPT}}", str(receipt_path))
-            target = project / ".agents/skills/reverse-workflow/SKILL.md"
-            if target.exists() and target.read_bytes() != skill.encode():
+        elif "reverse" in selected["components"] and selected["client"] == "codex":
+            skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
+            global_target = agent / "skills/reverse-workflow/SKILL.md"
+            if global_target.exists() and global_target.read_bytes() != skill.encode():
+                raise InstallError("Codex 全局 skill 已被用户修改，拒绝覆盖")
+            journal.write(global_target, skill.encode())
+            project_target = project / ".agents/skills/reverse-workflow/SKILL.md"
+            if project_target.exists() and project_target.read_bytes() != skill.encode():
                 raise InstallError("Codex 项目入口已被用户修改，拒绝覆盖")
-            journal.write(target, skill.encode())
+            journal.write(project_target, skill.encode())
         else:
             global_skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
             global_skill = global_skill.replace("{{RECEIPT}}", str(receipt_path))
@@ -752,6 +754,8 @@ def verify(root):
         if receipt["adapter"]["root"] not in packages:
             failures.append("Pi package registration missing or changed")
     elif client == "codex":
+        if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
+            failures.append("Codex global skill missing")
         if not (Path(receipt["scope"]["project"]) / ".agents/skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex project entry missing")
     elif client == "claude":
