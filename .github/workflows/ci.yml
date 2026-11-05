@@ -11,6 +11,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check Pi grilling adapter scripts
+        shell: bash
+        run: |
+          node --check scripts/pi-adapt-grill-skills.mjs
+          node --check scripts/verify-pi-grill-skills.mjs
       - name: Select preinstalled Python
         shell: pwsh
         run: |

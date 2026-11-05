@@ -49,6 +49,7 @@ npx skills add mattpocock/skills -s grill-me
 npx skills add mattpocock/skills -s grill-with-docs
 npx skills add mattpocock/skills -s domain-modeling
 node scripts/pi-adapt-grill-skills.mjs
+node scripts/verify-pi-grill-skills.mjs
 ```
 
 安装结果应出现在 `~/.agents/skills/`（Windows 为 `%USERPROFILE%\\.agents\\skills\\`）下。最后一次脚本执行应把 `grill-me` 和 `grill-with-docs` 改成 Pi 可组合的门面；它是幂等的，第二次执行不会重复修改。官方 `grilling/SKILL.md` 不会被修改。
@@ -57,6 +58,7 @@ node scripts/pi-adapt-grill-skills.mjs
 
 ```text
 node scripts/pi-adapt-grill-skills.mjs
+node scripts/verify-pi-grill-skills.mjs
 ```
 
 这四个技能属于 Pi 用户级配置，和 `--root` 指定的 REA/reverse/Spec Kit 安装根分开保存。迁移电脑时要同时迁移安装器仓库、reverse 工作副本/远程来源、成果项目，以及按本节重装的用户级技能。安装器的 `verify` 不会把 grilling 算作核心事务的一部分，因此要单独检查四个目录和适配脚本输出。
