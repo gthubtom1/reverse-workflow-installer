@@ -440,6 +440,11 @@ def _install_selected(plan, args):
             for source in (REPO / "adapters/pi").rglob("*"):
                 if source.is_file(): journal.write(adapter / source.relative_to(REPO / "adapters/pi"), source.read_bytes())
             journal.write(adapter / "receipt-location.json", encode_json({"receipt": str(receipt_path)}))
+            global_skill = (REPO / "adapters/pi/skills/reverse-workflow/SKILL.md").read_bytes()
+            global_target = agent / "skills/reverse-workflow/SKILL.md"
+            if global_target.exists() and global_target.read_bytes() != global_skill:
+                raise InstallError(f"Pi 全局 skill 已被用户修改，拒绝覆盖: {global_target}")
+            journal.write(global_target, global_skill)
             settings_path = agent / "settings.json"
             settings = load_json(settings_path, {})
             packages = settings.setdefault("packages", [])
@@ -624,6 +629,11 @@ def _install(plan, args):
                         raise InstallError(f"已有适配器含后续修改，拒绝覆盖: {target}")
                     journal.write(target, source.read_bytes())
             journal.write(adapter / "receipt-location.json", encode_json({"receipt": str(receipt_path)}))
+            global_skill = (REPO / "adapters/pi/skills/reverse-workflow/SKILL.md").read_bytes()
+            global_target = agent / "skills/reverse-workflow/SKILL.md"
+            if global_target.exists() and global_target.read_bytes() != global_skill:
+                raise InstallError(f"Pi 全局 skill 已被用户修改，拒绝覆盖: {global_target}")
+            journal.write(global_target, global_skill)
             settings_path = agent / "settings.json"
             settings = load_json(settings_path, {})
             packages = settings.setdefault("packages", [])
@@ -753,6 +763,8 @@ def verify(root):
         packages = load_json(Path(receipt["scope"]["agent_dir"]) / "settings.json", {}).get("packages", [])
         if receipt["adapter"]["root"] not in packages:
             failures.append("Pi package registration missing or changed")
+        if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
+            failures.append("Pi global skill missing")
     elif client == "codex":
         if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex global skill missing")
