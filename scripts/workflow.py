@@ -195,6 +195,13 @@ def tree_hash(path, exclude_git=False):
     return hasher.hexdigest()
 
 
+def specify_init_args(specify, target, client):
+    args = [specify, "init", target, "--integration", client, "--script", "py", "--non-interactive"]
+    if client == "codex":
+        args.append("--ignore-agent-tools")
+    return args
+
+
 def make_plan(args, fetch=None):
     selected = scope(args)
     manifest = load_json(REPO / "components.json")
@@ -224,7 +231,7 @@ def make_plan(args, fetch=None):
         commands.extend([f"rea setup --client {selected['client']} --skill=false --dry-run --json", f"rea setup --client {selected['client']} --skill=false --yes --json"])
     if "spec_kit" in selected["components"]:
         commands.append(("核验只读复用 Spec Kit tools/bin: " + selected["spec_kit_tools"] + " / " + selected["spec_kit_bin"] + " @" + components["spec_kit"]["version"]) if selected["spec_kit_tools"] else ("uv --no-config tool install --default-index https://pypi.org/simple specify-cli==" + components["spec_kit"]["version"]))
-        commands.append(f"specify init <staging-project> --integration {selected['client']} --script py --non-interactive")
+        commands.append(f"specify init <staging-project> --integration {selected['client']} --script py --non-interactive" + (" --ignore-agent-tools" if selected["client"] == "codex" else ""))
     return {"schema_version": 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
 
 
@@ -419,7 +426,7 @@ def _install_selected(plan, args):
             generated = tx / "project"
             if project.exists() and any(project.iterdir()):
                 raise InstallError("首次 init 的成果目录必须不存在或为空；不会覆盖既有项目")
-            run([specify, "init", generated, "--integration", selected["client"], "--script", "py", "--non-interactive"], cwd=root, env=env)
+            run(specify_init_args(specify, generated, selected["client"]), cwd=root, env=env)
             if not (generated / ".specify").is_dir():
                 raise InstallError("specify init 未生成 .specify")
             generated_files = [p for p in generated.rglob("*") if p.is_file()]
@@ -572,7 +579,7 @@ def _install(plan, args):
         if not previous.get("installed"):
             if project.exists() and any(project.iterdir()):
                 raise InstallError("首次 init 的成果目录必须不存在或为空；不会覆盖既有项目。请选择独立新项目")
-            run([specify, "init", generated, "--integration", selected["client"], "--script", "py", "--non-interactive"], cwd=root, env=env)
+            run(specify_init_args(specify, generated, selected["client"]), cwd=root, env=env)
             if not (generated / ".specify").is_dir():
                 raise InstallError("specify init 未生成 .specify")
             native = generated / (".pi/prompts" if selected["client"] == "pi" else ".agents/skills")
@@ -775,7 +782,10 @@ def accept(root):
             check("spec_kit_version", version.get("cli_version") == expected, {"expected": expected, "observed": version.get("cli_version")})
             with tempfile.TemporaryDirectory(prefix="speckit-acceptance-") as temp:
                 project = Path(temp) / "project"
-                completed = subprocess.run([str(specify), "init", str(project), "--integration", receipt["scope"]["client"], "--script", "py", "--non-interactive"], cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+                init_args = [str(specify), "init", str(project), "--integration", receipt["scope"]["client"], "--script", "py", "--non-interactive"]
+                if receipt["scope"]["client"] == "codex":
+                    init_args.append("--ignore-agent-tools")
+                completed = subprocess.run(init_args, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
                 check("spec_kit_init", completed.returncode == 0 and (project / ".specify").is_dir(), {"returncode": completed.returncode, "native": str(project / ".specify") if (project / ".specify").is_dir() else None})
         except (InstallError, OSError, subprocess.TimeoutExpired) as exc:
             check("spec_kit", False, str(exc))
