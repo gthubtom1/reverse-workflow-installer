@@ -1,6 +1,8 @@
-# 日常使用与成果追版
+# 日常使用、首次验收与成果追版
 
-安装后从独立成果项目启动指定 Pi/Codex 配置。首次让智能体读组合入口与本机 receipt，先 RULES，再原 router，再 PRIMARY；所有专业知识仍由增强 reverse 提供。
+安装器完成的是组件、配置和项目资源的安装；真正使用前还要按 [安装后快速开始](quick-start.md) 完成 `verify`、`accept`、宿主重启和一次对话冒烟测试。`installed: true` 只代表安装事务成功，不代表模型已经选择了 reverse-workflow。
+
+安装后从独立成果项目启动指定 Pi/Codex 配置。专业任务优先显式使用 `/skill:reverse-workflow`，让智能体先读取组合入口和本机 receipt，再读 RULES、原 master-route 和 PRIMARY。REA 由 PRIMARY 在需要时调用，Spec Kit 用于成果项目的规格、计划和任务。
 
 可以直接说：
 
@@ -10,7 +12,7 @@
 - “只验证这次实现和原版是否一致，保留失败输出和未执行项。”
 - “到网上补充完善知识库，先定位 reverse 的原生维护说明，按已授权模块逐批复核来源。”
 
-Pi 未自动读取入口时可用 `/skill:reverse-workflow` 或短 `/reverse-workflow` prompt。Codex 在成果项目发现 `.agents/skills/reverse-workflow`，通过其 receipt 指向现有 reverse 插件入口；不必把工作目录改成工具仓库。
+Pi 未自动读取入口时可用 `/skill:reverse-workflow` 或短 `/reverse-workflow` prompt。新对话的完整复制模板、只读检查模板和复刻模板见 [安装后快速开始](quick-start.md)。Codex 在成果项目发现 `.agents/skills/reverse-workflow`，通过其 receipt 指向现有 reverse 插件入口；不必把工作目录改成工具仓库。
 
 追随产品 1.0→1.1 时说：
 
@@ -20,4 +22,4 @@ Pi 未自动读取入口时可用 `/skill:reverse-workflow` 或短 `/reverse-wor
 
 旧版证据和通过记录保持原样，不能充当新版通过证据。变化的需求/obligation、源码摘要和测试判据需重新产生对应 proof；失败不覆盖旧成品。报告复用、适配、新增、排除、未知和下一恢复入口。具体原生步骤取决于所安装增强 reverse 版本，安装器本身不实现产品追版算法。
 
-REA bundle、原 case 与 Spec Kit 的规格/任务/测试保存在成果项目中，工具仓库只读。Converged、退出 0、文件存在都不能证明任意行为等价；实际原版/本方运行、错误变体检出、独立隔离构建与恢复分别验收。没有设备/provider/账号或隔离环境时保持未验证，不编造闭环。
+REA bundle、原 case 与 Spec Kit 的规格/任务/测试保存在成果项目中，工具仓库只读。Converged、退出 0、文件存在或静态 `verify` 通过都不能证明任意行为等价；实际原版/本方运行、错误变体检出、独立隔离构建、宿主资源加载和对话触发分别验收。没有设备/provider/账号或隔离环境时保持未验证，不编造闭环。

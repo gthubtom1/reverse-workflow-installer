@@ -1,7 +1,9 @@
 ---
 name: reverse-workflow
-description: 从本机安装回执定位 reverse-skill 原仓库及现有 Codex 薄插件，处理用户授权的分析、独立实现、验证、恢复、追版与知识维护。
+description: 逆向、二进制、APK、前端签名、协议、API 安全、复刻、行为对比、版本追踪或知识维护任务的统一入口；从本机 receipt 定位 reverse-skill，并要求原生 router 选择 PRIMARY。
 ---
+
+这是成果项目中的统一入口。遇到上述专业任务时先进入本 skill，不要直接绕过它执行普通命令。
 
 读取本机回执 `{{RECEIPT}}`，要求 `installed: true`。从 `reverse.root` 得到用户增强仓库的显式本地路径；先读其原 `RULES.md`。
 

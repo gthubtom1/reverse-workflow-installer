@@ -4,6 +4,8 @@
 
 REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务。本仓库负责安装、范围明确的配置、更新与恢复，不保存领域关键词或知识正文，不修改两个官方工具。
 
+第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个组件的分工、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
+
 安装器默认按三件套处理，但组件范围可以显式缩小。`reverse-skill`、REA 和 Spec Kit 可以分别安装；未选择的组件不会被解析、安装、注册或在 verify 中要求存在：
 
 ```text
@@ -24,7 +26,7 @@ python scripts/install.py plan --components spec-kit --client pi --project ../sp
 
 已经有 AI 助手时，可以把本仓库链接发给它并说：
 
-> 请先阅读 README 和 AGENTS，把这套环境安装到当前智能体的独立配置目录，成果项目另建。先展示 plan，按我已有授权执行 --apply，最后分别报告安装检查和真实任务验证。
+> 请先阅读 README、AGENTS 和 [安装后快速开始](docs/quick-start.md)，把这套环境安装到当前智能体的独立配置目录，成果项目另建。先展示 plan，按我已有授权执行 --apply，安装后运行 verify 和 accept，最后分别报告静态安装、宿主加载和真实任务验证。
 
 需要提前具备 Python 3.11+、Git、uv、符合本次 REA `engines.node` 的 Node（含同一分发包的 npm），以及已能正常登录使用的 Pi 或 Codex。安装器不会安装智能体、模型账号、Java/Ghidra，也不会改系统 PATH。Node 太旧时可下载官方旁置分发包并用 `--node` 指定 node 可执行文件；不会替换当前宿主的 Node。
 
@@ -61,9 +63,9 @@ REA/Spec Kit 每次新 plan 解析官方最新稳定包；reverse 使用指定�
 
 ## 配置和项目里会发生什么
 
-REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。MCP 保留完整 tools，不注册第二个分析 router。
+REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。
 
-Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
+Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
 
 Codex 使用官方 setup 与 Spec Kit Codex integration，并在成果项目生成薄 `.agents/skills/reverse-workflow/SKILL.md`，通过本机回执给现有 reverse Codex 插件提供显式本地路径。不假定某个插件注册命令存在；插件缺失时仍交原 RULES、原 router 和 PRIMARY。
 
@@ -91,7 +93,7 @@ restore 默认撤销最近活动事务；按字段/资源进行条件恢复，�
 python scripts/install.py accept --root ../workflow
 ```
 
-`accept` 按 receipt 中的组件范围执行：REA 使用官方 `rea mcp doctor` 检查 stdio 启动、initialize、完整 tools/prompts catalog 和 request flow；reverse 在临时目录运行原生 master-router；Spec Kit 在临时目录执行官方 `specify init` 并检查原生模板。验收不会修改活动宿主配置、官方包或用户成果项目。
+`accept` 按 receipt 中的组件范围执行：REA 使用官方 `rea mcp doctor` 检查 stdio 启动、initialize、完整 tools/prompts catalog 和 request flow；reverse 在临时目录运行原生 master-router；Spec Kit 在临时目录执行官方 `specify init` 并检查原生模板。验收不会修改活动宿主配置、官方包或用户成果项目。验收通过后还要重启或 reload 宿主，再用 [安装后快速开始](docs/quick-start.md) 中的显式开场白做一次真实对话测试。
 
 
 > 分析这个程序，把选定功能做成独立项目，并和原版对比；证据不足的地方保留 unknown。
@@ -100,7 +102,7 @@ python scripts/install.py accept --root ../workflow
 
 > 这个项目上游从 1.0 更新到 1.1 了，沿用我们的实现和界面，只适配变化并重新验证。
 
-追版复用原 case、证据、Spec Kit feature/tasks 和旧成果；上游新版本的验证不能借用旧版通过记录。实际专业流程由增强 reverse 提供，不由安装器复制。更多话术见 [使用说明](docs/usage.md)。
+追版复用原 case、证据、Spec Kit feature/tasks 和旧成果；上游新版本的验证不能借用旧版通过记录。实际专业流程由增强 reverse 提供，不由安装器复制。新对话开场白、只读检查和复刻任务模板见 [安装后快速开始](docs/quick-start.md) 与 [使用说明](docs/usage.md)。
 
 ## 验证与支持边界
 
@@ -110,7 +112,7 @@ python -B -m unittest discover -s tests -v
 
 测试全离线，用模拟 HTTP 和模拟官方 CLI 驱动真实配置/备份/回退文件操作；不下载、不运行安装命令、不访问用户 profile。Windows 本地测试已执行；Ubuntu/其他 Python 的 CI 配置已提供，实际 CI 结果以运行记录为准。
 
-[兼容记录](docs/compatibility.md) 将文档支持、本机测试、宿主加载和完整任务分别列出。首版只声明 Pi/Codex 的适配实现，不声称支持所有智能体，不保证自然语言每次自动加载技能、不保证任意目标等价。Node 下载、provider 安装、MCP 握手、代表任务及独立隔离交付由后续真实验收补齐。
+[兼容记录](docs/compatibility.md) 将文档支持、本机测试、宿主加载和完整任务分别列出。首版只声明 Pi/Codex 的适配实现，不声称支持所有智能体，不保证自然语言每次自动加载技能、不保证任意目标等价。安装器把静态安装、宿主加载、MCP 验收、代表任务和对话触发分开记录；Node 下载、provider 安装、MCP 握手、代表任务及独立隔离交付由后续真实验收补齐。
 
 ## 来源与许可
 
