@@ -1,5 +1,6 @@
 """Official stable metadata resolution. No third party Python dependencies."""
 import json
+import os
 import re
 import urllib.error
 import urllib.request
@@ -10,7 +11,12 @@ class InstallError(Exception):
 
 
 def http_json(url):
-    request = urllib.request.Request(url, headers={"User-Agent": "reverse-workflow-installer/0.1", "Accept": "application/json"})
+    headers = {"User-Agent": "reverse-workflow-installer/0.1", "Accept": "application/json"}
+    if "api.github.com/" in url:
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.load(response)
