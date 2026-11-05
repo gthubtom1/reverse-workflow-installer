@@ -451,6 +451,18 @@ class VersionsAndIdentity(unittest.TestCase):
             with self.assertRaisesRegex(InstallError, "HTTP 404"):
                 http_json(error.url)
 
+    def test_github_token_is_used_without_revealing_it(self):
+        import io
+        from versions import http_json
+        observed = {}
+        def fake_urlopen(request, timeout=30):
+            observed["authorization"] = request.get_header("Authorization")
+            return io.BytesIO(b'{"sha":"fixture"}')
+        with patch.dict(os.environ, {"GH_TOKEN": "fixture-secret"}, clear=False):
+            with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                self.assertEqual(http_json("https://api.github.com/repos/example/project/commits/main")["sha"], "fixture")
+        self.assertEqual(observed["authorization"], "Bearer fixture-secret")
+
     def test_codex_merge_retains_unrelated_format_and_rejects_unrelated_mutation(self):
         original = b'# user comment\nmodel = "keep"\n'
         staged = b'model="keep"\n[mcp_servers.rea]\ncommand="node"\n'

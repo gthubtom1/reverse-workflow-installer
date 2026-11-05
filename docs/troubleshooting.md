@@ -6,7 +6,7 @@
 | Node engine 不满足 | 读 plan 的 node_engine；准备含 npm 的官方 Node 分发包，用 --node 指定可执行文件 |
 | 找不到 npm-cli.js/semver | 当前安装器支持官方 Node 分发布局；不混用另一个 Node 的 PATH npm |
 | GitHub 404 | 增强仓库可能尚无 main 或权限不可见；release 404 可回退解析 main，main 404 会明确失败 |
-| HTTP 403/429/网络错误 | 修复网络或等待限流；不会把失败当作“没有 release”静默回退 |
+| GitHub 403/429/网络错误 | 安装器会停止，不把失败当作没有 release。若已登录 GitHub CLI，可在当前进程中设置 `GH_TOKEN` 后重新运行 plan，例如 PowerShell：`$env:GH_TOKEN = (gh auth token); python scripts/install.py plan ...`；token 只作为进程环境使用，不写入 receipt 或日志。没有认证时等待限流恢复；不会静默切换版本 |
 | 配置或 reverse 漂移 | 旧计划不会覆盖新文件；审阅变化后重新 plan |
 | 首次成果目录非空 | 使用独立空项目；不会用 --force 吞掉旧文件 |
 | 官方 setup/init 接口不匹配 | 保留事务目录；按冻结版本核实际官方帮助/输出，再更新适配；不手改原包 |
