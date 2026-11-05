@@ -1,12 +1,37 @@
 # 安装后快速开始
 
-这套环境由三个彼此独立、通过安装回执和成果项目协作的组件组成：
+这套环境由三个核心组件和一个 Pi 伴随技能组成。前三个由本安装器管理；`grilling` 保持官方原文，由官方 `npx skills` 安装器单独安装，再由本仓库提供的 Pi 适配脚本处理门面技能：
 
 | 组件 | 负责内容 | 什么时候使用 |
 |---|---|---|
 | REA | MCP 分析工具、工具目录和证据相关能力 | PRIMARY 专业技能需要调用分析工具时 |
 | reverse-skill | 原生路由、范围门禁、专业技能和证据流程 | 逆向、二进制、协议、前端签名、复刻、追版等任务开始时 |
 | Spec Kit | 成果项目中的规格、计划、任务和模板 | 需要独立实现、复刻、验证或长期维护项目时 |
+| grilling | 方案决策树、隐含前提和结论审查 | 形成方案、确认分析结论或准备修改/重实现之前 |
+
+`grilling` 不替代 reverse 路由，也不替代 REA 取证。需要读文件、跑命令或比对字节的问题由 agent/subagent 查证；`grilling` 只把查证后的事实带入决策访谈。
+
+### Pi grilling 伴随技能
+
+在新电脑或新用户配置上，先在安装器仓库根目录逐个安装官方技能。不要把多个名字写进一次 `-s` 参数；上游安装器的逗号语法存在问题：
+
+```text
+npx skills add mattpocock/skills -s grilling
+npx skills add mattpocock/skills -s grill-me
+npx skills add mattpocock/skills -s grill-with-docs
+npx skills add mattpocock/skills -s domain-modeling
+node scripts/pi-adapt-grill-skills.mjs
+```
+
+安装结果应出现在 `~/.agents/skills/`（Windows 为 `%USERPROFILE%\\.agents\\skills\\`）下。最后一次脚本执行应把 `grill-me` 和 `grill-with-docs` 改成 Pi 可组合的门面；它是幂等的，第二次执行不会重复修改。官方 `grilling/SKILL.md` 不会被修改。
+
+如果以后运行 `npx skills update`，上游可能重新写回两个门面；更新后再次执行：
+
+```text
+node scripts/pi-adapt-grill-skills.mjs
+```
+
+这四个技能属于 Pi 用户级配置，和 `--root` 指定的 REA/reverse/Spec Kit 安装根分开保存。迁移电脑时要同时迁移安装器仓库、reverse 工作副本/远程来源、成果项目，以及按本节重装的用户级技能。安装器的 `verify` 不会把 grilling 算作核心事务的一部分，因此要单独检查四个目录和适配脚本输出。
 
 安装后不要凭感觉推进任务。针对 EXE、DLL、APK、JS、协议和已有 case 的分阶段操作、加壳/未加壳分流、REA work item、动态验证和可复制提示词，见 [Reverse 工作流使用手册](reverse-workflow-playbook.md)。
 

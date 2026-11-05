@@ -1,14 +1,14 @@
 # Reverse Workflow Installer
 
-把官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill) 和官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
+把官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill)、官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 和可选的官方 [grilling](https://github.com/mattpocock/skills) 访谈技能接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
 
-REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务。本仓库负责安装、范围明确的配置、更新与恢复，不保存领域关键词或知识正文，不修改两个官方工具。
+REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务；`grilling` 在 Pi 中负责方案决策树、隐含前提和结论审查。本仓库负责安装、范围明确的配置、更新与恢复，不修改 REA、Spec Kit 或 `grilling` 官方正文。
 
-第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个组件的分工、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
+第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个核心组件和 Pi `grilling` 伴随技能的分工、官方技能安装与 Pi 适配、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
 
 如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。
 
-安装器默认按三件套处理，但组件范围可以显式缩小。`reverse-skill`、REA 和 Spec Kit 可以分别安装；未选择的组件不会被解析、安装、注册或在 verify 中要求存在：
+安装器默认按三件核心组件处理，`grilling` 是 Pi 的官方伴随技能，不属于 `--components` 的 REA/reverse/spec-kit 事务范围。三件核心组件可以分别安装；未选择的核心组件不会被解析、安装、注册或在 verify 中要求存在。Pi 的 `grilling` 请按 [Pi grilling 安装](docs/quick-start.md#pi-grilling-伴随技能) 单独安装并验收：上游官方安装器的逗号选择语法不可靠，四个技能必须一次安装一个。
 
 ```text
 # 只装 reverse-skill；不需要宿主配置

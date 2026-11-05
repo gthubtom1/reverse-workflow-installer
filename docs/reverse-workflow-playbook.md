@@ -4,14 +4,17 @@
 
 安装仓库负责把组件接到 Pi/Codex；真正的专业流程由已安装的 `reverse-skill` 执行。下面的提示词可以直接复制到 Pi Web 或 Codex。
 
-## 先记住三件事
+## 先记住四件事
 
 ```text
 reverse-workflow = 唯一入口
 reverse-skill    = 路由、case、阶段和证据总控
 REA              = PRIMARY 选定后的定点分析执行器
 Spec Kit         = 独立成果项目的规格、计划和任务
+grilling         = 方案决策树、隐含前提和结论审查
 ```
+
+`grilling` 是 Pi 用户级官方伴随技能。它不负责选择 PRIMARY，也不代替 REA 查事实。需要读文件、跑命令或比对字节的问题先由 agent/subagent 查证；在形成方案、确认分析结论或准备修改/重实现之前，再让 `grilling` 逐轮质询决策和假设。它要求用户确认达成共识后才能进入实施。安装方法见 [安装后快速开始](quick-start.md#pi-grilling-伴随技能)。
 
 REA 不是第二个 router。遇到逆向任务，先进入 `/skill:reverse-workflow`，由原生 router 选择 PRIMARY，然后 PRIMARY 根据当前 Evidence 创建 bounded work item，再调用 REA。
 

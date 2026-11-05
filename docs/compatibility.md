@@ -7,6 +7,7 @@
 | REA 6.8.0 | 官方 npm 包、Node engines、setup pi/codex、skill=false 与 scoped env | 模拟官方输出的保留配置、身份/失败/漂移检查 | 未由本仓执行 |
 | Spec Kit 1.3.0 | 随包模板；init integration pi/codex、script py、non-interactive；version --json | 模拟 init 和更新保留项目文件 | 未由本仓执行 |
 | 增强 reverse release/main | 固定用户仓库；RULES → 原 master-route → PRIMARY；已有薄 Codex 插件 | 本地工作副本只读身份检查、回执定位 | 专业路由/端到端任务由主流程验证 |
+| Pi grilling 伴随技能 | 上游官方 `grilling`、`grill-me`、`grill-with-docs`、`domain-modeling`；Pi 门面适配脚本 | 官方技能逐个安装、Pi 门面幂等改写、官方 `grilling` 正文不变 | 当前电脑已部署；新会话中的模型级触发和事实委派仍需真实对话验收 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
 | Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并与项目薄技能夹具测试 | 实际 Codex 版本、项目 skill 发现和新会话触发待验 |
 | 本机 accept 验收 | 官方 REA doctor、原 router 临时路由、官方 Spec Kit 临时 init | 当前 receipt 选定组件的真实本机验收 | 未运行即保持未验证 |
