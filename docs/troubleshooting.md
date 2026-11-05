@@ -19,6 +19,9 @@
 | accept 的 reverse router 检查失败 | 先检查 reverse 工作副本 dirty/commit 和原生 master-route；不要在 installer 中复制第二套路由 |
 | accept 的 Spec Kit init 检查失败 | 检查官方 specify 版本、client integration 和临时目录权限；不要把失败模板写入用户成果项目 |
 | Pi 旧 REA 技能仍竞争 | 按宿主资源清单找准 SKILL 路径，重新 plan --exclude-rea-skill 精确排除；不编辑官方原文 |
+| Pi 的 grilling 没出现或门面行为异常 | 确认 `~/.agents/skills/{grilling,grill-me,grill-with-docs,domain-modeling}` 都存在；从安装器仓库运行 `node scripts/pi-adapt-grill-skills.mjs`，然后重启或 reload Pi。脚本只适配两个门面，不修改官方 `grilling` 正文 |
+| grilling 提出了本来可以查证的事实问题 | 让它先暂停提问，要求 agent/subagent/REA 查文件、跑工具或比对字节；事实返回后再继续方案 frontier |
+| grilling 和 reverse 输出格式混在一起 | reverse 负责阶段报告和下一步菜单；grilling 访谈使用 Q1/推荐答案；先完成访谈并确认共识，再发实施指令 |
 
 官方命令非零时，安装器输出命令入口与退出码，不回显可能含凭据的任意 stdout/stderr。可按事务 plan 中的路径在同一隔离环境手动执行官方命令查看具体诊断。成功 setup 的完整 JSON 保存在事务目录，仅供本机查看。安装器的日志不是操作系统隔离沙箱；它只限定自己配置和包管理器的目录。
 

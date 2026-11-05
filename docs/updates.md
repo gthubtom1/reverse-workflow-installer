@@ -2,6 +2,8 @@
 
 工具更新和成果追版是不同操作。`update` 跟随官方 REA/Spec Kit stable 与增强 reverse release/main；上游产品 1.0→1.1 的差分、规格和测试由原 reverse 专业流程在成果项目中处理。
 
+Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行 `npx skills update` 后，要在安装器仓库根目录重新执行 `node scripts/pi-adapt-grill-skills.mjs`；这只重写 `grill-me` 和 `grill-with-docs` 门面，不修改官方 `grilling` 正文。核心安装器的 update/restore 不会自动回滚或升级 `~/.agents/skills/` 下的用户级技能。
+
 工具更新沿用相同 root、client、agent 和 project，重新 plan 并保存冻结文件。显式复用原包路径时，须先由其管理者在独立位置准备本次精确版本；版本不符则拒绝，安装器不会修改复用目录。省略复用参数可以在 root/versions 的新目录安装。`--reverse-root` 始终使用该工作副本，update 不会替你 git pull 或覆盖本地修改；先由仓库维护流程更新，再 plan。
 
 事务顺序：解析精确身份 → 隔离 npm/uv 目录 → 官方 setup 暂存 dry-run/yes → 检查只涉及 REA 字段和绝对 launcher → 官方 init 暂存（首次）→ 检查配置未漂移 → 写适配器和配置/新项目 → 回执。每个写入前持久化原字节和新字节、SHA256；失败条件恢复本次写入。旧活动 receipt 保留，首次失败不产生 installed:true。中断/crash 仍有 journal 可恢复；文件系统断电原子性和整个多文件事务的瞬时原子可见性不作保证。

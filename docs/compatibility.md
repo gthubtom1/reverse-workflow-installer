@@ -14,7 +14,7 @@
 
 本地已执行 Windows/Python 3.12 的 unittest。CI 配置提供 Windows/Ubuntu × Python 3.11/3.12/3.13，未触发的 job 不计通过。没有对 macOS 或其他宿主作实测声明。
 
-每次真实验收应在本机私有记录中补上：精确宿主版本、三个组件身份、运行时版本、加载路径/资源清单、MCP 握手和 tools/schema、provider 状态、原 router 输出、实际 Spec Kit 模板执行、代表任务结果、第二会话恢复和显式入口触发结果。receipt 中的 `unverified` 不会因文件存在、`verify` 通过或安装器退出 0 自动转为 passed。
+每次真实验收应在本机私有记录中补上：精确宿主版本、三个核心组件身份、Pi 伴随技能目录与适配状态（如使用 Pi）、运行时版本、加载路径/资源清单、MCP 握手和 tools/schema、provider 状态、原 router 输出、实际 Spec Kit 模板执行、代表任务结果、第二会话恢复和显式入口触发结果。receipt 中的 `unverified` 不会因文件存在、`verify` 通过或安装器退出 0 自动转为 passed。
 
 不自动安装 Node/provider；不自动注册 Codex 插件；不自动升级已有项目模板。既有带特殊引号/数组表形式的 REA TOML 配置暂不支持自动编辑，明确拒绝。语义/等价/隔离验收均不属于安装静态检查。
 

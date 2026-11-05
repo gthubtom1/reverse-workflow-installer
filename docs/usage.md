@@ -4,7 +4,19 @@
 
 如果你不知道一个具体目标应该怎么开始、分诊后怎么继续、加壳和未加壳如何分流，先读 [Reverse 工作流使用手册](reverse-workflow-playbook.md)。它包含从第一条提示词到 Triage、Static、Dynamic、Synthesis、独立实现和原版对比的完整操作顺序。
 
-安装后从独立成果项目启动指定 Pi/Codex 配置。专业任务优先显式使用 `/skill:reverse-workflow`，让智能体先读取组合入口和本机 receipt，再读 RULES、原 master-route 和 PRIMARY。REA 由 PRIMARY 在需要时调用，Spec Kit 用于成果项目的规格、计划和任务。
+安装后从独立成果项目启动指定 Pi/Codex 配置。专业任务优先显式使用 `/skill:reverse-workflow`，让智能体先读取组合入口和本机 receipt，再读 RULES、原 master-route 和 PRIMARY。REA 由 PRIMARY 在需要时调用，Spec Kit 用于成果项目的规格、计划和任务。Pi 需要审查方案或准备修改前，再使用 `grilling`；它不会替代 reverse 路由或 REA 取证。
+
+方案准备实施前可以说：
+
+```text
+现在先不要实施。使用 grilling 审查当前方案；需要文件、字节或工具才能回答的事实先自行查证，只把需要我决定的方案分叉列出来，等我确认共识。
+```
+
+达成共识后再说：
+
+```text
+我们已经达成共识。按确认的范围实施，完成后重新验证原版与产物，并报告失败项和 unknown。
+```
 
 可以直接说：
 

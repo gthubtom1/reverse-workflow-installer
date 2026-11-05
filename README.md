@@ -72,8 +72,6 @@ Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt
 Codex 使用官方 setup 与 Spec Kit Codex integration，并在成果项目生成薄 `.agents/skills/reverse-workflow/SKILL.md`，通过本机回执给现有 reverse Codex 插件提供显式本地路径。不假定某个插件注册命令存在；插件缺失时仍交原 RULES、原 router 和 PRIMARY。
 
 Claude Desktop 使用显式的 `claude_desktop_config.json` JSON 配置。安装器只合并 `mcpServers.rea`，保留其他字段；并在成果项目生成 `CLAUDE.md`，把当前回执、reverse 原生 router、bounded REA work item 和零基础动态选项规则交给 Claude。Claude Desktop 不需要 Claude CLI 在 PATH；宿主真实加载仍需重启 Claude 后用新对话验证。
-
-Claude Desktop 使用显式的 `claude_desktop_config.json` JSON 配置。安装器只合并 `mcpServers.rea`，保留其他字段；并在成果项目生成 `CLAUDE.md`，把当前回执、reverse 原生 router、bounded REA work item 和零基础动态选项规则交给 Claude。Claude Desktop 不需要 Claude CLI 在 PATH；宿主真实加载仍需重启 Claude 后用新对话验证。
 Spec Kit 用官方 `specify init --integration <实际client> --script py --non-interactive` 在暂存项目生成随包原生资源，检查后写入你的新成果项目。首次必须是空目录；不在工具源码仓库里 init。更新工具保留项目的 constitution、规格、代码和已有模板；已有项目模板迁移尚未自动化。
 
 ## 更新、检查和恢复
