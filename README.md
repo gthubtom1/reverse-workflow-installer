@@ -6,6 +6,8 @@ REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PR
 
 第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个组件的分工、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
 
+如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。
+
 安装器默认按三件套处理，但组件范围可以显式缩小。`reverse-skill`、REA 和 Spec Kit 可以分别安装；未选择的组件不会被解析、安装、注册或在 verify 中要求存在：
 
 ```text
