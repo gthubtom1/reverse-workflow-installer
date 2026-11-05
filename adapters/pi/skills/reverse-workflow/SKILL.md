@@ -17,7 +17,7 @@ description: 逆向、二进制、APK、前端签名、协议、API 安全、复
 
 Pi 端另装有 `grilling` 技能（`~/.agents/skills/grilling`，上游 mattpocock/skills，正文不改）。两者分工如下：
 
-1. 只在形成方案、给出分析结论、或准备改二进制/重实现之前调用 `grilling`；启动、授权、范围确认阶段不调用，不重复索取用户已给出的启动确认。满足调用条件时，先读取 `~/.agents/skills/grilling/SKILL.md`，按其完整规则工作，不自行摘要或重写其规则。
+1. 只在形成方案、给出分析结论、审查已有报告/case/补丁/复刻项目，或准备改二进制/重实现之前调用 `grilling`；启动、授权、范围确认和纯事实分诊阶段不调用，不重复索取用户已给出的启动确认。满足调用条件时，先读取 `~/.agents/skills/grilling/SKILL.md`，按其完整规则工作，不自行摘要或重写其规则。
 2. `reverse-workflow` 继续负责路由、授权、证据链、REA 门槛和阶段报告；`grilling` 只负责方案决策树和假设审查。进入 grilling 访谈后，该轮问题使用 grilling 的 `❓ **Q1**` / `➡️` 格式；reverse 的阶段报告放在访谈轮次之前或该轮完成之后，不插入 grilling 问题块。目标、授权、范围、下一步选择仍使用本入口的编号选项。
 3. `grilling` 的“事实归 agent”在本入口强制生效：凡需读文件、跑命令、比对字节才能回答的问题，派 subagent 查证后直接给结论，不得当成问题抛给用户；只有决策类问题才进 frontier。
 4. `GLOSSARY.md` 与 ADR 等术语产物写入成果项目，不写入 reverse-skill 仓库——该仓库白名单与泄漏扫描只接受 `skills/field-journal/**.md`。
