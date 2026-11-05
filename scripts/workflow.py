@@ -126,8 +126,8 @@ def scope(args):
     if needs_agent(components) and agent is None:
         raise InstallError("所选组件需要 --agent-dir 或 --client-config；不会默认写用户 profile")
     config_name = {"pi": "mcp.json", "codex": "config.toml", "claude": "claude_desktop_config.json"}.get(client)
-    config = (agent / config_name) if agent and config_name else None
-    if explicit and config != explicit:
+    config = explicit if client == "claude" and explicit else ((agent / config_name) if agent and config_name else None)
+    if explicit and config != explicit and client != "claude":
         raise InstallError(f"--client-config 必须是指定 agent 目录中的 {config.name}；Pi settings.json 与 mcp.json 共用该目录")
     project = abs_path(args.project) if args.project else None
     if needs_project(components) and project is None:
@@ -450,8 +450,11 @@ def _install_selected(plan, args):
             skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
             journal.write(project / ".agents/skills/reverse-workflow/SKILL.md", skill.encode())
         elif "reverse" in selected["components"] and selected["client"] == "claude":
-            skill = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
-            journal.write(project / "CLAUDE.md", skill.encode())
+            skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
+            target = agent / "skills/reverse-workflow/SKILL.md"
+            if target.exists() and target.read_bytes() != skill.encode():
+                raise InstallError("Claude 全局 skill 已被用户修改，拒绝覆盖")
+            journal.write(target, skill.encode())
         if desired_config is not None:
             journal.write(config, desired_config, "json" if selected["client"] in ("pi", "claude") else "toml")
         for source in generated_files:
@@ -651,12 +654,18 @@ def _install(plan, args):
                 raise InstallError("Codex 项目入口已被用户修改，拒绝覆盖")
             journal.write(target, skill.encode())
         else:
-            skill = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8")
-            skill = skill.replace("{{RECEIPT}}", str(receipt_path))
-            target = project / "CLAUDE.md"
-            if target.exists() and target.read_bytes() != skill.encode():
+            global_skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
+            global_skill = global_skill.replace("{{RECEIPT}}", str(receipt_path))
+            global_target = agent / "skills/reverse-workflow/SKILL.md"
+            if global_target.exists() and global_target.read_bytes() != global_skill.encode():
+                raise InstallError("Claude 全局 skill 已被用户修改，拒绝覆盖")
+            journal.write(global_target, global_skill.encode())
+            project_skill = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8")
+            project_skill = project_skill.replace("{{RECEIPT}}", str(receipt_path))
+            project_target = project / "CLAUDE.md"
+            if project_target.exists() and project_target.read_bytes() != project_skill.encode():
                 raise InstallError("Claude 项目入口已被用户修改，拒绝覆盖")
-            journal.write(target, skill.encode())
+            journal.write(project_target, project_skill.encode())
         # The settings merge above is ours; independently recheck the MCP input.
         observed = digest(config.read_bytes()) if config.exists() else None
         if observed != plan["config_inputs"][str(config)]:
@@ -746,6 +755,8 @@ def verify(root):
         if not (Path(receipt["scope"]["project"]) / ".agents/skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex project entry missing")
     elif client == "claude":
+        if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
+            failures.append("Claude global skill missing")
         if not (Path(receipt["scope"]["project"]) / "CLAUDE.md").is_file():
             failures.append("Claude project entry missing")
     return {"ok": not failures, "failures": failures, "transaction": receipt["transaction"], "validation": receipt["validation"], "note": "verify 只核身份和配置；不会启动宿主/MCP或声称真实任务通过"}
