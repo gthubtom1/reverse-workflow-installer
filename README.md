@@ -6,7 +6,7 @@ REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PR
 
 第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个核心组件和 Pi `grilling` 伴随技能的分工、官方技能安装与 Pi 适配、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
 
-如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。
+如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。零基础用户直接从其中的 [零基础一键开始](docs/reverse-workflow-playbook.md#零基础一键开始) 复制模板即可。
 
 安装器默认按三件核心组件处理，`grilling` 是 Pi 的官方伴随技能，不属于 `--components` 的 REA/reverse/spec-kit 事务范围。三件核心组件可以分别安装；未选择的核心组件不会被解析、安装、注册或在 verify 中要求存在。Pi 的 `grilling` 请按 [Pi grilling 安装](docs/quick-start.md#pi-grilling-伴随技能) 单独安装并验收：上游官方安装器的逗号选择语法不可靠，四个技能必须一次安装一个。
 

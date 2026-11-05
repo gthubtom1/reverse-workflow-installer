@@ -2,7 +2,7 @@
 
 安装器完成的是组件、配置和项目资源的安装；真正使用前还要按 [安装后快速开始](quick-start.md) 完成 `verify`、`accept`、宿主重启和一次对话冒烟测试。`installed: true` 只代表安装事务成功，不代表模型已经选择了 reverse-workflow。
 
-如果你不知道一个具体目标应该怎么开始、分诊后怎么继续、加壳和未加壳如何分流，先读 [Reverse 工作流使用手册](reverse-workflow-playbook.md)。它包含从第一条提示词到 Triage、Static、Dynamic、Synthesis、独立实现和原版对比的完整操作顺序。
+如果你是零基础，先看 [Reverse 工作流手册里的零基础一键开始](reverse-workflow-playbook.md#零基础一键开始)。把目标放到当前对话工作目录根目录后，复制模板即可开始；后续按编号推进，不需要自己选择工具或理解 REA/provider/work item。
 
 安装后从独立成果项目启动指定 Pi/Codex 配置。专业任务优先显式使用 `/skill:reverse-workflow`，让智能体先读取组合入口和本机 receipt，再读 RULES、原 master-route 和 PRIMARY。REA 由 PRIMARY 在需要时调用，Spec Kit 用于成果项目的规格、计划和任务。Pi 需要审查方案或准备修改前，再使用 `grilling`；它不会替代 reverse 路由或 REA 取证。
 
