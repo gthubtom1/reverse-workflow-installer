@@ -33,7 +33,7 @@ python scripts/install.py accept --root ../workflow
 
 `verify` 只检查包、版本、hash、回执和配置身份；`accept` 才会检查 REA MCP 的启动和工具目录、原生 reverse router，以及 Spec Kit 的临时初始化。两个命令都不会修改用户成果项目。
 
-然后重启 Pi/Codex，或者使用宿主提供的 reload 功能。启动时必须使用安装计划中的同一个配置根：Pi 使用对应的 `PI_CODING_AGENT_DIR`，Codex 使用对应的 `CODEX_HOME`，并从成果项目目录工作。Pi Web/SDK 需要核对它实际读取的配置，不能把 CLI 的配置路径当成 Web 已加载的证据。
+然后重启 Pi/Codex/Claude Desktop，或者使用宿主提供的 reload 功能。启动时必须使用安装计划中的同一个配置根：Pi 使用对应的 `PI_CODING_AGENT_DIR`，Codex 使用对应的 `CODEX_HOME`，Claude Desktop 使用安装计划中的 `claude_desktop_config.json`，并从成果项目工作。Pi Web/SDK 和 Claude Desktop 需要核对它实际读取的配置，不能把 CLI 示例当作宿主已加载的证据。
 
 最后开一个新对话，使用下面的工作流冒烟测试。只有“宿主加载”和“对话确实进入原生 router”都确认后，才可以把安装视为真正可用。
 

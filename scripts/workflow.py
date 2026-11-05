@@ -125,14 +125,15 @@ def scope(args):
     agent = abs_path(args.agent_dir) if args.agent_dir else (explicit.parent if explicit else None)
     if needs_agent(components) and agent is None:
         raise InstallError("所选组件需要 --agent-dir 或 --client-config；不会默认写用户 profile")
-    config = (agent / ("mcp.json" if client == "pi" else "config.toml")) if agent and client != "none" else None
+    config_name = {"pi": "mcp.json", "codex": "config.toml", "claude": "claude_desktop_config.json"}.get(client)
+    config = (agent / config_name) if agent and config_name else None
     if explicit and config != explicit:
         raise InstallError(f"--client-config 必须是指定 agent 目录中的 {config.name}；Pi settings.json 与 mcp.json 共用该目录")
     project = abs_path(args.project) if args.project else None
     if needs_project(components) and project is None:
         raise InstallError("所选 Spec Kit 组件需要 --project 指定独立成果项目")
-    if client == "codex" and "reverse" in components and project is None:
-        raise InstallError("Codex 使用 reverse 入口需要 --project 写入薄项目 skill")
+    if client in ("codex", "claude") and "reverse" in components and project is None:
+        raise InstallError(f"{client} 使用 reverse 入口需要 --project 写入项目入口")
     reverse = abs_path(args.reverse_root) if args.reverse_root else None
     tools = [REPO, root / "versions", root / ".installer"]
     if agent:
@@ -197,7 +198,7 @@ def tree_hash(path, exclude_git=False):
 
 def specify_init_args(specify, target, client):
     args = [specify, "init", target, "--integration", client, "--script", "py", "--non-interactive"]
-    if client == "codex":
+    if client in ("codex", "claude"):
         args.append("--ignore-agent-tools")
     return args
 
@@ -227,8 +228,11 @@ def make_plan(args, fetch=None):
     inputs = {str(p): digest(p.read_bytes()) if p.exists() else None for p in input_paths}
     commands = []
     if "rea" in selected["components"]:
-        commands.append(("核验只读复用 REA prefix: " + selected["rea_prefix"] + " @" + components["rea"]["version"]) if selected["rea_prefix"] else ("npm install --prefix <root>/versions/<frozen-id>/rea --registry https://registry.npmjs.org rea-agents@" + components["rea"]["version"]))
-        commands.extend([f"rea setup --client {selected['client']} --skill=false --dry-run --json", f"rea setup --client {selected['client']} --skill=false --yes --json"])
+        if selected["client"] == "claude":
+            commands.append("手动合并 Claude Desktop JSON MCP 配置；不调用 REA setup（Claude Desktop 原生注册由安装器管理）")
+        else:
+            commands.append(("核验只读复用 REA prefix: " + selected["rea_prefix"] + " @" + components["rea"]["version"]) if selected["rea_prefix"] else ("npm install --prefix <root>/versions/<frozen-id>/rea --registry https://registry.npmjs.org rea-agents@" + components["rea"]["version"]))
+            commands.extend([f"rea setup --client {selected['client']} --skill=false --dry-run --json", f"rea setup --client {selected['client']} --skill=false --yes --json"])
     if "spec_kit" in selected["components"]:
         commands.append(("核验只读复用 Spec Kit tools/bin: " + selected["spec_kit_tools"] + " / " + selected["spec_kit_bin"] + " @" + components["spec_kit"]["version"]) if selected["spec_kit_tools"] else ("uv --no-config tool install --default-index https://pypi.org/simple specify-cli==" + components["spec_kit"]["version"]))
         commands.append(f"specify init <staging-project> --integration {selected['client']} --script py --non-interactive" + (" --ignore-agent-tools" if selected["client"] == "codex" else ""))
@@ -357,7 +361,7 @@ def _install_selected(plan, args):
         before_config = b""
         config = Path(selected["client_config"]) if selected["client_config"] else None
         if "rea" in selected["components"]:
-            before_config = config.read_bytes() if config.exists() else (b"{}\n" if selected["client"] == "pi" else b"")
+            before_config = config.read_bytes() if config.exists() else (b"{}\n" if selected["client"] in ("pi", "claude") else b"")
             atomic(stage / config.name, before_config)
         env = process_env(root, paths, stage, selected["client"], selected.get("node") or sys.executable)
         node = None
@@ -445,8 +449,11 @@ def _install_selected(plan, args):
         elif "reverse" in selected["components"] and selected["client"] == "codex":
             skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
             journal.write(project / ".agents/skills/reverse-workflow/SKILL.md", skill.encode())
+        elif "reverse" in selected["components"] and selected["client"] == "claude":
+            skill = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
+            journal.write(project / "CLAUDE.md", skill.encode())
         if desired_config is not None:
-            journal.write(config, desired_config, "json" if selected["client"] == "pi" else "toml")
+            journal.write(config, desired_config, "json" if selected["client"] in ("pi", "claude") else "toml")
         for source in generated_files:
             journal.write(project / source.relative_to(generated), source.read_bytes())
         hashes = {}
@@ -477,8 +484,8 @@ def _install(plan, args):
         raise InstallError("安装根已属于另一配置/项目范围；请选新 root，或 restore 后安装")
     if previous.get("installed") and previous.get("managed_rea_config") is not None:
         current_bytes = Path(selected["client_config"]).read_bytes()
-        current_config = json.loads(current_bytes) if selected["client"] == "pi" else toml_parts(current_bytes)[0]
-        current_entry = current_config.get("mcpServers" if selected["client"] == "pi" else "mcp_servers", {}).get("rea")
+        current_config = json.loads(current_bytes) if selected["client"] in ("pi", "claude") else toml_parts(current_bytes)[0]
+        current_entry = current_config.get("mcpServers" if selected["client"] in ("pi", "claude") else "mcp_servers", {}).get("rea")
         if current_entry != previous["managed_rea_config"]:
             raise InstallError("活动 REA 配置含后续用户修改；拒绝覆盖，请先审阅差异并保留/迁移自定义项")
     identity = components["reverse"].get("local_identity")
@@ -506,7 +513,7 @@ def _install(plan, args):
         stage = tx / "agent"
         stage.mkdir()
         config = Path(selected["client_config"])
-        before_config = config.read_bytes() if config.exists() else (b"{}\n" if selected["client"] == "pi" else b"")
+        before_config = config.read_bytes() if config.exists() else (b"{}\n" if selected["client"] in ("pi", "claude") else b"")
         atomic(stage / config.name, before_config)
         env = process_env(root, paths, stage, selected["client"], selected["node"])
         node, npm, node_version = node_and_npm(selected["node"], components["rea"]["node_engine"], root, env)
@@ -542,34 +549,45 @@ def _install(plan, args):
         spec_version = object_output(run([specify, "version", "--json"], cwd=root, env=env), "specify version")
         if spec_version.get("cli_version") != components["spec_kit"]["version"]:
             raise InstallError("specify version 的 cli_version 与计划不一致")
-        rea = [node, paths["rea_package"] / "scripts/rea.mjs"]
-        setup = rea + ["setup", "--client", selected["client"], "--skill=false"]
-        dryrun = object_output(run(setup + ["--dry-run", "--json"], cwd=root, env=env), "REA setup dry-run")
-        atomic(tx / "setup-dryrun.json", encode_json(dryrun))
-        applied = object_output(run(setup + ["--yes", "--json"], cwd=root, env=env), "REA setup yes")
-        atomic(tx / "setup-result.json", encode_json(applied))
-        staged_config = (stage / config.name).read_bytes()
-        if selected["client"] == "pi":
-            original, modified = json.loads(before_config), json.loads(staged_config)
-            rea_entry = copy.deepcopy(modified.get("mcpServers", {}).get("rea"))
-            if not rea_entry:
-                raise InstallError("官方 setup 未生成 mcpServers.rea")
-            for value in (original, modified):
-                value.setdefault("mcpServers", {}).pop("rea", None)
-                if not value["mcpServers"]:
-                    value.pop("mcpServers")
-            if original != modified:
-                raise InstallError("官方 setup 修改了非 REA 字段；拒绝合并")
-            desired = json.loads(before_config)
+        if selected["client"] == "claude":
+            rea_entry = {
+                "command": str(node),
+                "args": [str(paths["rea_package"] / "scripts/rea.mjs"), "mcp"],
+                "env": {"GHIDRA_INSTALL_DIR": "D:\\Tools\\Ghidra", "JAVA_HOME": "D:\\Tools\\runtime\\jdk21\\jdk-21.0.12.1+1"},
+            }
+            desired = json.loads(before_config or b"{}")
             desired.setdefault("mcpServers", {})["rea"] = rea_entry
             desired_config = encode_json(desired)
         else:
-            desired_config = codex_merge(before_config, staged_config)
-            parsed, _, _ = toml_parts(desired_config)
-            if not parsed.get("mcp_servers", {}).get("rea"):
-                raise InstallError("官方 setup 未生成 mcp_servers.rea")
+            rea = [node, paths["rea_package"] / "scripts/rea.mjs"]
+            setup = rea + ["setup", "--client", selected["client"], "--skill=false"]
+            dryrun = object_output(run(setup + ["--dry-run", "--json"], cwd=root, env=env), "REA setup dry-run")
+            atomic(tx / "setup-dryrun.json", encode_json(dryrun))
+            applied = object_output(run(setup + ["--yes", "--json"], cwd=root, env=env), "REA setup yes")
+            atomic(tx / "setup-result.json", encode_json(applied))
+            staged_config = (stage / config.name).read_bytes()
+            if selected["client"] == "pi":
+                original, modified = json.loads(before_config), json.loads(staged_config)
+                rea_entry = copy.deepcopy(modified.get("mcpServers", {}).get("rea"))
+                if not rea_entry:
+                    raise InstallError("官方 setup 未生成 mcpServers.rea")
+                for value in (original, modified):
+                    value.setdefault("mcpServers", {}).pop("rea", None)
+                    if not value["mcpServers"]:
+                        value.pop("mcpServers")
+                if original != modified:
+                    raise InstallError("官方 setup 修改了非 REA 字段；拒绝合并")
+                desired = json.loads(before_config)
+                desired.setdefault("mcpServers", {})["rea"] = rea_entry
+                desired_config = encode_json(desired)
+            else:
+                desired_config = codex_merge(before_config, staged_config)
+                parsed, _, _ = toml_parts(desired_config)
+                if not parsed.get("mcp_servers", {}).get("rea"):
+                    raise InstallError("官方 setup 未生成 mcp_servers.rea")
+
         # Always check direct launcher identity. Do not restrict tools or exposure.
-        parsed_entry = (json.loads(desired_config)["mcpServers"]["rea"] if selected["client"] == "pi" else parsed["mcp_servers"]["rea"])
+        parsed_entry = (json.loads(desired_config)["mcpServers"]["rea"] if selected["client"] in ("pi", "claude") else parsed["mcp_servers"]["rea"])
         if abs_path(parsed_entry.get("command", ".")) != abs_path(node) or str(paths["rea_package"] / "scripts/rea.mjs") not in parsed_entry.get("args", []):
             raise InstallError("官方 setup 没有登记本事务的绝对 Node/REA 入口")
         if any(key in parsed_entry for key in ("disabled_tools", "enabled_tools", "toolExposure")):
@@ -582,7 +600,7 @@ def _install(plan, args):
             run(specify_init_args(specify, generated, selected["client"]), cwd=root, env=env)
             if not (generated / ".specify").is_dir():
                 raise InstallError("specify init 未生成 .specify")
-            native = generated / (".pi/prompts" if selected["client"] == "pi" else ".agents/skills")
+            native = generated / (".pi/prompts" if selected["client"] == "pi" else (".claude" if selected["client"] == "claude" else ".agents/skills"))
             if not native.is_dir() or not any(native.rglob("*.md")):
                 raise InstallError(f"Spec Kit 未生成已支持的 {selected['client']} 原生资源；保留暂存结果，拒绝切换")
             generated_files = [p for p in generated.rglob("*") if p.is_file()]
@@ -624,7 +642,7 @@ def _install(plan, args):
                 if manual not in skills:
                     skills.append(manual)
             journal.write(settings_path, encode_json(settings), "json")
-        else:
+        elif selected["client"] == "codex":
             # Codex uses a project skill to supply the local path to upstream's plugin skill.
             skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8")
             skill = skill.replace("{{RECEIPT}}", str(receipt_path))
@@ -632,11 +650,18 @@ def _install(plan, args):
             if target.exists() and target.read_bytes() != skill.encode():
                 raise InstallError("Codex 项目入口已被用户修改，拒绝覆盖")
             journal.write(target, skill.encode())
+        else:
+            skill = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8")
+            skill = skill.replace("{{RECEIPT}}", str(receipt_path))
+            target = project / "CLAUDE.md"
+            if target.exists() and target.read_bytes() != skill.encode():
+                raise InstallError("Claude 项目入口已被用户修改，拒绝覆盖")
+            journal.write(target, skill.encode())
         # The settings merge above is ours; independently recheck the MCP input.
         observed = digest(config.read_bytes()) if config.exists() else None
         if observed != plan["config_inputs"][str(config)]:
             raise InstallError("MCP 配置在激活前发生漂移；事务回退")
-        journal.write(config, desired_config, "json" if selected["client"] == "pi" else "toml")
+        journal.write(config, desired_config, "json" if selected["client"] in ("pi", "claude") else "toml")
         for source in generated_files:
             target = project / source.relative_to(generated)
             if target.exists() and target.read_bytes() != source.read_bytes():
@@ -707,8 +732,8 @@ def verify(root):
         failures.append("reverse working copy drift")
     config = Path(receipt["scope"]["client_config"])
     client = receipt["scope"]["client"]
-    data = load_json(config, {}) if client == "pi" else toml_parts(config.read_bytes())[0]
-    entry = data.get("mcpServers" if client == "pi" else "mcp_servers", {}).get("rea", {})
+    data = load_json(config, {}) if client in ("pi", "claude") else toml_parts(config.read_bytes())[0]
+    entry = data.get("mcpServers" if client in ("pi", "claude") else "mcp_servers", {}).get("rea", {})
     if entry.get("command") != receipt["runtime"]["node"] or str(Path(receipt["paths"]["rea_package"]) / "scripts/rea.mjs") not in entry.get("args", []):
         failures.append("REA MCP launcher drift")
     if entry != receipt["managed_rea_config"]:
@@ -717,9 +742,12 @@ def verify(root):
         packages = load_json(Path(receipt["scope"]["agent_dir"]) / "settings.json", {}).get("packages", [])
         if receipt["adapter"]["root"] not in packages:
             failures.append("Pi package registration missing or changed")
-    else:
+    elif client == "codex":
         if not (Path(receipt["scope"]["project"]) / ".agents/skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex project entry missing")
+    elif client == "claude":
+        if not (Path(receipt["scope"]["project"]) / "CLAUDE.md").is_file():
+            failures.append("Claude project entry missing")
     return {"ok": not failures, "failures": failures, "transaction": receipt["transaction"], "validation": receipt["validation"], "note": "verify 只核身份和配置；不会启动宿主/MCP或声称真实任务通过"}
 
 
