@@ -1,6 +1,6 @@
 # project-continuity 插件安装
 
-本仓提供 Pi `project-continuity` 1.0.0 的安装集成。来源 ref 为 `project-continuity-v1.0.0`；发布由插件维护方完成。本次离线测试不证明远程 tag 已发布，也不证明真实 Pi/Web/SDK 已加载插件。
+本仓提供 Pi `project-continuity` 1.0.0 的安装集成，来源为已发布的 `project-continuity-v1.0.0`。默认首次安装与旧环境升级、实际 Pi Web 页面和 SDK/RPC 恢复流程已执行验证，具体证据及边界见 [验收记录](project-continuity-verification.md)。静态安装通过仍不能替代每台机器的宿主加载检查。
 
 ## 安装范围
 
