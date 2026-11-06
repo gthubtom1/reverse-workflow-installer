@@ -2,11 +2,11 @@
 
 安装器完成的是组件、配置和项目资源的安装；真正使用前还要按 [安装后快速开始](quick-start.md) 完成 `verify`、`accept`、宿主重启和一次对话冒烟测试。`installed: true` 只代表安装事务成功，不代表模型已经选择了 reverse-workflow。
 
-如果你是零基础，先看 [Reverse 工作流手册里的零基础一键开始](reverse-workflow-playbook.md#零基础一键开始)。把目标放到当前对话工作目录根目录后，复制模板即可开始；后续按编号推进，不需要自己选择工具或理解 REA/provider/work item。
+如果你是零基础，先看 [Reverse 工作流手册里的零基础一键开始](reverse-workflow-playbook.md#零基础一键开始)。把目标放到当前对话工作目录根目录后，复制模板即可开始；后续由智能体在已授权范围内连续推进；只有需要你取舍目标、补充授权或材料时才提问。
 
-安装后从独立成果项目启动指定 Pi/Codex 配置。专业任务优先显式使用 `/skill:reverse-workflow`，让智能体先读取组合入口和本机 receipt，再读 RULES、原 master-route 和 PRIMARY。REA 由 PRIMARY 在需要时调用，Spec Kit 用于成果项目的规格、计划和任务。Pi 需要审查方案或准备修改前，再使用 `grilling`；它不会替代 reverse 路由或 REA 取证。
+安装后从独立成果项目启动指定 Pi/Codex 配置。专业任务优先显式使用 `/skill:reverse-workflow`，让智能体先读取组合入口和本机 receipt，再读 RULES、原 master-route 和 PRIMARY。REA 由 PRIMARY 在需要时调用，Spec Kit 用于成果项目的规格、计划和任务。Pi 仅在明确请求质询或存在重要目标取舍时使用 `grilling`，也可以开工时澄清目标；常规事实核查和既定方案内实施自动推进。
 
-方案准备实施前可以说：
+如果你想专门质询尚未确认的方案，可以说（可选）：
 
 ```text
 现在先不要实施。使用 grilling 审查当前方案；需要文件、字节或工具才能回答的事实先自行查证，只把需要我决定的方案分叉列出来，等我确认共识。

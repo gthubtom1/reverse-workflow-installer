@@ -243,7 +243,7 @@ def make_plan(args, fetch=None):
 def pi_global_skill_text(receipt_path):
     source = (REPO / "adapters/pi/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
     relative = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
-    absolute = f"读取本次安装生成的回执定位文件 `{receipt_path}`，再读取其中 `receipt` 指向的本机 JSON。"
+    absolute = f"直接读取本机安装回执 `{receipt_path}`（这是回执本体，不是 receipt-location.json）。"
     if relative not in source:
         raise InstallError("Pi reverse-workflow skill 缺少可适配的 receipt 定位文本")
     return source.replace(relative, absolute, 1)

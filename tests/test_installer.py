@@ -133,6 +133,18 @@ class Fixture(unittest.TestCase):
         self.assertTrue(any("--skill=false" in c and "--dry-run" in c for c in self.calls))
         self.assertTrue(any("--integration" in c and "pi" in c for c in self.calls))
 
+    def test_pi_global_and_package_entry_use_resolvable_receipts(self):
+        result = self.install()
+        global_text = (self.agent / "skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn(str(self.root / ".installer/receipt.json"), global_text)
+        self.assertIn("直接读取本机安装回执", global_text)
+        self.assertNotIn("再读取其中 `receipt`", global_text)
+        adapter = Path(result["adapter"]["root"])
+        locator = load_json(adapter / "receipt-location.json")
+        self.assertEqual(load_json(Path(locator["receipt"]))["transaction"], result["transaction"])
+        self.assertIn("汇报不等于等待批准", global_text)
+        self.assertNotIn("下一步建议必须根据当前 Evidence 动态生成 2–5", global_text)
+
     def test_repeat_no_reinstall_no_duplicate_resources(self):
         first = self.install()
         self.calls.clear()
