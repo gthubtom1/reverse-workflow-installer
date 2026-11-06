@@ -5,12 +5,12 @@
 | 项目 | 已核官方文档/源码 | 本仓离线验证 | 宿主真实加载/任务 |
 |---|---|---|---|
 | REA 6.8.0 | 官方 npm 包、Node engines、setup pi/codex、skill=false 与 scoped env | 模拟官方输出的保留配置、身份/失败/漂移检查 | 未由本仓执行 |
-| Spec Kit 1.3.0 | 随包模板；init integration pi/codex、script py、non-interactive；version --json | 模拟 init 和更新保留项目文件 | 未由本仓执行 |
+| Spec Kit 1.3.1 | 官方 `version --json` 与 `init`；pi/codex/claude integration 参数 | 模拟 init、扩展安装、更新保留项目文件 | 本机 Pi 临时 init 与版本检查通过；现有成果项目模板保留，不自动迁移 |
 | 增强 reverse release/main | 固定用户仓库；RULES → 原 master-route → PRIMARY；已有薄 Codex 插件 | 本地工作副本只读身份检查、回执定位 | 专业路由/端到端任务由主流程验证 |
 | Pi grilling 伴随技能 | 上游 `grilling`、`grill-me`、`grill-with-docs`、`domain-modeling`；只适配两个门面 | Node 离线夹具验证缺依赖时零写入、幂等、旧路径检出，以及适配前后两个官方技能字节不变 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
 | Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并与项目薄技能夹具测试 | 实际 Codex 版本、项目 skill 发现和新会话触发待验 |
-| 本机 accept 验收 | 官方 REA doctor、原 router 临时路由、官方 Spec Kit 临时 init | 当前 receipt 选定组件的真实本机验收 | 未运行即保持未验证 |
+| 本机 accept 验收 | 官方 REA doctor、原 router 临时路由、官方 Spec Kit 临时 init | 按 receipt 选定组件验收 | Pi 基础验收通过；REA 工具目录完整。JADX 深度代码 provider 尚缺用户提供的桥接 JAR，不能声明 APK 深度分析已就绪 |
 
 本地已执行 Windows/Python 3.12 的 unittest，并增加 Node 门面适配夹具。2026-11-06 使用一个已配置模型做了有限抽样：在一次请求里连续读取两个自有文本夹具，中途没有要求“继续”；新运行/联网范围保持未执行并请求补充确认。此抽样仅覆盖交互边界，不证明完整逆向、复杂加壳目标、所有模型或浏览器/桌面 provider 已验证。
 

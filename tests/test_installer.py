@@ -475,6 +475,18 @@ class Fixture(unittest.TestCase):
             self.install()
         self.assertFalse(any("install" in call or "setup" in call or "init" in call for call in self.calls))
 
+    def test_claude_rea_preserves_explicit_provider_environment(self):
+        self.args.components = "rea"
+        self.args.client = "claude"
+        config = self.agent / "claude_desktop_config.json"
+        environment = {"GHIDRA_INSTALL_DIR": str(self.base / "my-ghidra"), "JAVA_HOME": str(self.base / "my-jdk")}
+        atomic(config, encode_json({"mcpServers": {"rea": {"command": "old-node", "args": ["old-launcher"], "env": environment}, "user": {"command": "keep"}}}))
+        result = self.install()
+        self.assertEqual(load_json(config)["mcpServers"]["rea"]["env"], environment)
+        self.assertEqual(load_json(config)["mcpServers"]["user"], {"command": "keep"})
+        self.assertEqual(result["managed_rea_config"]["command"], str(self.node))
+        self.assertTrue(w.verify(self.root)["ok"])
+
     def test_claude_subset_writes_global_and_project_entries(self):
         self.args.components = "reverse"
         self.args.client = "claude"

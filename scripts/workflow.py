@@ -570,7 +570,9 @@ def _install(plan, args):
         if "rea" in selection:
             if client == "claude":
                 desired = json.loads(before_config or b"{}")
-                managed_rea = {"command": str(node), "args": [str(paths["rea_package"] / "scripts/rea.mjs"), "mcp"]}
+                # Preserve explicit local provider environment/options; never invent machine paths.
+                managed_rea = copy.deepcopy(desired.get("mcpServers", {}).get("rea") or {})
+                managed_rea.update({"command": str(node), "args": [str(paths["rea_package"] / "scripts/rea.mjs"), "mcp"]})
                 desired.setdefault("mcpServers", {})["rea"] = managed_rea
                 desired_config = encode_json(desired)
             else:
