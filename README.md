@@ -1,6 +1,6 @@
 # Reverse Workflow Installer
 
-把官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill)、官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 和可选的官方 [grilling](https://github.com/mattpocock/skills) 访谈技能接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
+把 Pi [project-continuity](docs/project-continuity-install.md) 插件、官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill)、官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 和可选的官方 [grilling](https://github.com/mattpocock/skills) 访谈技能接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
 
 REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务；`grilling` 在 Pi 中负责方案决策树、隐含前提和结论审查。本仓库负责安装、范围明确的配置、更新与恢复，不修改 REA、Spec Kit 或 `grilling` 官方正文。
 
@@ -8,7 +8,7 @@ REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PR
 
 如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。零基础用户直接从其中的 [零基础一键开始](docs/reverse-workflow-playbook.md#零基础一键开始) 复制模板即可。
 
-安装器默认按三件核心组件处理，`grilling` 是 Pi 的官方伴随技能，不属于 `--components` 的 REA/reverse/spec-kit 事务范围。三件核心组件可以分别安装；未选择的核心组件不会被解析、安装、注册或在 verify 中要求存在。Pi 的 `grilling` 请按 [Pi grilling 安装](docs/quick-start.md#pi-grilling-伴随技能) 单独安装并验收：上游官方安装器的逗号选择语法不可靠，四个技能必须一次安装一个。
+安装器默认处理三件核心组件；Pi 的 `all` 安装与更新还会自动加入 `project-continuity`，包括原来仅有三组件的活动安装。用 `--without-project-continuity` 可在尚未安装该插件时退出默认选择。插件来源固定为 `project-continuity-v1.0.0`，只注册独立插件子目录；本地包可用 `--continuity-root` 只读复用。详见 [插件安装与更新](docs/project-continuity-install.md)。`grilling` 是 Pi 的官方伴随技能，不属于 `--components` 事务范围。三件核心组件可以分别安装；未选择的核心组件不会被解析、安装、注册或在 verify 中要求存在。Pi 的 `grilling` 请按 [Pi grilling 安装](docs/quick-start.md#pi-grilling-伴随技能) 单独安装并验收：上游官方安装器的逗号选择语法不可靠，四个技能必须一次安装一个。
 
 ```text
 # 只装 reverse-skill；不需要宿主配置
@@ -67,7 +67,7 @@ REA/Spec Kit 每次新 plan 解析官方最新稳定包；reverse 使用指定�
 
 REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。
 
-Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
+Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。默认组合另注册独立 `project-continuity` 插件包，仅加载其 `./index.ts`，不会加载 agent-plugins hub 的其他扩展。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
 
 Codex 使用官方 setup 与 Spec Kit Codex integration，并在成果项目生成薄 `.agents/skills/reverse-workflow/SKILL.md`，通过本机回执给现有 reverse Codex 插件提供显式本地路径。不假定某个插件注册命令存在；插件缺失时仍交原 RULES、原 router 和 PRIMARY。
 
@@ -84,7 +84,7 @@ python scripts/install.py restore --root ../workflow
 python scripts/install.py restore --root ../workflow --apply
 ```
 
-带 `--plan-file` 可保证展示与应用使用同一版本。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
+带 `--plan-file` 可保证展示与应用使用同一版本。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。原三组件 Pi 安装应继续使用默认 `all` 范围来加入插件；只传 `--components project-continuity` 会缩减既有范围而被拒绝。已经包含插件时，opt-out 也不能代替 restore 卸载它。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
 
 本机回执、精确 paths/版本、配置 diff 摘要及完整恢复备份位于 `root/.installer/`。备份可能包含你原配置中的秘密，属于本地私有数据，禁止发布。`installed: true` **只表示包与指定配置事务已完成**。`verify` 核包、运行时、reverse 和注册身份，不启动宿主/MCP；它返回的 `validation` 保留加载、握手/schema、真实任务等未验证项。失败事务不会写成功回执，已有活动安装会回退保留。
 
@@ -96,7 +96,7 @@ restore 默认撤销最近活动事务；按字段/资源进行条件恢复，�
 python scripts/install.py accept --root ../workflow
 ```
 
-`accept` 按 receipt 中的组件范围执行：REA 使用官方 `rea mcp doctor` 检查 stdio 启动、initialize、完整 tools/prompts catalog 和 request flow；reverse 在临时目录运行原生 master-router；Spec Kit 在临时目录执行官方 `specify init` 并检查原生模板。验收不会修改活动宿主配置、官方包或用户成果项目。验收通过后还要重启或 reload 宿主，再用 [安装后快速开始](docs/quick-start.md) 中的显式开场白做一次真实对话测试。
+`accept` 按 receipt 中的组件范围执行：REA 使用官方 `rea mcp doctor` 检查 stdio 启动、initialize、完整 tools/prompts catalog 和 request flow；reverse 在临时目录运行原生 master-router；Spec Kit 在临时目录执行官方 `specify init` 并检查原生模板。验收不会修改活动宿主配置、官方包或用户成果项目。`accept` 不运行 project-continuity 插件事件，其加载和跨会话恢复会明确保留为 unverified。验收通过后还要重启或 reload 宿主，再用 [安装后快速开始](docs/quick-start.md) 中的显式开场白做一次真实对话测试。
 
 
 > 分析这个程序，把选定功能做成独立项目，并和原版对比；证据不足的地方保留 unknown。

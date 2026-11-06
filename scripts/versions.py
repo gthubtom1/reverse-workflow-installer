@@ -32,11 +32,11 @@ def stable(version):
     return bool(re.fullmatch(r"\d+\.\d+\.\d+", version))
 
 
-COMPONENTS = ("rea", "spec_kit", "reverse")
+COMPONENTS = ("rea", "spec_kit", "reverse", "project_continuity")
 
 
 def resolve(manifest, fetch=http_json, components=None):
-    """Resolve only requested components; None keeps the historical all-components behavior."""
+    """Resolve only requested components; None resolves all known components."""
     requested = list(COMPONENTS) if components is None else [str(key) for key in components]
     for key in requested:
         if key not in COMPONENTS:
@@ -54,6 +54,8 @@ def resolve(manifest, fetch=http_json, components=None):
         result["spec_kit"] = _resolve_spec_kit(manifest, fetch)
     if "reverse" in requested:
         result["reverse"] = _resolve_reverse(manifest, fetch)
+    if "project_continuity" in requested:
+        result["project_continuity"] = _resolve_project_continuity(manifest, fetch)
     return result
 
 
@@ -68,6 +70,25 @@ def _resolve_spec_kit(manifest, fetch):
     specver = max(candidates, key=lambda v: tuple(map(int, v.split("."))))
     files = spec["releases"][specver]
     return {"version": specver, "repository": manifest["spec_kit"]["repository"], "artifacts": [{"filename": f["filename"], "sha256": f.get("digests", {}).get("sha256"), "requires_python": f.get("requires_python")} for f in files if not f.get("yanked", False)]}
+
+
+def _resolve_project_continuity(manifest, fetch):
+    from urllib.parse import quote
+    entry = manifest["project_continuity"]
+    ref = entry["release_ref"]
+    commit = fetch(entry["api"] + "/commits/" + quote(ref, safe=""))["sha"]
+    if not re.fullmatch(r"[a-f0-9]{40}", str(commit)):
+        raise InstallError("project_continuity commit 身份无效")
+    return {
+        "ref": ref,
+        "commit": str(commit),
+        "repository": entry["repository"],
+        "api": entry["api"],
+        "plugin_dir": entry["plugin_dir"],
+        "package_name": entry["package_name"],
+        "version": entry["version"],
+        "expected_extension": entry["expected_extension"],
+    }
 
 
 def _resolve_reverse(manifest, fetch):

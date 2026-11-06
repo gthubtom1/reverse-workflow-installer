@@ -1,4 +1,5 @@
 .local/
+backups/continuity-review-*/
 __pycache__/
 *.py[cod]
 .installer/
