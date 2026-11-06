@@ -1,6 +1,6 @@
 # Project Continuity 1.1.0 验收记录
 
-日期：2026-11-06。插件发布 tag 为 [`project-continuity-v1.1.0`](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.1.0)，提交 `11089f8549200a486c5b473e985262450ce11f0d`，插件 tree hash 由 installer receipt 冻结。安装器最新发布为 [`v0.3.5`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.3.5)（包含 v0.3.2 的更新修复），当前 reverse 正式发布为 [`v1.7.2`](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.7.2)。
+日期：2026-11-06。插件发布 tag 为 [`project-continuity-v1.1.0`](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.1.0)，提交 `11089f8549200a486c5b473e985262450ce11f0d`，插件 tree hash 由 installer receipt 冻结。安装器部署修复发布为 [`v0.3.2`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.3.2)，验证记录随后随 v0.3.5/v0.3.6 文档发布更新，当前 reverse 正式发布为 [`v1.7.2`](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.7.2)。
 
 ## 当前版本检查
 
