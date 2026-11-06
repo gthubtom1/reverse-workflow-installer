@@ -1,8 +1,22 @@
-# Project Continuity 1.0.0 验收记录
+# Project Continuity 1.1.0 验收记录
 
-日期：2026-11-06。插件发布 tag 为 [`project-continuity-v1.0.0`](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.0.0)，提交 `bb3a94573d1876c611ed128d842048a07a18daf3`。插件源与安装集成分别由 [agent-plugins PR #1](https://github.com/gthubtom1/agent-plugins/pull/1) 和 [installer PR #10](https://github.com/gthubtom1/reverse-workflow-installer/pull/10) 合入。
+日期：2026-11-06。插件发布 tag 为 [`project-continuity-v1.1.0`](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.1.0)，提交 `11089f8549200a486c5b473e985262450ce11f0d`，插件 tree hash 由 installer receipt 冻结。安装器发布为 [`v0.3.2`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.3.2)，当前 reverse 正式发布为 [`v1.7.1`](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.7.1)。
 
-## 已执行的检查
+## 当前版本检查
+
+| 层次 | 实际结果 | 能说明什么 |
+|---|---|---|
+| 插件离线回归 | 85/85；Node 语法检查通过 | 项目/目标/分支隔离、取消终态、ID/alias 碰撞、stale source、并行失败、CAS、日志完整性、中断事务和有界恢复符合夹具 |
+| 实际 Pi Web bundled SDK/RPC | Pi SDK 1.5.0、bundled CLI RPC；290/290 断言通过；加载当前发布插件目录无 loader/extension errors | 真实宿主 runner 注册三个工具和 `/continuity`，prompt/compact/tree/reload/resume/adopt/branch lifecycle 接线有效；验证使用隔离 deterministic provider，不调用账号模型 |
+| 安装器离线回归 | Python 103/103；grilling 门面回归保持通过 | 默认组合、旧版本 continuity update、事务恢复、重复 hub 注册拒绝、精确来源、漂移拒绝、过滤配置和 restore 保留用户设置 |
+| 当前活动部署 | 远程 plan 解析 reverse `v1.7.1` commit `c035cb0e5dbd12a5d3551971de43e93541e404` 与 continuity `v1.1.0` commit `11089f8`；verify 无 failures | 活动 checkout、manifest、独立插件注册和 tree hash 一致；reverse 不再使用本地 working copy |
+| 当前 accept | REA 6.8.0：229/229 tools；reverse identity/router 通过；Spec Kit 1.3.1 version/init 通过 | 四合一静态和基础宿主验收未被插件升级破坏；JADX provider 仍因缺少 caller-supplied bridge JAR 保持 optional failure |
+| 实际宿主扩展烟雾 | 新 trusted session 注册 `continuity_status`, `continuity_search`, `continuity_save` 与 `/continuity`；fresh → save → resume → untrusted 全部通过 | 当前已安装 release 可被实际 Pi Web bundled runtime 加载，项目隔离和 trust gate 生效 |
+
+`accept` 的 JADX 检查分类为 `missing_analysis_engine`：需要调用方通过 `REA_JADX_MCP_JAR` 提供 `jadx-headless-mcp 0.7.1`，REA 不自动下载或安装它。这不阻塞 continuity plugin、reverse router 或安装部署。宿主 loading、MCP schema、真实 reverse 任务和 Spec Kit 实际成果语义仍分别报告，机械验收不替代业务证明。
+
+## 1.0.0 历史基线
+
 
 | 层次 | 实际结果 | 能说明什么 |
 |---|---|---|
@@ -15,7 +29,8 @@
 | 全新默认安装 | 新安装根、agent 配置、成果项目；默认 all 自动含插件，远程取得同一发布 commit，verify 通过 | 新设备默认路径能获取插件；测试复用了本机符合版本要求的官方工具，不冒充裸机全工具下载测试 |
 | 原组合基础验收 | REA 6.8.0 的 229/229 tools、原 master-router、Spec Kit 1.3.1 的版本/init 通过 | 插件接入未破坏这些基础路径；原有 JADX 桥接缺口仍单独报告 |
 
-## 测试中发现并修正的问题
+## 1.0.0 历史发现与修正
+
 
 首次外部模型抽样把两个独立决定合成一条，撤销角色时只改文字、保留了 accepted 状态。恢复后的回答虽正确，记录粒度却不符合取消语义。补明确“一条记录对应一个可独立变更的对象/决定”和按类型选择 status 的工具说明后，用**相同三条用户提示**复测：两个决定分别保存，原角色 id 为 cancelled，另一约束保持 accepted，新会话正确续接。原失败与复测的完整本地报告均保留，未用成功自述替代落盘检查。
 

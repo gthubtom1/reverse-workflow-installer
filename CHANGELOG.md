@@ -1,4 +1,7 @@
-## 0.3.2 — 2026-11-06
+## 0.3.3 — 2026-11-06
+
+- Refresh public project-continuity verification for 1.1.0, reverse v1.7.1, the remote frozen deployment, and the separated host/semantic verification limits.
+
 
 - Allow an intact older frozen project-continuity release to pass update preflight; the new plan still validates and installs the newer published identity.
 - Add an offline regression covering an older active plugin release during update.
