@@ -10,4 +10,4 @@
 
 开发测试使用 `python -B -m unittest discover -s tests -v`，所有测试夹具只写本仓 `.local/tests/`。不得为测试执行真实 npm/uv/setup/init，不接触真实 profile。CI 不需要网络下载安装组件。新增官方版本必须核实际 CLI/包布局；不发明参数、插件命令或就绪能力。
 
-本仓只维护分发与宿主适配，领域知识和 PRIMARY 决策继续在 reverse 原仓库。公开内容不用绝对机器路径，不提交本机 receipt、目标样本、凭据或客户数据。未经当前任务授权不要 git add/commit/push。
+本仓只维护分发与宿主适配，领域知识和 PRIMARY 决策继续在 reverse 原仓库。变更前后按 [维护与发布闭环](docs/maintenance.md) 核对规则、入口、教程、回归、活动部署与正式 release；不能只推 main 就声称换电脑会拿到新版本。公开内容不用绝对机器路径，不提交本机 receipt、目标样本、凭据或客户数据。未经当前任务授权不要 git add/commit/push。

@@ -152,6 +152,8 @@ def scope(args):
         raise InstallError("--spec-kit-tools 与 --spec-kit-bin 必须一起提供")
     if client != "pi" and (args.rea_manual or args.exclude_rea_skill):
         raise InstallError("--rea-manual / --exclude-rea-skill 仅适用于 Pi")
+    if client == "pi" and (args.rea_manual or args.exclude_rea_skill) and agent is None:
+        raise InstallError("--rea-manual / --exclude-rea-skill 需要 --agent-dir 或 --client-config；不会默认写用户 profile")
     reuse = {key: str(abs_path(getattr(args, key))) if getattr(args, key) else None for key in ("rea_prefix", "spec_kit_tools", "spec_kit_bin")}
     for directory in [root / "versions", root / ".installer", *[Path(p) for p in reuse.values() if p]]:
         if project and (project == directory or project.is_relative_to(directory) or directory.is_relative_to(project)):
@@ -206,15 +208,15 @@ def specify_init_args(specify, target, client):
 def make_plan(args, fetch=None):
     selected = scope(args)
     manifest = load_json(REPO / "components.json")
-    components = resolve(manifest, **({"fetch": fetch} if fetch else {}))
-    if selected["reverse_root"]:
-        identity = reverse_identity(selected["reverse_root"])
-        components["reverse"]["published_commit"] = components["reverse"]["commit"]
-        components["reverse"]["commit"] = identity["commit"]
-        components["reverse"]["local_identity"] = identity
-        components["reverse"]["mode"] = "read-only-working-copy"
-    else:
-        components["reverse"]["mode"] = "clone-frozen-commit"
+    # Resolve only selected components; an explicit local reverse working copy needs no upstream lookup.
+    keys = [key for key in selected["components"] if not (key == "reverse" and selected["reverse_root"])]
+    components = resolve(manifest, **({"fetch": fetch} if fetch else {}), components=keys)
+    if "reverse" in selected["components"]:
+        if selected["reverse_root"]:
+            identity = reverse_identity(selected["reverse_root"])
+            components["reverse"] = {"repository": manifest["reverse"]["repository"], "ref": "local-working-copy", "commit": identity["commit"], "published_commit": None, "local_identity": identity, "mode": "read-only-working-copy"}
+        else:
+            components["reverse"]["mode"] = "clone-frozen-commit"
     missing = []
     if "rea" in selected["components"]:
         if not selected["node"]: missing.append("node")
@@ -240,13 +242,21 @@ def make_plan(args, fetch=None):
     return {"schema_version": 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
 
 
+PI_RECEIPT_LINE = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
+
+
+def pi_adapt(text, receipt_path):
+    if PI_RECEIPT_LINE not in text:
+        return text
+    absolute = f"直接读取本机安装回执 `{receipt_path}`（这是回执本体，不是 receipt-location.json）。"
+    return text.replace(PI_RECEIPT_LINE, absolute, 1)
+
+
 def pi_global_skill_text(receipt_path):
     source = (REPO / "adapters/pi/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
-    relative = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
-    absolute = f"直接读取本机安装回执 `{receipt_path}`（这是回执本体，不是 receipt-location.json）。"
-    if relative not in source:
+    if PI_RECEIPT_LINE not in source:
         raise InstallError("Pi reverse-workflow skill 缺少可适配的 receipt 定位文本")
-    return source.replace(relative, absolute, 1)
+    return pi_adapt(source, receipt_path)
 
 
 def limits():
@@ -269,14 +279,15 @@ def validate_plan(plan):
     if set(plan["config_inputs"]) != {str(p) for p in expected_configs}:
         raise InstallError("冻结计划的配置输入范围不一致")
     manifest = load_json(REPO / "components.json")
-    for key in ("rea", "spec_kit", "reverse"):
-        if plan["components"][key]["repository"] != manifest[key]["repository"]:
+    planned = plan.get("components") or {}
+    for key in selected["components"]:
+        component = planned.get(key)
+        if not isinstance(component, dict) or component.get("repository") != manifest[key]["repository"]:
             raise InstallError("计划的组件来源不在固定来源清单中")
-    for key in plan["scope"]["components"]:
-        if key in ("rea", "spec_kit") and not stable(plan["components"][key]["version"]):
+        if key in ("rea", "spec_kit") and not stable(component.get("version")):
             raise InstallError("计划缺少精确稳定版本")
-    if "reverse" in plan["scope"]["components"] and not re.fullmatch(r"[0-9a-f]{40}", plan["components"]["reverse"]["commit"]):
-        raise InstallError("计划缺少精确 reverse commit")
+        if key == "reverse" and not re.fullmatch(r"[0-9a-f]{40}", str(component.get("commit"))):
+            raise InstallError("计划缺少精确 reverse commit")
     for name, expected in plan["config_inputs"].items():
         p = Path(name)
         if (digest(p.read_bytes()) if p.exists() else None) != expected:
@@ -342,15 +353,147 @@ def install(plan, args):
         return _install(plan, args)
 
 
-def _install_selected(plan, args):
+IDENTITY_KEYS = ("root", "client", "agent_dir", "client_config", "project")
+ALL_COMPONENTS = ["rea", "spec_kit", "reverse"]
+
+
+def normalized_identity(scope_value):
+    value = scope_value if isinstance(scope_value, dict) else {}
+    identity = {}
+    for key in IDENTITY_KEYS:
+        raw = value.get(key)
+        if key == "client":
+            identity[key] = str(raw) if raw else None
+        else:
+            identity[key] = str(abs_path(raw)) if raw else None
+    return identity
+
+
+def receipt_components(receipt):
+    recorded = (receipt.get("scope") or {}).get("components")
+    return list(recorded) if recorded else list(ALL_COMPONENTS)
+
+
+def config_rea_entry(client, config):
+    config = Path(config) if config else None
+    if config is None or not config.is_file():
+        return None
+    data = load_json(config, {}) if client in ("pi", "claude") else toml_parts(config.read_bytes())[0]
+    table = data.get("mcpServers" if client in ("pi", "claude") else "mcp_servers", {})
+    return table.get("rea")
+
+
+def adapter_identity_key():
+    """Content address for shipped host adapters: source edits always get a fresh install path."""
+    hasher = hashlib.sha256()
+    base = REPO / "adapters"
+    for item in sorted(base.rglob("*"), key=lambda p: p.relative_to(base).as_posix()):
+        if item.is_file():
+            hasher.update(item.relative_to(base).as_posix().encode() + b"\0" + item.read_bytes())
+    return digest(encode_json({"adapter": ADAPTER_VERSION, "sources": hasher.hexdigest()}))[:20]
+
+
+def ownership_key(path):
+    return os.path.normcase(str(Path(path).resolve()))
+
+
+def ownership_index(root, previous):
+    """Hashes recorded for files this installer wrote, including older transactions that left them unchanged."""
+    recorded = {}
+
+    def absorb(entries):
+        for entry in entries or []:
+            if isinstance(entry, dict) and entry.get("path") and entry.get("after_sha256"):
+                recorded.setdefault(ownership_key(entry["path"]), set()).add(str(entry["after_sha256"]))
+
+    absorb(previous.get("config_diff"))
+    for path, value in (previous.get("entry_hashes") or {}).items():
+        if path and value:
+            recorded.setdefault(ownership_key(path), set()).add(str(value))
+    candidates = [Path(root) / ".installer/transactions" / str(transaction) for transaction in (previous.get("history") or [])]
+    if previous.get("backup"):
+        candidates.append(Path(previous["backup"]))
+    for directory in candidates:
+        journal_path = directory / "journal.json" if directory.is_dir() else directory
+        if journal_path.is_file():
+            absorb(load_json(journal_path, {}).get("files"))
+    return recorded
+
+
+def owned_skill_hashes(previous, receipt_path):
+    """Exact bytes of the previous installer's Pi adapter, adapted with this receipt path."""
+    hashes = set()
+    adapter_root = (previous.get("adapter") or {}).get("root")
+    if not adapter_root:
+        return hashes
+    try:
+        text = (Path(adapter_root) / "skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return hashes
+    adapted = pi_adapt(text, str(receipt_path))
+    if adapted != text:
+        hashes.add(digest(adapted.encode()))
+    return hashes
+
+
+def owned_project_file(path, ownership):
+    """True only when an existing project file is installer-written and unchanged."""
+    path = Path(path)
+    if path.is_symlink():
+        return False
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    return digest(data) in ownership.get(ownership_key(path), ())
+
+
+def write_host_file(journal, ownership, path, data, *, client, legacy=(), owner_receipt=None, entries=None):
+    """Allow current==desired or bytes this installer recorded; reject user edits and other roots."""
+    path = Path(path)
+    current = path.read_bytes() if path.exists() else None
+    if current is not None and current != data:
+        allowed = set(ownership.get(ownership_key(path), ())) | set(legacy)
+        if digest(current) not in allowed:
+            other = re.search(r"([A-Za-z]:[\\/][^\s`\"']*?|/[^\s`\"']*?)[\\/]\.installer[\\/]receipt\.json", current.decode("utf-8", "replace"))
+            if other and owner_receipt is not None and abs_path(Path(other.group(1)) / ".installer/receipt.json") != abs_path(owner_receipt):
+                raise InstallError(f"{client} 宿主文件属于另一安装根 {other.group(1)}，拒绝覆盖: {path}；同一 agent/项目只能由一个安装根管理，请先 restore 并清理旧 root，或改用独立的 --agent-dir/--project")
+            raise InstallError(f"{client} 宿主文件已被用户修改，拒绝覆盖: {path}；请先备份/移走该文件，或 restore 后再更新")
+    journal.write(path, data)
+    if entries is not None:
+        entries[str(path.resolve())] = digest(data)
+
+
+def _install(plan, args):
     selected, components = plan["scope"], plan["components"]
+    selection = list(selected["components"])
     root = Path(selected["root"])
-    agent = Path(selected["agent_dir"]) if selected["agent_dir"] else None
-    project = Path(selected["project"]) if selected["project"] else None
+    agent = Path(selected["agent_dir"]) if selected.get("agent_dir") else None
+    project = Path(selected["project"]) if selected.get("project") else None
+    config = Path(selected["client_config"]) if selected.get("client_config") else None
+    client = selected["client"]
     receipt_path = root / ".installer/receipt.json"
     previous = load_json(receipt_path, {})
-    version_key = digest(encode_json({"components": {k: components[k] for k in selected["components"]}, "node": selected.get("node"), "adapter": ADAPTER_VERSION}))[:20]
+    installed = bool(previous.get("installed"))
+    previous_selection = receipt_components(previous) if installed else []
+    if installed:
+        if normalized_identity(previous.get("scope")) != normalized_identity(selected):
+            raise InstallError("安装根已属于另一客户端/agent/项目范围；请选新 root，或 restore 后安装")
+        if not set(previous_selection) <= set(selection):
+            raise InstallError("不能在同一 root 收缩或更换组件范围（已安装 " + ", ".join(previous_selection) + "；本次 " + ", ".join(selection) + "）；请 restore 到目标组件的事务，或用新 root 安装")
+        recorded_config = previous.get("managed_rea_config")
+        if recorded_config is not None and config_rea_entry(client, config) != recorded_config:
+            raise InstallError("活动 REA 配置含后续用户修改或已缺失；拒绝覆盖，请先审阅差异并保留/迁移自定义项")
+    identity = components.get("reverse", {}).get("local_identity") if "reverse" in selection else None
+    if identity and reverse_identity(identity["root"]) != identity:
+        raise InstallError("reverse 工作副本自 plan 后发生漂移；重新 plan")
+    if plan["missing_prerequisites"]:
+        raise InstallError("缺少依赖: " + ", ".join(plan["missing_prerequisites"]) + "；请自行准备后重新 plan")
+    version_key = digest(encode_json({"components": {key: components[key] for key in selection}, "node": selected.get("node"), "adapter": ADAPTER_VERSION}))[:20]
     version_dir = root / "versions" / version_key
+    if version_dir.exists() and not (version_dir / "complete.json").exists():
+        completed = sorted((root / "versions").glob(version_key + "-*/complete.json"))
+        version_dir = completed[-1].parent if completed else root / "versions" / (version_key + "-" + uuid.uuid4().hex[:8])
     paths = package_paths(version_dir)
     if selected.get("rea_prefix"):
         paths["rea_prefix"] = Path(selected["rea_prefix"])
@@ -358,9 +501,8 @@ def _install_selected(plan, args):
     if selected.get("spec_kit_tools"):
         paths["uv_tools"] = Path(selected["spec_kit_tools"])
         paths["uv_bin"] = Path(selected["spec_kit_bin"])
-    if "reverse" in selected["components"] and selected.get("reverse_root"):
+    if "reverse" in selection and selected.get("reverse_root"):
         paths["reverse"] = Path(selected["reverse_root"])
-    identity = components["reverse"].get("local_identity") if "reverse" in selected["components"] else None
     transaction = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:8]
     tx = root / ".installer/transactions" / transaction
     journal = Journal(tx)
@@ -369,26 +511,42 @@ def _install_selected(plan, args):
         stage = tx / "agent"
         stage.mkdir(parents=True)
         before_config = b""
-        config = Path(selected["client_config"]) if selected["client_config"] else None
-        if "rea" in selected["components"]:
-            before_config = config.read_bytes() if config.exists() else (b"{}\n" if selected["client"] in ("pi", "claude") else b"")
+        if config is not None:
+            before_config = config.read_bytes() if config.exists() else (b"{}\n" if client in ("pi", "claude") else b"")
             atomic(stage / config.name, before_config)
-        env = process_env(root, paths, stage, selected["client"], selected.get("node") or sys.executable)
-        node = None
-        npm = None
-        if "rea" in selected["components"]:
-            node, npm, node_version = node_and_npm(selected["node"], components["rea"]["node_engine"], root, env)
-            if not selected.get("rea_prefix"):
+        env = process_env(root, paths, stage, client, selected.get("node") or sys.executable)
+        node = npm = node_version = None
+        if "rea" in selection:
+            node, npm, node_version = node_and_npm(selected.get("node"), components["rea"]["node_engine"], root, env)
+        complete = load_json(version_dir / "complete.json", {})
+        if complete:
+            if "rea" in selection:
+                if not Path(paths["rea_package"]).is_dir():
+                    raise InstallError("既有 REA 原包缺失；拒绝复用，保留现场")
+                if tree_hash(paths["rea_package"]) != complete.get("rea_sha256"):
+                    raise InstallError("既有 REA 原包发生漂移；拒绝复用，保留现场")
+            if "spec_kit" in selection and complete.get("spec_kit_sha256"):
+                if not Path(paths["uv_tools"]).is_dir():
+                    raise InstallError("既有 Spec Kit 隔离工具环境缺失；拒绝复用")
+                if tree_hash(paths["uv_tools"]) != complete["spec_kit_sha256"]:
+                    raise InstallError("既有 Spec Kit 隔离工具环境发生漂移；拒绝复用")
+        else:
+            if version_dir.exists():
+                raise InstallError("存在未完成的版本目录；检查失败事务后移走该目录再重试")
+            version_dir.mkdir(parents=True)
+        if "rea" in selection:
+            if not complete and not selected.get("rea_prefix"):
                 run([node, npm, "install", "--prefix", paths["rea_prefix"], "--no-audit", "--no-fund", "--registry", "https://registry.npmjs.org", "rea-agents@" + components["rea"]["version"]], cwd=root, env=env)
             package = load_json(paths["rea_package"] / "package.json", {})
             if package.get("name") != "rea-agents" or package.get("version") != components["rea"]["version"]:
                 raise InstallError("npm 安装包身份与冻结计划不一致")
-            if not selected.get("rea_prefix"):
+            if not complete and not selected.get("rea_prefix"):
                 lock = load_json(paths["rea_prefix"] / "package-lock.json", {})
                 if lock.get("packages", {}).get("node_modules/rea-agents", {}).get("integrity") != components["rea"]["integrity"]:
                     raise InstallError("REA npm lock integrity 与冻结元数据不一致")
-        if "spec_kit" in selected["components"]:
-            if not selected.get("spec_kit_tools"):
+        specify = None
+        if "spec_kit" in selection:
+            if not complete and not selected.get("spec_kit_tools"):
                 run([selected["uv"], "--no-config", "tool", "install", "--default-index", "https://pypi.org/simple", "--python", sys.executable, "specify-cli==" + components["spec_kit"]["version"]], cwd=root, env=env)
             specify = paths["uv_bin"] / ("specify.exe" if os.name == "nt" else "specify")
             if not specify.is_file():
@@ -396,30 +554,34 @@ def _install_selected(plan, args):
             spec_version = object_output(run([specify, "version", "--json"], cwd=root, env=env), "specify version")
             if spec_version.get("cli_version") != components["spec_kit"]["version"]:
                 raise InstallError("specify version 的 cli_version 与计划不一致")
-        if "reverse" in selected["components"]:
-            if identity is None:
-                run([selected["git"], "clone", "--no-checkout", components["reverse"]["repository"], paths["reverse"]], cwd=root)
-                run([selected["git"], "-C", paths["reverse"], "checkout", "--detach", components["reverse"]["commit"]], cwd=root)
-            reverse = identity or reverse_identity(paths["reverse"])
+        reverse = None
+        if "reverse" in selection:
+            if identity is not None:
+                reverse = identity
+            else:
+                if not complete or not Path(paths["reverse"]).is_dir():
+                    run([selected["git"], "clone", "--no-checkout", components["reverse"]["repository"], paths["reverse"]], cwd=root, env=env)
+                    run([selected["git"], "-C", paths["reverse"], "checkout", "--detach", components["reverse"]["commit"]], cwd=root, env=env)
+                reverse = reverse_identity(paths["reverse"])
             if reverse["commit"] != components["reverse"]["commit"]:
                 raise InstallError("reverse checkout commit 不符")
         desired_config = None
         managed_rea = None
-        if "rea" in selected["components"]:
-            if selected["client"] == "claude":
+        if "rea" in selection:
+            if client == "claude":
                 desired = json.loads(before_config or b"{}")
                 managed_rea = {"command": str(node), "args": [str(paths["rea_package"] / "scripts/rea.mjs"), "mcp"]}
                 desired.setdefault("mcpServers", {})["rea"] = managed_rea
                 desired_config = encode_json(desired)
             else:
                 rea = [node, paths["rea_package"] / "scripts/rea.mjs"]
-                setup = rea + ["setup", "--client", selected["client"], "--skill=false"]
+                setup = rea + ["setup", "--client", client, "--skill=false"]
                 dryrun = object_output(run(setup + ["--dry-run", "--json"], cwd=root, env=env), "REA setup dry-run")
                 atomic(tx / "setup-dryrun.json", encode_json(dryrun))
                 applied = object_output(run(setup + ["--yes", "--json"], cwd=root, env=env), "REA setup yes")
                 atomic(tx / "setup-result.json", encode_json(applied))
                 staged_config = (stage / config.name).read_bytes()
-                if selected["client"] == "pi":
+                if client == "pi":
                     original, modified = json.loads(before_config), json.loads(staged_config)
                     managed_rea = copy.deepcopy(modified.get("mcpServers", {}).get("rea"))
                     if not managed_rea:
@@ -435,197 +597,27 @@ def _install_selected(plan, args):
                 else:
                     desired_config = codex_merge(before_config, staged_config)
                     parsed, _, _ = toml_parts(desired_config)
-                    managed_rea = parsed["mcp_servers"]["rea"]
+                    managed_rea = parsed.get("mcp_servers", {}).get("rea")
+                    if not managed_rea:
+                        raise InstallError("官方 setup 未生成 mcp_servers.rea")
             if abs_path(managed_rea.get("command", ".")) != abs_path(node) or str(paths["rea_package"] / "scripts/rea.mjs") not in managed_rea.get("args", []):
                 raise InstallError("官方 setup 没有登记本事务的绝对 Node/REA 入口")
             if any(key in managed_rea for key in ("disabled_tools", "enabled_tools", "toolExposure")):
                 raise InstallError("REA 注册含工具过滤；本组合要求完整 tools")
-        generated_files = []
-        if "spec_kit" in selected["components"]:
-            specify = paths["uv_bin"] / ("specify.exe" if os.name == "nt" else "specify")
-            generated = tx / "project"
-            if project.exists() and any(project.iterdir()):
-                raise InstallError("首次 init 的成果目录必须不存在或为空；不会覆盖既有项目")
-            run(specify_init_args(specify, generated, selected["client"]), cwd=root, env=env)
-            if not (generated / ".specify").is_dir():
-                raise InstallError("specify init 未生成 .specify")
-            generated_files = [p for p in generated.rglob("*") if p.is_file()]
-        validate_plan(plan)
-        adapter = root / "adapters" / version_key / selected["client"] if selected["client"] != "none" else None
-        if "reverse" in selected["components"] and selected["client"] == "pi":
-            for source in (REPO / "adapters/pi").rglob("*"):
-                if source.is_file(): journal.write(adapter / source.relative_to(REPO / "adapters/pi"), source.read_bytes())
-            journal.write(adapter / "receipt-location.json", encode_json({"receipt": str(receipt_path)}))
-            global_skill = pi_global_skill_text(receipt_path).encode()
-            global_target = agent / "skills/reverse-workflow/SKILL.md"
-            if global_target.exists() and global_target.read_bytes() != global_skill:
-                raise InstallError(f"Pi 全局 skill 已被用户修改，拒绝覆盖: {global_target}")
-            journal.write(global_target, global_skill)
-            settings_path = agent / "settings.json"
-            settings = load_json(settings_path, {})
-            packages = settings.setdefault("packages", [])
-            packages[:] = [p for p in packages if p != str(previous.get("adapter", {}).get("root"))]
-            if str(adapter) not in packages: packages.append(str(adapter))
-            journal.write(settings_path, encode_json(settings))
-        elif "reverse" in selected["components"] and selected["client"] == "codex":
-            skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
-            journal.write(project / ".agents/skills/reverse-workflow/SKILL.md", skill.encode())
-        elif "reverse" in selected["components"] and selected["client"] == "claude":
-            skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
-            target = agent / "skills/reverse-workflow/SKILL.md"
-            if target.exists() and target.read_bytes() != skill.encode():
-                raise InstallError("Claude 全局 skill 已被用户修改，拒绝覆盖")
-            journal.write(target, skill.encode())
-        if desired_config is not None:
-            journal.write(config, desired_config, "json" if selected["client"] in ("pi", "claude") else "toml")
-        for source in generated_files:
-            journal.write(project / source.relative_to(generated), source.read_bytes())
-        hashes = {}
-        if "rea" in selected["components"]: hashes["rea_sha256"] = tree_hash(paths["rea_package"])
-        if "spec_kit" in selected["components"]: hashes["spec_kit_sha256"] = tree_hash(paths["uv_tools"])
-        if "reverse" in selected["components"]: hashes["reverse_sha256"] = tree_hash(paths["reverse"], exclude_git=True)
-        receipt_paths = {k: str(paths[k]) for k in ("rea_prefix", "rea_package", "uv_tools", "uv_bin", "reverse") if k in paths and ((k.startswith("rea") and "rea" in selected["components"]) or (k.startswith("uv") and "spec_kit" in selected["components"]) or (k == "reverse" and "reverse" in selected["components"]))}
-        runtime = {"node": node, "node_version": node_version if node else None, "specify": str(specify) if "spec_kit" in selected["components"] else None}
-        receipt = {"schema_version": 1, "installed": True, "meaning": "selected official components installed; host acceptance is separate", "adapter_version": ADAPTER_VERSION, "transaction": transaction, "scope": {k: selected[k] for k in ("components", "root", "client", "agent_dir", "client_config", "project")}, "components": components, "paths": receipt_paths, "runtime": runtime, "reverse": reverse if "reverse" in selected["components"] else None, "adapter": {"root": str(adapter) if adapter else None}, "hashes": hashes, "checks": {"selected_components": "passed", "scoped_config": "passed"}, "validation": limits(), "config_diff": [{"path": e["path"], "before_sha256": e["before_sha256"], "after_sha256": e["after_sha256"]} for e in journal.data["files"]], "backup": str(journal.path), "managed_rea_config": managed_rea}
-        journal.write(receipt_path, encode_json(receipt))
-        journal.finish("committed")
-        return receipt
-    except Exception as exc:
-        journal.data["failure"] = {"type": type(exc).__name__, "message": str(exc)}
-        journal.data["rollback"] = restore_journal(journal.path, apply=True)
-        journal.finish("failed")
-        raise
-
-
-def _install(plan, args):
-    if set(plan["scope"]["components"]) != {"rea", "spec_kit", "reverse"}:
-        return _install_selected(plan, args)
-    selected, components = plan["scope"], plan["components"]
-    root, agent, project = map(Path, (selected["root"], selected["agent_dir"], selected["project"]))
-    receipt_path = root / ".installer/receipt.json"
-    previous = load_json(receipt_path, {})
-    if previous.get("installed") and previous["scope"] != {k: selected[k] for k in ("root", "client", "agent_dir", "client_config", "project")}:
-        raise InstallError("安装根已属于另一配置/项目范围；请选新 root，或 restore 后安装")
-    if previous.get("installed") and previous.get("managed_rea_config") is not None:
-        current_bytes = Path(selected["client_config"]).read_bytes()
-        current_config = json.loads(current_bytes) if selected["client"] in ("pi", "claude") else toml_parts(current_bytes)[0]
-        current_entry = current_config.get("mcpServers" if selected["client"] in ("pi", "claude") else "mcp_servers", {}).get("rea")
-        if current_entry != previous["managed_rea_config"]:
-            raise InstallError("活动 REA 配置含后续用户修改；拒绝覆盖，请先审阅差异并保留/迁移自定义项")
-    identity = components["reverse"].get("local_identity")
-    if identity and reverse_identity(identity["root"]) != identity:
-        raise InstallError("reverse 工作副本自 plan 后发生漂移；重新 plan")
-    if plan["missing_prerequisites"]:
-        raise InstallError("缺少依赖: " + ", ".join(plan["missing_prerequisites"]) + "；请自行准备后重新 plan")
-    version_key = digest(encode_json({"components": components, "node": selected["node"], "adapter": ADAPTER_VERSION}))[:20]
-    version_dir = root / "versions" / version_key
-    if version_dir.exists() and not (version_dir / "complete.json").exists():
-        completed_candidates = sorted((root / "versions").glob(version_key + "-*/complete.json"))
-        version_dir = completed_candidates[-1].parent if completed_candidates else root / "versions" / (version_key + "-" + uuid.uuid4().hex[:8])
-    paths = package_paths(version_dir)
-    if selected.get("rea_prefix"):
-        paths["rea_prefix"] = Path(selected["rea_prefix"])
-        paths["rea_package"] = paths["rea_prefix"] / "node_modules/rea-agents"
-    if selected.get("spec_kit_tools"):
-        paths["uv_tools"] = Path(selected["spec_kit_tools"])
-        paths["uv_bin"] = Path(selected["spec_kit_bin"])
-    transaction = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:8]
-    tx = root / ".installer/transactions" / transaction
-    journal = Journal(tx)
-    atomic(tx / "plan.json", encode_json(plan))
-    try:
-        stage = tx / "agent"
-        stage.mkdir()
-        config = Path(selected["client_config"])
-        before_config = config.read_bytes() if config.exists() else (b"{}\n" if selected["client"] in ("pi", "claude") else b"")
-        atomic(stage / config.name, before_config)
-        env = process_env(root, paths, stage, selected["client"], selected["node"])
-        node, npm, node_version = node_and_npm(selected["node"], components["rea"]["node_engine"], root, env)
-        complete = load_json(version_dir / "complete.json", {})
-        if complete:
-            if tree_hash(paths["rea_package"]) != complete["rea_sha256"]:
-                raise InstallError("既有 REA 原包发生漂移；拒绝复用，保留现场")
-        else:
-            if version_dir.exists():
-                raise InstallError("存在未完成的版本目录；检查失败事务后移走该目录再重试")
-            version_dir.mkdir(parents=True)
-            if not selected.get("rea_prefix"):
-                run([node, npm, "install", "--prefix", paths["rea_prefix"], "--no-audit", "--no-fund", "--registry", "https://registry.npmjs.org", "rea-agents@" + components["rea"]["version"]], cwd=root, env=env)
-            package = load_json(paths["rea_package"] / "package.json", {})
-            if package.get("name") != "rea-agents" or package.get("version") != components["rea"]["version"]:
-                raise InstallError("npm 安装包身份与冻结计划不一致")
-            lock = load_json(paths["rea_prefix"] / "package-lock.json", {})
-            actual_integrity = lock.get("packages", {}).get("node_modules/rea-agents", {}).get("integrity")
-            if actual_integrity != components["rea"]["integrity"]:
-                raise InstallError("REA npm lock integrity 与冻结元数据不一致")
-            if not selected.get("spec_kit_tools"):
-                run([selected["uv"], "--no-config", "tool", "install", "--default-index", "https://pypi.org/simple", "--python", sys.executable, "specify-cli==" + components["spec_kit"]["version"]], cwd=root, env=env)
-            if identity is None:
-                run([selected["git"], "clone", "--no-checkout", components["reverse"]["repository"], paths["reverse"]], cwd=root, env=env)
-                run([selected["git"], "-C", paths["reverse"], "checkout", "--detach", components["reverse"]["commit"]], cwd=root, env=env)
-            complete = {"rea_sha256": tree_hash(paths["rea_package"])}
-        reverse = identity or reverse_identity(paths["reverse"])
-        if reverse["commit"] != components["reverse"]["commit"]:
-            raise InstallError("reverse checkout commit 不符")
-        specify = paths["uv_bin"] / ("specify.exe" if os.name == "nt" else "specify")
-        if not specify.is_file():
-            raise InstallError("uv 工具目录缺少 specify 可执行文件")
-        spec_version = object_output(run([specify, "version", "--json"], cwd=root, env=env), "specify version")
-        if spec_version.get("cli_version") != components["spec_kit"]["version"]:
-            raise InstallError("specify version 的 cli_version 与计划不一致")
-        if selected["client"] == "claude":
-            rea_entry = {
-                "command": str(node),
-                "args": [str(paths["rea_package"] / "scripts/rea.mjs"), "mcp"],
-            }
-            desired = json.loads(before_config or b"{}")
-            desired.setdefault("mcpServers", {})["rea"] = rea_entry
-            desired_config = encode_json(desired)
-        else:
-            rea = [node, paths["rea_package"] / "scripts/rea.mjs"]
-            setup = rea + ["setup", "--client", selected["client"], "--skill=false"]
-            dryrun = object_output(run(setup + ["--dry-run", "--json"], cwd=root, env=env), "REA setup dry-run")
-            atomic(tx / "setup-dryrun.json", encode_json(dryrun))
-            applied = object_output(run(setup + ["--yes", "--json"], cwd=root, env=env), "REA setup yes")
-            atomic(tx / "setup-result.json", encode_json(applied))
-            staged_config = (stage / config.name).read_bytes()
-            if selected["client"] == "pi":
-                original, modified = json.loads(before_config), json.loads(staged_config)
-                rea_entry = copy.deepcopy(modified.get("mcpServers", {}).get("rea"))
-                if not rea_entry:
-                    raise InstallError("官方 setup 未生成 mcpServers.rea")
-                for value in (original, modified):
-                    value.setdefault("mcpServers", {}).pop("rea", None)
-                    if not value["mcpServers"]:
-                        value.pop("mcpServers")
-                if original != modified:
-                    raise InstallError("官方 setup 修改了非 REA 字段；拒绝合并")
-                desired = json.loads(before_config)
-                desired.setdefault("mcpServers", {})["rea"] = rea_entry
-                desired_config = encode_json(desired)
-            else:
-                desired_config = codex_merge(before_config, staged_config)
-                parsed, _, _ = toml_parts(desired_config)
-                if not parsed.get("mcp_servers", {}).get("rea"):
-                    raise InstallError("官方 setup 未生成 mcp_servers.rea")
-
-        # Always check direct launcher identity. Do not restrict tools or exposure.
-        parsed_entry = (json.loads(desired_config)["mcpServers"]["rea"] if selected["client"] in ("pi", "claude") else parsed["mcp_servers"]["rea"])
-        if abs_path(parsed_entry.get("command", ".")) != abs_path(node) or str(paths["rea_package"] / "scripts/rea.mjs") not in parsed_entry.get("args", []):
-            raise InstallError("官方 setup 没有登记本事务的绝对 Node/REA 入口")
-        if any(key in parsed_entry for key in ("disabled_tools", "enabled_tools", "toolExposure")):
-            raise InstallError("REA 注册含工具过滤；本组合要求完整 tools")
         generated = tx / "project"
         generated_files = []
-        if not previous.get("installed"):
-            if project.exists() and any(project.iterdir()):
-                raise InstallError("首次 init 的成果目录必须不存在或为空；不会覆盖既有项目。请选择独立新项目")
-            run(specify_init_args(specify, generated, selected["client"]), cwd=root, env=env)
+        ownership = ownership_index(root, previous)
+        init_project = "spec_kit" in selection and "spec_kit" not in previous_selection
+        if init_project:
+            foreign = [] if not project.exists() else [p for p in project.rglob("*") if (p.is_file() or p.is_symlink()) and not owned_project_file(p, ownership)]
+            if foreign:
+                raise InstallError("首次 init 的成果目录必须不存在或为空；不会覆盖既有项目。请选择独立新项目（发现非本安装根文件: " + str(foreign[0]) + "）")
+            run(specify_init_args(specify, generated, client), cwd=root, env=env)
             if not (generated / ".specify").is_dir():
                 raise InstallError("specify init 未生成 .specify")
-            native = generated / (".pi/prompts" if selected["client"] == "pi" else (".claude" if selected["client"] == "claude" else ".agents/skills"))
+            native = generated / (".pi/prompts" if client == "pi" else (".claude" if client == "claude" else ".agents/skills"))
             if not native.is_dir() or not any(native.rglob("*.md")):
-                raise InstallError(f"Spec Kit 未生成已支持的 {selected['client']} 原生资源；保留暂存结果，拒绝切换")
+                raise InstallError(f"Spec Kit 未生成已支持的 {client} 原生资源；保留暂存结果，拒绝切换")
             generated_files = [p for p in generated.rglob("*") if p.is_file()]
             for item in generated.rglob("*"):
                 if item.is_symlink():
@@ -633,87 +625,138 @@ def _install(plan, args):
             staged_path_strings = (str(generated).encode(), generated.as_posix().encode())
             if any(any(marker in p.read_bytes() for marker in staged_path_strings) for p in generated_files):
                 raise InstallError("Spec Kit 生成文件绑定暂存绝对路径；当前迁移器无法保证可移植，拒绝切换")
-        # Recheck all inputs before the first scoped configuration mutation.
+        # Recheck every frozen input before the first scoped mutation.
         validate_plan(plan)
-        adapter = root / "adapters" / version_key / selected["client"]
-        if selected["client"] == "pi":
-            for source in (REPO / "adapters/pi").rglob("*"):
-                if source.is_file():
-                    target = adapter / source.relative_to(REPO / "adapters/pi")
-                    if target.exists() and target.read_bytes() != source.read_bytes():
-                        raise InstallError(f"已有适配器含后续修改，拒绝覆盖: {target}")
-                    journal.write(target, source.read_bytes())
-            journal.write(adapter / "receipt-location.json", encode_json({"receipt": str(receipt_path)}))
-            global_skill = pi_global_skill_text(receipt_path).encode()
-            global_target = agent / "skills/reverse-workflow/SKILL.md"
-            if global_target.exists() and global_target.read_bytes() != global_skill:
-                raise InstallError(f"Pi 全局 skill 已被用户修改，拒绝覆盖: {global_target}")
-            journal.write(global_target, global_skill)
+        resources = {"rea_manual": bool(plan["resource_selection"]["rea_manual"]), "exclude_rea_skill": [str(abs_path(p)) for p in plan["resource_selection"]["exclude_rea_skill"]], "rea_manual_skill": None}
+        adapter_key = adapter_identity_key() if client == "pi" else None
+        adapter = None
+        entry_hashes = {}
+        if client == "pi" and ("reverse" in selection or resources["rea_manual"]):
+            adapter = root / "adapters" / adapter_key / "pi"
+            if "reverse" in selection:
+                legacy_skill = owned_skill_hashes(previous, receipt_path)
+                for source in (REPO / "adapters/pi").rglob("*"):
+                    if source.is_file():
+                        target = adapter / source.relative_to(REPO / "adapters/pi")
+                        data = source.read_bytes()
+                        entry_hashes[str(target.resolve())] = digest(data)
+                        journal.write(target, data)
+            else:
+                target = adapter / "manual/rea-manual/SKILL.md"
+                data = (REPO / "adapters/pi/manual/rea-manual/SKILL.md").read_bytes()
+                entry_hashes[str(target.resolve())] = digest(data)
+                journal.write(target, data)
+            location = encode_json({"receipt": str(receipt_path)})
+            entry_hashes[str((adapter / "receipt-location.json").resolve())] = digest(location)
+            journal.write(adapter / "receipt-location.json", location)
+            if "reverse" in selection:
+                write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", pi_global_skill_text(receipt_path).encode(), client="Pi", legacy=legacy_skill, owner_receipt=receipt_path, entries=entry_hashes)
+        elif "reverse" in selection and client == "codex":
+            skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
+            write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
+            write_host_file(journal, ownership, project / ".agents/skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
+        elif "reverse" in selection and client == "claude":
+            skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
+            write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
+            entry = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
+            write_host_file(journal, ownership, project / "CLAUDE.md", entry, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
+        if client == "pi" and agent is not None and (adapter is not None or resources["exclude_rea_skill"]):
             settings_path = agent / "settings.json"
             settings = load_json(settings_path, {})
-            packages = settings.setdefault("packages", [])
+            before_settings = copy.deepcopy(settings)
+            old_adapter = (previous.get("adapter") or {}).get("root")
+            wanted = str(adapter) if adapter is not None and "reverse" in selection else None
+            packages = settings.get("packages", [])
             if not isinstance(packages, list):
                 raise InstallError("Pi settings.packages 必须是数组")
-            old_adapter = previous.get("adapter", {}).get("root")
-            packages[:] = [p for p in packages if p != old_adapter and not (isinstance(p, dict) and p.get("source") == old_adapter)]
-            if str(adapter) not in packages:
-                packages.append(str(adapter))
-            skills = settings.setdefault("skills", [])
+            packages = [p for p in packages if not (old_adapter and old_adapter != wanted and (p == old_adapter or (isinstance(p, dict) and p.get("source") == old_adapter)))]
+            if wanted and not any(p == wanted or (isinstance(p, dict) and p.get("source") == wanted) for p in packages):
+                packages.append(wanted)
+            skills = settings.get("skills", [])
             if not isinstance(skills, list):
                 raise InstallError("Pi settings.skills 必须是数组")
-            for resource in plan["resource_selection"]["exclude_rea_skill"]:
+            skills = list(skills)
+            for resource in resources["exclude_rea_skill"]:
                 exclusion = "-" + str(abs_path(resource))
                 if exclusion not in skills:
                     skills.append(exclusion)
-            if plan["resource_selection"]["rea_manual"]:
+            if resources["rea_manual"]:
                 manual = str(adapter / "manual/rea-manual/SKILL.md")
+                resources["rea_manual_skill"] = manual
                 if manual not in skills:
                     skills.append(manual)
-            journal.write(settings_path, encode_json(settings), "json")
-        elif "reverse" in selected["components"] and selected["client"] == "codex":
-            skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path))
-            global_target = agent / "skills/reverse-workflow/SKILL.md"
-            if global_target.exists() and global_target.read_bytes() != skill.encode():
-                raise InstallError("Codex 全局 skill 已被用户修改，拒绝覆盖")
-            journal.write(global_target, skill.encode())
-            project_target = project / ".agents/skills/reverse-workflow/SKILL.md"
-            if project_target.exists() and project_target.read_bytes() != skill.encode():
-                raise InstallError("Codex 项目入口已被用户修改，拒绝覆盖")
-            journal.write(project_target, skill.encode())
-        else:
-            global_skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
-            global_skill = global_skill.replace("{{RECEIPT}}", str(receipt_path))
-            global_target = agent / "skills/reverse-workflow/SKILL.md"
-            if global_target.exists() and global_target.read_bytes() != global_skill.encode():
-                raise InstallError("Claude 全局 skill 已被用户修改，拒绝覆盖")
-            journal.write(global_target, global_skill.encode())
-            project_skill = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8")
-            project_skill = project_skill.replace("{{RECEIPT}}", str(receipt_path))
-            project_target = project / "CLAUDE.md"
-            if project_target.exists() and project_target.read_bytes() != project_skill.encode():
-                raise InstallError("Claude 项目入口已被用户修改，拒绝覆盖")
-            journal.write(project_target, project_skill.encode())
-        # The settings merge above is ours; independently recheck the MCP input.
-        observed = digest(config.read_bytes()) if config.exists() else None
-        if observed != plan["config_inputs"][str(config)]:
-            raise InstallError("MCP 配置在激活前发生漂移；事务回退")
-        journal.write(config, desired_config, "json" if selected["client"] in ("pi", "claude") else "toml")
+            if packages:
+                settings["packages"] = packages
+            else:
+                settings.pop("packages", None)
+            if skills:
+                settings["skills"] = skills
+            else:
+                settings.pop("skills", None)
+            if settings != before_settings:
+                journal.write(settings_path, encode_json(settings), "json")
+        if desired_config is not None:
+            observed = digest(config.read_bytes()) if config.exists() else None
+            if observed != plan["config_inputs"][str(config)]:
+                raise InstallError("MCP 配置在激活前发生漂移；事务回退")
+            journal.write(config, desired_config, "json" if client in ("pi", "claude") else "toml")
         for source in generated_files:
             target = project / source.relative_to(generated)
             if target.exists() and target.read_bytes() != source.read_bytes():
                 raise InstallError(f"项目生成文件冲突: {target}")
             journal.write(target, source.read_bytes())
-        final_rea_hash = tree_hash(paths["rea_package"])
-        if final_rea_hash != complete["rea_sha256"]:
-            raise InstallError("官方命令运行期间 REA 原包发生改变；拒绝记录为原包成功")
-        complete["specify_sha256"] = digest(specify.read_bytes())
-        spec_tree_hash = tree_hash(paths["uv_tools"])
-        if complete.get("spec_kit_sha256") and complete["spec_kit_sha256"] != spec_tree_hash:
-            raise InstallError("Spec Kit 隔离工具环境发生漂移；拒绝复用")
-        complete["spec_kit_sha256"] = spec_tree_hash
+        if "rea" in selection:
+            final_rea_hash = tree_hash(paths["rea_package"])
+            if complete.get("rea_sha256") and final_rea_hash != complete["rea_sha256"]:
+                raise InstallError("官方命令运行期间 REA 原包发生改变；拒绝记录为原包成功")
+            complete["rea_sha256"] = final_rea_hash
+        if "spec_kit" in selection:
+            complete["specify_sha256"] = digest(specify.read_bytes())
+            spec_tree_hash = tree_hash(paths["uv_tools"])
+            if complete.get("spec_kit_sha256") and complete["spec_kit_sha256"] != spec_tree_hash:
+                raise InstallError("Spec Kit 隔离工具环境发生漂移；拒绝复用")
+            complete["spec_kit_sha256"] = spec_tree_hash
+        if "reverse" in selection:
+            complete["reverse_sha256"] = tree_hash(paths["reverse"], exclude_git=True)
         atomic(version_dir / "complete.json", encode_json(complete))
-        receipt = {"schema_version": 1, "installed": True, "meaning": "official packages and scoped configuration installed; host acceptance is separate", "adapter_version": ADAPTER_VERSION, "client_version": "unverified; host CLI not executed", "transaction": transaction, "history": previous.get("history", []) + [transaction], "previous_transaction": previous.get("transaction"), "scope": {k: selected[k] for k in ("root", "client", "agent_dir", "client_config", "project")}, "managed_rea_config": parsed_entry, "components": components, "paths": {k: str(v) for k, v in paths.items()}, "runtime": {"node": node, "node_version": node_version, "node_sha256": digest(Path(node).read_bytes()), "specify": str(specify)}, "reverse": reverse, "adapter": {"root": str(adapter), "codex_plugin_reference": reverse["codex_plugin"]}, "hashes": complete, "checks": {"package_identity": "passed", "official_setup_staged": "passed", "scoped_config": "passed", "specify_version": "passed", "project_init": "preserved-existing" if previous.get("installed") else "passed"}, "validation": limits(), "config_diff": [{"path": e["path"], "before_sha256": e["before_sha256"], "after_sha256": e["after_sha256"]} for e in journal.data["files"]], "backup": str(journal.path)}
-        # Receipt itself participates in rollback, so a failed commit cannot lie.
+        receipt_paths = {}
+        if "rea" in selection:
+            receipt_paths.update({"rea_prefix": str(paths["rea_prefix"]), "rea_package": str(paths["rea_package"])})
+        if "spec_kit" in selection:
+            receipt_paths.update({"uv_tools": str(paths["uv_tools"]), "uv_bin": str(paths["uv_bin"])})
+        if "reverse" in selection:
+            receipt_paths["reverse"] = str(paths["reverse"])
+        checks = {"selected_components": "passed", "scoped_config": "passed"}
+        if "rea" in selection:
+            checks["package_identity"] = "passed"
+            checks["official_setup_staged"] = "passed"
+        if "spec_kit" in selection:
+            checks["specify_version"] = "passed"
+        checks["project_init"] = "passed" if init_project else "preserved-existing"
+        receipt = {
+            "schema_version": 1,
+            "installed": True,
+            "meaning": "official packages and scoped configuration installed; host acceptance is separate",
+            "adapter_version": ADAPTER_VERSION,
+            "client_version": "unverified; host CLI not executed",
+            "transaction": transaction,
+            "history": list(previous.get("history") or []) + [transaction],
+            "previous_transaction": previous.get("transaction"),
+            "scope": {"components": selection, **{key: selected[key] for key in IDENTITY_KEYS}},
+            "components": components,
+            "paths": receipt_paths,
+            "runtime": {"node": node, "node_version": node_version, "node_sha256": digest(Path(node).read_bytes()) if node else None, "specify": str(specify) if specify else None},
+            "reverse": reverse,
+            "adapter": {"root": str(adapter) if adapter else None, "key": adapter_key, "codex_plugin_reference": (reverse or {}).get("codex_plugin")},
+            "resource_selection": resources,
+            "entry_hashes": entry_hashes,
+            "managed_rea_config": managed_rea,
+            "hashes": complete,
+            "checks": checks,
+            "validation": limits(),
+            "config_diff": [{"path": e["path"], "before_sha256": e["before_sha256"], "after_sha256": e["after_sha256"]} for e in journal.data["files"]],
+            "backup": str(journal.path),
+        }
         journal.write(receipt_path, encode_json(receipt), "file")
         journal.finish("committed")
         return receipt
@@ -724,107 +767,102 @@ def _install(plan, args):
         raise
 
 
-def verify_selected(receipt):
+def verify(root):
+    root = Path(root)
+    receipt = load_json(root / ".installer/receipt.json", {})
+    if not receipt.get("installed"):
+        raise InstallError("没有活动 installed receipt；先 install --apply，或检查失败事务")
     failures = []
-    selected = set(receipt["scope"].get("components", []))
+    selection = set(receipt_components(receipt))
     paths = receipt.get("paths", {})
     hashes = receipt.get("hashes", {})
     scope = receipt.get("scope", {})
+    runtime = receipt.get("runtime") or {}
     client = scope.get("client", "none")
     agent = Path(scope["agent_dir"]) if scope.get("agent_dir") else None
     project = Path(scope["project"]) if scope.get("project") else None
-    if "rea" in selected:
-        if tree_hash(paths["rea_package"]) != hashes.get("rea_sha256"):
+    if "rea" in selection:
+        if paths.get("rea_package") and tree_hash(paths["rea_package"]) != hashes.get("rea_sha256"):
             failures.append("REA original package identity drift")
+        if runtime.get("node") and runtime.get("node_sha256"):
+            try:
+                if digest(Path(runtime["node"]).read_bytes()) != runtime["node_sha256"]:
+                    failures.append("Node runtime identity drift")
+            except OSError:
+                failures.append("Node runtime missing")
         if not receipt.get("managed_rea_config"):
             failures.append("REA managed configuration missing")
-        config_path = Path(scope["client_config"]) if scope.get("client_config") else None
-        try:
-            if config_path is None or not config_path.is_file():
-                failures.append("REA host configuration missing")
-            else:
-                data = load_json(config_path, {}) if client in ("pi", "claude") else toml_parts(config_path.read_bytes())[0]
-                table = data.get("mcpServers" if client in ("pi", "claude") else "mcp_servers", {})
-                entry = table.get("rea", {})
-                expected = receipt["managed_rea_config"]
-                if entry != expected:
-                    failures.append("REA managed configuration drift")
-        except (InstallError, OSError, ValueError) as exc:
-            failures.append("REA host configuration unreadable: " + str(exc))
-    if "spec_kit" in selected:
-        if tree_hash(paths["uv_tools"]) != hashes.get("spec_kit_sha256"):
+        else:
+            config_path = Path(scope["client_config"]) if scope.get("client_config") else None
+            try:
+                if config_path is None or not config_path.is_file():
+                    failures.append("REA host configuration missing")
+                else:
+                    entry = config_rea_entry(client, config_path) or {}
+                    if entry.get("command") != runtime.get("node") or str(Path(paths["rea_package"]) / "scripts/rea.mjs") not in entry.get("args", []):
+                        failures.append("REA MCP launcher drift")
+                    if entry != receipt["managed_rea_config"]:
+                        failures.append("REA managed configuration drift")
+            except (InstallError, OSError, ValueError) as exc:
+                failures.append("REA host configuration unreadable: " + str(exc))
+    if "spec_kit" in selection:
+        if paths.get("uv_tools") and tree_hash(paths["uv_tools"]) != hashes.get("spec_kit_sha256"):
             failures.append("Spec Kit environment identity drift")
-        if not Path(receipt["runtime"]["specify"]).is_file():
+        specify = runtime.get("specify")
+        if not specify or not Path(specify).is_file():
             failures.append("specify executable missing")
-    if "reverse" in selected:
-        if tree_hash(paths["reverse"], exclude_git=True) != hashes.get("reverse_sha256"):
-            failures.append("reverse working copy identity drift")
-        reverse = receipt.get("reverse")
-        if not reverse or reverse_identity(reverse["root"]) != reverse:
+        elif hashes.get("specify_sha256") and digest(Path(specify).read_bytes()) != hashes["specify_sha256"]:
+            failures.append("specify executable identity drift")
+    if "reverse" in selection:
+        stored_reverse = receipt.get("reverse")
+        if not stored_reverse or reverse_identity(stored_reverse["root"]) != stored_reverse:
             failures.append("reverse working copy drift")
-        if client == "pi" and agent:
-            settings = load_json(agent / "settings.json", {})
-            if receipt.get("adapter", {}).get("root") not in settings.get("packages", []):
+        elif hashes.get("reverse_sha256") and hashes["reverse_sha256"] != stored_reverse.get("working_tree_sha256"):
+            failures.append("reverse working copy identity drift")
+    resources = receipt.get("resource_selection") or {}
+    if client == "pi":
+        settings = load_json(agent / "settings.json", {}) if agent else {}
+        packages = settings.get("packages", [])
+        packages = packages if isinstance(packages, list) else []
+        adapter_root = (receipt.get("adapter") or {}).get("root")
+        if adapter_root and "reverse" in selection:
+            if not any(p == adapter_root or (isinstance(p, dict) and p.get("source") == adapter_root) for p in packages):
                 failures.append("Pi package registration missing or changed")
             global_skill = agent / "skills/reverse-workflow/SKILL.md"
-            if not global_skill.is_file() or str(Path(scope["root"]) / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
+            if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
                 failures.append("Pi global skill missing or receipt path drift")
-        elif client == "codex" and agent:
-            if not (agent / "skills/reverse-workflow/SKILL.md").is_file():
-                failures.append("Codex global skill missing")
-            if not project or not (project / ".agents/skills/reverse-workflow/SKILL.md").is_file():
-                failures.append("Codex project entry missing")
-        elif client == "claude" and agent:
-            if not (agent / "skills/reverse-workflow/SKILL.md").is_file():
-                failures.append("Claude global skill missing")
-            if not project or not (project / "CLAUDE.md").is_file():
-                failures.append("Claude project entry missing")
-    return {"ok": not failures, "failures": failures, "transaction": receipt["transaction"], "validation": receipt.get("validation", limits()), "note": "verify 只核选定组件身份和实际配置；不会启动宿主/MCP或声称真实任务通过"}
-
-
-def verify(root):
-    receipt = load_json(Path(root) / ".installer/receipt.json", {})
-    if not receipt.get("installed"):
-        raise InstallError("没有活动 installed receipt；先 install --apply，或检查失败事务")
-    selected = set(receipt.get("scope", {}).get("components", ["rea", "spec_kit", "reverse"]))
-    if selected != {"rea", "spec_kit", "reverse"}:
-        return verify_selected(receipt)
-    failures = []
-    for label, observed, expected in [
-        ("REA original package", tree_hash(receipt["paths"]["rea_package"]), receipt["hashes"]["rea_sha256"]),
-        ("Spec Kit environment", tree_hash(receipt["paths"]["uv_tools"]), receipt["hashes"]["spec_kit_sha256"]),
-        ("Node runtime", digest(Path(receipt["runtime"]["node"]).read_bytes()), receipt["runtime"]["node_sha256"]),
-        ("specify executable", digest(Path(receipt["runtime"]["specify"]).read_bytes()), receipt["hashes"]["specify_sha256"]),
-    ]:
-        if observed != expected:
-            failures.append(label + " identity drift")
-    if reverse_identity(receipt["reverse"]["root"]) != receipt["reverse"]:
-        failures.append("reverse working copy drift")
-    config = Path(receipt["scope"]["client_config"])
-    client = receipt["scope"]["client"]
-    data = load_json(config, {}) if client in ("pi", "claude") else toml_parts(config.read_bytes())[0]
-    entry = data.get("mcpServers" if client in ("pi", "claude") else "mcp_servers", {}).get("rea", {})
-    if entry.get("command") != receipt["runtime"]["node"] or str(Path(receipt["paths"]["rea_package"]) / "scripts/rea.mjs") not in entry.get("args", []):
-        failures.append("REA MCP launcher drift")
-    if entry != receipt["managed_rea_config"]:
-        failures.append("REA managed configuration drift")
-    if client == "pi":
-        packages = load_json(Path(receipt["scope"]["agent_dir"]) / "settings.json", {}).get("packages", [])
-        if receipt["adapter"]["root"] not in packages:
-            failures.append("Pi package registration missing or changed")
-        if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
-            failures.append("Pi global skill missing")
-    elif client == "codex":
-        if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
-            failures.append("Codex global skill missing")
-        if not (Path(receipt["scope"]["project"]) / ".agents/skills/reverse-workflow/SKILL.md").is_file():
+        skills = settings.get("skills", [])
+        skills = skills if isinstance(skills, list) else []
+        for resource in resources.get("exclude_rea_skill") or []:
+            if "-" + str(resource) not in skills:
+                failures.append("Pi REA skill exclusion missing: " + str(resource))
+        manual = resources.get("rea_manual_skill")
+        if manual:
+            if not Path(manual).is_file():
+                failures.append("Pi rea-manual skill file missing: " + str(manual))
+            elif manual not in skills:
+                failures.append("Pi rea-manual skill registration missing")
+    elif client == "codex" and "reverse" in selection:
+        global_skill = agent / "skills/reverse-workflow/SKILL.md"
+        if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
+            failures.append("Codex global skill missing or receipt path drift")
+        if not project or not (project / ".agents/skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex project entry missing")
-    elif client == "claude":
-        if not (Path(receipt["scope"]["agent_dir"]) / "skills/reverse-workflow/SKILL.md").is_file():
-            failures.append("Claude global skill missing")
-        if not (Path(receipt["scope"]["project"]) / "CLAUDE.md").is_file():
+    elif client == "claude" and "reverse" in selection:
+        global_skill = agent / "skills/reverse-workflow/SKILL.md"
+        if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
+            failures.append("Claude global skill missing or receipt path drift")
+        if not project or not (project / "CLAUDE.md").is_file():
             failures.append("Claude project entry missing")
-    return {"ok": not failures, "failures": failures, "transaction": receipt["transaction"], "validation": receipt["validation"], "note": "verify 只核身份和配置；不会启动宿主/MCP或声称真实任务通过"}
+    for path, expected in (receipt.get("entry_hashes") or {}).items():
+        target = Path(path)
+        try:
+            observed = digest(target.read_bytes()) if target.is_file() else None
+        except OSError:
+            observed = None
+        if observed != expected:
+            failures.append("installer entry drift: " + str(path))
+    return {"ok": not failures, "failures": failures, "transaction": receipt["transaction"], "validation": receipt.get("validation", limits()), "note": "verify 只核选定组件身份和实际配置；不会启动宿主/MCP或声称真实任务通过"}
 
 
 def accept(root):
@@ -886,9 +924,7 @@ def accept(root):
             check("spec_kit_version", version.get("cli_version") == expected, {"expected": expected, "observed": version.get("cli_version")})
             with tempfile.TemporaryDirectory(prefix="speckit-acceptance-") as temp:
                 project = Path(temp) / "project"
-                init_args = [str(specify), "init", str(project), "--integration", receipt["scope"]["client"], "--script", "py", "--non-interactive"]
-                if receipt["scope"]["client"] == "codex":
-                    init_args.append("--ignore-agent-tools")
+                init_args = specify_init_args(specify, project, receipt["scope"]["client"])
                 completed = subprocess.run(init_args, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
                 check("spec_kit_init", completed.returncode == 0 and (project / ".specify").is_dir(), {"returncode": completed.returncode, "native": str(project / ".specify") if (project / ".specify").is_dir() else None})
         except (InstallError, OSError, subprocess.TimeoutExpired) as exc:

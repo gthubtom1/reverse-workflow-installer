@@ -26,15 +26,15 @@
 在新电脑或新用户配置上，先在安装器仓库根目录逐个安装官方技能。不要把多个名字写进一次 `-s` 参数；上游安装器的逗号语法存在问题：
 
 ```text
-npx skills add mattpocock/skills -s grilling
-npx skills add mattpocock/skills -s grill-me
-npx skills add mattpocock/skills -s grill-with-docs
-npx skills add mattpocock/skills -s domain-modeling
+npx skills add mattpocock/skills -s grilling --agent pi --global
+npx skills add mattpocock/skills -s grill-me --agent pi --global
+npx skills add mattpocock/skills -s grill-with-docs --agent pi --global
+npx skills add mattpocock/skills -s domain-modeling --agent pi --global
 node scripts/pi-adapt-grill-skills.mjs
 node scripts/verify-pi-grill-skills.mjs
 ```
 
-安装结果应出现在 `~/.agents/skills/`（Windows 为 `%USERPROFILE%\\.agents\\skills\\`）下。最后一次脚本执行应把 `grill-me` 和 `grill-with-docs` 改成 Pi 可组合的门面；它是幂等的，第二次执行不会重复修改。官方 `grilling/SKILL.md` 不会被修改。
+安装结果应出现在 `~/.agents/skills/` 下。`--agent pi --global` 明确选择 Pi 用户级安装；省略 `--global` 通常会装到当前项目，和上面的用户级适配根不一致。适配脚本会先检查四个技能都完整，再修改两个门面；缺少依赖时以非零退出，不会静默跳过。重复执行不会重复修改。本地检查证明的是适配结构与引用一致；没有上游基线时不证明官方正文的来源真实性。
 
 如果以后运行 `npx skills update`，上游可能重新写回两个门面；更新后再次执行：
 

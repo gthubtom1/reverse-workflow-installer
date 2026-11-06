@@ -11,11 +11,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Check Pi grilling adapter scripts
-        shell: bash
-        run: |
-          node --check scripts/pi-adapt-grill-skills.mjs
-          node --check scripts/verify-pi-grill-skills.mjs
       - name: Select preinstalled Python
         shell: pwsh
         run: |
@@ -27,3 +22,21 @@ jobs:
           else { $python = Join-Path $pythonRoot 'bin/python' }
           & $python -B -m unittest discover -s tests -v
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+  pi-grill-skills:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check Pi grilling scripts
+        shell: bash
+        run: |
+          node --version
+          node --check scripts/pi-grill-common.mjs
+          node --check scripts/pi-adapt-grill-skills.mjs
+          node --check scripts/verify-pi-grill-skills.mjs
+          node --check tests/pi-grill-skills.test.mjs
+      - name: Run offline Pi grilling fixtures
+        shell: bash
+        run: node --test tests/pi-grill-skills.test.mjs

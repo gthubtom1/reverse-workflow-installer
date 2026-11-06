@@ -1,43 +1,28 @@
 #!/usr/bin/env node
 // Offline verification for the optional Pi grilling companion skills.
+//
+// This checks the local adapter structure only: every dependency must exist
+// with valid frontmatter, the official skills must not carry the Pi adapter
+// marker, and both shims must match the exact body the adapter generates for
+// this skills root. Stale roots, marker-only shims and dropped
+// domain-modeling references therefore fail.
+//
+// It cannot prove the official bodies are authentic upstream text because no
+// upstream baseline is stored here.
+//
 // Usage: node scripts/verify-pi-grill-skills.mjs [skillsRoot]
 
-import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { SCOPE_NOTE, resolveSkillsRoot, verifySkills } from "./pi-grill-common.mjs";
 
-const root = resolve(
-  process.argv[2] ?? join(process.env.USERPROFILE ?? process.env.HOME ?? ".", ".agents", "skills"),
-);
+const root = resolveSkillsRoot(process.argv[2]);
+const result = verifySkills(root);
 
-const required = ["grilling", "grill-me", "grill-with-docs", "domain-modeling"];
-const failures = [];
-
-for (const name of required) {
-  const file = join(root, name, "SKILL.md");
-  if (!existsSync(file)) {
-    failures.push(`missing ${name}: ${file}`);
-  }
-}
-
-const read = (name) => readFileSync(join(root, name, "SKILL.md"), "utf8");
-if (!failures.length) {
-  const official = ["grilling", "domain-modeling"];
-  for (const name of official) {
-    if (read(name).includes("<!-- pi-adapter:")) {
-      failures.push(`official skill appears adapted: ${name}`);
-    }
-  }
-  for (const name of ["grill-me", "grill-with-docs"]) {
-    const text = read(name);
-    if (!text.includes("<!-- pi-adapter:")) failures.push(`Pi adapter note missing: ${name}`);
-    if (!text.includes("../grilling/SKILL.md")) failures.push(`grilling reference missing: ${name}`);
-  }
-}
-
-if (failures.length) {
+if (!result.ok) {
   console.error("Pi grilling verification failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  for (const failure of result.failures) console.error(`- ${failure}`);
+  console.error(SCOPE_NOTE);
   process.exitCode = 1;
 } else {
-  console.log(`Pi grilling skills verified: ${root}`);
+  console.log(`Pi grilling adapter structure verified: ${root}`);
+  console.log(SCOPE_NOTE);
 }

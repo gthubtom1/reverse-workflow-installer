@@ -109,7 +109,8 @@ class Fixture(unittest.TestCase):
             project = Path(argv[argv.index("init") + 1])
             client = argv[argv.index("--integration") + 1]
             atomic(project / ".specify/memory/constitution.md", b"original constitution")
-            atomic(project / (".pi/prompts/speckit.specify.md" if client == "pi" else ".agents/skills/speckit-specify/SKILL.md"), b"original integration")
+            native = ".pi/prompts/speckit.specify.md" if client == "pi" else (".claude/commands/speckit.specify.md" if client == "claude" else ".agents/skills/speckit-specify/SKILL.md")
+            atomic(project / native, b"original integration")
             return ""
         raise AssertionError(argv)
 
@@ -326,7 +327,7 @@ class Fixture(unittest.TestCase):
         import io
         output = io.StringIO()
         argv = ["install", "--root", str(self.root), "--client", "pi", "--agent-dir", str(self.agent), "--project", str(self.project), "--reverse-root", str(self.reverse), "--node", str(self.node)]
-        with patch.object(w, "resolve", lambda manifest: resolve(manifest, metadata)), contextlib.redirect_stdout(output):
+        with patch.object(w, "resolve", lambda manifest, **kwargs: resolve(manifest, metadata, **kwargs)), contextlib.redirect_stdout(output):
             self.assertEqual(cli.main(argv), 0)
         self.assertNotIn("installed", json.loads(output.getvalue()))
         self.assertFalse(any("install" in c or "setup" in c or "init" in c for c in self.calls))
@@ -408,6 +409,276 @@ class Fixture(unittest.TestCase):
         self.assertEqual(receipt["scope"]["components"], ["spec_kit"])
         self.assertTrue((self.project / ".specify/memory/constitution.md").is_file())
         self.assertTrue(w.verify(self.root)["ok"])
+
+
+    def test_repeat_install_upgrades_recorded_global_skill(self):
+        first = self.install()
+        source = self.source / "adapters/pi/skills/reverse-workflow/SKILL.md"
+        atomic(source, source.read_bytes() + b"\nAdapter body revision from a newer installer.\n")
+        second = self.install()
+        global_text = (self.agent / "skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Adapter body revision from a newer installer", global_text)
+        self.assertNotEqual(first["adapter"]["key"], second["adapter"]["key"])
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_user_modified_global_skill_is_rejected(self):
+        self.install()
+        target = self.agent / "skills/reverse-workflow/SKILL.md"
+        atomic(target, target.read_bytes() + b"local user note")
+        with self.assertRaisesRegex(InstallError, "已被用户修改"):
+            self.install()
+        self.assertIn("local user note", target.read_text(encoding="utf-8"))
+
+    def test_same_agent_other_root_rejects_with_actionable_conflict(self):
+        first = self.install()
+        self.args.root = str(self.base / "second-stack")
+        self.args.project = str(self.base / "second-project")
+        with self.assertRaisesRegex(InstallError, "另一安装根"):
+            self.install()
+        self.assertIn(str(self.root / ".installer/receipt.json"), (self.agent / "skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8"))
+        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
+
+    def test_legacy_unrecorded_pi_skill_upgrade_uses_previous_adapter_bytes(self):
+        self.install()
+        path = self.root / ".installer/receipt.json"
+        legacy = load_json(path)
+        for key in ("config_diff", "history", "backup"):
+            legacy.pop(key, None)
+        atomic(path, encode_json(legacy))
+        source = self.source / "adapters/pi/skills/reverse-workflow/SKILL.md"
+        atomic(source, source.read_bytes() + b"\nLegacy upgrade body.\n")
+        self.install()
+        self.assertIn("Legacy upgrade body", (self.agent / "skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8"))
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_legacy_full_receipt_shape_still_verifies(self):
+        self.install()
+        path = self.root / ".installer/receipt.json"
+        legacy = load_json(path)
+        legacy["scope"].pop("components")
+        legacy.pop("resource_selection")
+        legacy.pop("entry_hashes")
+        legacy["hashes"].pop("reverse_sha256", None)
+        legacy["adapter"].pop("key", None)
+        atomic(path, encode_json(legacy))
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_legacy_receipt_without_components_blocks_silent_shrink(self):
+        self.install()
+        path = self.root / ".installer/receipt.json"
+        legacy = load_json(path)
+        legacy["scope"].pop("components")
+        atomic(path, encode_json(legacy))
+        self.args.components = "reverse"
+        self.calls.clear()
+        with self.assertRaisesRegex(InstallError, "收缩"):
+            self.install()
+        self.assertFalse(any("install" in call or "setup" in call or "init" in call for call in self.calls))
+
+    def test_claude_subset_writes_global_and_project_entries(self):
+        self.args.components = "reverse"
+        self.args.client = "claude"
+        receipt = self.install()
+        self.assertTrue((self.agent / "skills/reverse-workflow/SKILL.md").is_file())
+        self.assertTrue((self.project / "CLAUDE.md").is_file())
+        self.assertIn(str(self.root / ".installer/receipt.json"), (self.project / "CLAUDE.md").read_text(encoding="utf-8"))
+        self.assertEqual(receipt["scope"]["components"], ["reverse"])
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_codex_subset_writes_global_and_project_entries(self):
+        self.args.components = "reverse"
+        self.args.client = "codex"
+        receipt = self.install()
+        self.assertTrue((self.agent / "skills/reverse-workflow/SKILL.md").is_file())
+        self.assertTrue((self.project / ".agents/skills/reverse-workflow/SKILL.md").is_file())
+        self.assertEqual(receipt["scope"]["components"], ["reverse"])
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_subset_pi_resource_selection_is_applied_and_verified(self):
+        self.args.components = "reverse"
+        self.args.rea_manual = True
+        self.args.exclude_rea_skill = [str(self.base / "existing-rea/SKILL.md")]
+        receipt = self.install()
+        settings = load_json(self.agent / "settings.json")
+        exclusion = "-" + self.args.exclude_rea_skill[0]
+        manual = receipt["resource_selection"]["rea_manual_skill"]
+        self.assertIn(exclusion, settings["skills"])
+        self.assertTrue(Path(manual).is_file())
+        self.assertIn(manual, settings["skills"])
+        self.assertTrue(w.verify(self.root)["ok"])
+        settings["skills"].remove(exclusion)
+        atomic(self.agent / "settings.json", encode_json(settings))
+        self.assertFalse(w.verify(self.root)["ok"])
+
+    def test_subset_repeat_reuses_complete_and_keeps_original_hashes(self):
+        self.args.components = "rea"
+        self.args.project = None
+        self.args.reverse_root = None
+        first = self.install()
+        self.calls.clear()
+        second = self.install()
+        self.assertFalse(any("install" in call for call in self.calls))
+        self.assertEqual(first["hashes"]["rea_sha256"], second["hashes"]["rea_sha256"])
+        atomic(Path(first["paths"]["rea_package"]) / "scripts/rea.mjs", b"tampered")
+        self.calls.clear()
+        with self.assertRaisesRegex(InstallError, "漂移"):
+            self.install()
+        self.assertFalse(any("install" in call for call in self.calls))
+
+    def test_subset_expansion_allowed_and_shrink_rejected(self):
+        self.args.components = "reverse"
+        self.install()
+        self.args.components = "rea,reverse"
+        self.calls.clear()
+        expanded = self.install()
+        self.assertEqual(expanded["scope"]["components"], ["rea", "reverse"])
+        self.assertFalse(any("init" in call for call in self.calls))
+        self.assertTrue(w.verify(self.root)["ok"])
+        self.args.components = "reverse"
+        with self.assertRaisesRegex(InstallError, "收缩"):
+            self.install()
+
+    def test_subset_transition_keeps_history_pointer_and_restores(self):
+        self.args.components = "rea"
+        self.args.project = None
+        self.args.reverse_root = None
+        first = self.install()
+        second = self.install()
+        receipt = load_json(self.root / ".installer/receipt.json")
+        self.assertEqual(receipt["previous_transaction"], first["transaction"])
+        self.assertEqual(receipt["history"], [first["transaction"], second["transaction"]])
+        self.assertEqual(w.restore(self.root, apply=True)["applied"], True)
+        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
+
+    def test_subset_managed_rea_edit_blocks_repeat(self):
+        self.args.components = "rea"
+        self.args.project = None
+        self.args.reverse_root = None
+        self.install()
+        config = load_json(self.agent / "mcp.json")
+        config["mcpServers"]["rea"]["timeout"] = 99
+        atomic(self.agent / "mcp.json", encode_json(config))
+        self.calls.clear()
+        with self.assertRaisesRegex(InstallError, "后续用户修改"):
+            self.install()
+        self.assertFalse(any("setup" in call for call in self.calls))
+        self.assertEqual(load_json(self.agent / "mcp.json"), config)
+
+    def test_pi_object_form_package_source_is_verified_and_preserved(self):
+        receipt = self.install()
+        adapter = receipt["adapter"]["root"]
+        settings = load_json(self.agent / "settings.json")
+        settings["packages"] = [{"source": p} if p == adapter else p for p in settings["packages"]]
+        atomic(self.agent / "settings.json", encode_json(settings))
+        self.assertTrue(w.verify(self.root)["ok"])
+        self.install()
+        packages = load_json(self.agent / "settings.json")["packages"]
+        self.assertTrue(any(isinstance(p, dict) and p.get("source") == adapter for p in packages))
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_plan_resolves_only_selected_components(self):
+        self.args.components = "rea"
+        self.args.project = None
+        self.args.reverse_root = None
+        seen = []
+
+        def fetch(url):
+            seen.append(url)
+            if "github" in url:
+                raise AssertionError("unexpected GitHub lookup")
+            return metadata(url)
+
+        plan = w.make_plan(self.args, fetch)
+        self.assertEqual(sorted(plan["components"]), ["rea"])
+        self.assertFalse([url for url in seen if "github" in url])
+        w.validate_plan(plan)
+
+    def test_local_reverse_root_plan_skips_upstream_lookup(self):
+        self.args.components = "reverse"
+        self.args.project = None
+
+        def fetch(url):
+            raise AssertionError(url)
+
+        plan = w.make_plan(self.args, fetch)
+        self.assertEqual(plan["components"]["reverse"]["mode"], "read-only-working-copy")
+        self.assertEqual(plan["components"]["reverse"]["commit"], "a" * 40)
+        w.validate_plan(plan)
+
+
+    def test_identity_compares_client_literally(self):
+        identity = w.normalized_identity({"client": "pi", "root": str(self.root), "agent_dir": None, "client_config": None, "project": None})
+        self.assertEqual(identity["client"], "pi")
+        self.assertEqual(identity["root"], str(self.root.resolve()))
+
+    def test_specify_init_args_shared_flags(self):
+        self.assertIn("--ignore-agent-tools", w.specify_init_args("specify", "target", "claude"))
+        self.assertIn("--ignore-agent-tools", w.specify_init_args("specify", "target", "codex"))
+        self.assertNotIn("--ignore-agent-tools", w.specify_init_args("specify", "target", "pi"))
+
+    def test_verify_detects_global_skill_body_drift_with_receipt_path_intact(self):
+        self.install()
+        target = self.agent / "skills/reverse-workflow/SKILL.md"
+        text = target.read_text(encoding="utf-8")
+        self.assertIn(str(self.root / ".installer/receipt.json"), text)
+        atomic(target, (text + "\nuser appended instructions\n").encode())
+        result = w.verify(self.root)
+        self.assertFalse(result["ok"])
+        self.assertTrue(any("installer entry drift" in failure for failure in result["failures"]))
+
+    def test_verify_detects_deleted_adapter_package_skill(self):
+        receipt = self.install()
+        adapter_skill = Path(receipt["adapter"]["root"]) / "skills/reverse-workflow/SKILL.md"
+        self.assertTrue(adapter_skill.is_file())
+        adapter_skill.unlink()
+        result = w.verify(self.root)
+        self.assertFalse(result["ok"])
+        self.assertTrue(any("installer entry drift" in failure for failure in result["failures"]))
+
+    def test_codex_reverse_only_receipt_can_expand_to_spec_kit(self):
+        self.args.components = "reverse"
+        self.args.client = "codex"
+        self.install()
+        entry = self.project / ".agents/skills/reverse-workflow/SKILL.md"
+        self.assertTrue(entry.is_file())
+        self.args.components = "reverse,spec-kit"
+        receipt = self.install()
+        self.assertEqual(receipt["scope"]["components"], ["reverse", "spec_kit"])
+        self.assertTrue((self.project / ".specify").is_dir())
+        self.assertTrue((self.project / ".agents/skills/speckit-specify/SKILL.md").is_file())
+        self.assertTrue(entry.is_file())
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_claude_reverse_only_receipt_can_expand_to_spec_kit(self):
+        self.args.components = "reverse"
+        self.args.client = "claude"
+        self.install()
+        entry = self.project / "CLAUDE.md"
+        self.assertTrue(entry.is_file())
+        self.args.components = "reverse,spec-kit"
+        receipt = self.install()
+        self.assertEqual(receipt["scope"]["components"], ["reverse", "spec_kit"])
+        self.assertTrue((self.project / ".claude/commands/speckit.specify.md").is_file())
+        self.assertTrue(entry.is_file())
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_verify_ignores_user_spec_and_settings_edits(self):
+        self.install()
+        atomic(self.project / ".specify/memory/constitution.md", b"my project design")
+        settings = load_json(self.agent / "settings.json")
+        settings["defaultModel"] = "user-model"
+        atomic(self.agent / "settings.json", encode_json(settings))
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_expansion_rejects_foreign_project_files(self):
+        self.args.components = "reverse"
+        self.args.client = "codex"
+        self.install()
+        atomic(self.project / "notes.txt", b"user notes")
+        self.args.components = "reverse,spec-kit"
+        with self.assertRaisesRegex(InstallError, "不会覆盖既有项目"):
+            self.install()
+        self.assertEqual((self.project / "notes.txt").read_bytes(), b"user notes")
 
 
 class VersionsAndIdentity(unittest.TestCase):

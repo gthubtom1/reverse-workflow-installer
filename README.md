@@ -111,11 +111,14 @@ python scripts/install.py accept --root ../workflow
 
 ```text
 python -B -m unittest discover -s tests -v
+node --test tests/pi-grill-skills.test.mjs
 ```
 
 测试全离线，用模拟 HTTP 和模拟官方 CLI 驱动真实配置/备份/回退文件操作；不下载、不运行安装命令、不访问用户 profile。Windows 本地测试已执行；Ubuntu/其他 Python 的 CI 配置已提供，实际 CI 结果以运行记录为准。
 
 [兼容记录](docs/compatibility.md) 将文档支持、本机测试、宿主加载和完整任务分别列出。首版声明 Pi、Codex 和 Claude Desktop 的适配实现，不声称支持所有智能体，不保证自然语言每次自动加载技能、不保证任意目标等价。Pi 的 `grilling` 是独立用户级伴随技能，不属于核心安装事务；安装器把静态安装、宿主加载、MCP 验收、代表任务和对话触发分开记录；Node 下载、provider 安装、MCP 握手、代表任务及独立隔离交付由后续真实验收补齐。
+
+维护两仓库时请使用 [维护与发布闭环](docs/maintenance.md)：同时核对规则、入口、教程、离线回归、本机回执、远程 main 和 reverse 正式 release。默认安装优先正式 release，单独推送 main 不会让新电脑自动拿到尚未发行的改动。
 
 ## 来源与许可
 

@@ -5,54 +5,51 @@
 // reading SKILL.md files instead, so run this after installing or updating the
 // official skills.
 //
+// All four skills are preflighted before anything is written, so a missing or
+// malformed dependency aborts with a nonzero exit and no partial edits.
+//
 // Usage: node scripts/pi-adapt-grill-skills.mjs [skillsRoot]
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-const root = resolve(
-  process.argv[2] ?? join(process.env.USERPROFILE ?? process.env.HOME ?? ".", ".agents", "skills"),
-);
+import {
+  SCOPE_NOTE,
+  SHIM_NAMES,
+  expectedShimText,
+  preflightSkills,
+  resolveSkillsRoot,
+} from "./pi-grill-common.mjs";
 
-const ADAPTER_NOTE =
-  "<!-- pi-adapter: upstream body is a `Call the Skill tool ...` shim. Pi has no Skill tool; " +
-  "skills compose by reading the other skill's SKILL.md. Re-run pi-adapt-grill-skills.mjs after `npx skills update`. -->";
+const root = resolveSkillsRoot(process.argv[2]);
+const preflight = preflightSkills(root);
 
-const patches = {
-  "grill-me": `Read the \`grilling\` skill and follow it exactly.
+if (!preflight.ok) {
+  console.error("Pi grilling adaptation aborted; no files were written:");
+  for (const problem of preflight.problems) console.error(`- ${problem}`);
+  console.error(SCOPE_NOTE);
+  process.exitCode = 1;
+} else {
+  // Compute every expected body first, then write. Nothing is touched until
+  // the whole plan is known to be valid.
+  const plan = SHIM_NAMES.map((name) => {
+    const file = join(root, name, "SKILL.md");
+    const original = preflight.documents.get(name);
+    const next = expectedShimText(original, name, root);
+    if (next === null) throw new Error(`preflighted ${name} has no frontmatter`);
+    return { name, file, original, next };
+  });
 
-- Path: \`${join(root, "grilling", "SKILL.md")}\` (relative: \`../grilling/SKILL.md\`, resolved from this skill's directory).
-- Do not summarize it back to the user. Load it, then start the interview.
+  const pending = plan.filter((entry) => entry.next !== entry.original);
+  for (const entry of pending) writeFileSync(entry.file, entry.next);
 
-This skill exists only so you can invoke that discipline by name.`,
-  "grill-with-docs": `Read both of these skills, then follow them together:
-
-1. \`grilling\` — \`${join(root, "grilling", "SKILL.md")}\` (relative: \`../grilling/SKILL.md\`)
-2. \`domain-modeling\` — \`${join(root, "domain-modeling", "SKILL.md")}\` (relative: \`../domain-modeling/SKILL.md\`)
-
-Run the grilling interview as written, and while it runs apply the domain-modeling discipline: challenge terminology, invent edge-case scenarios, and write \`GLOSSARY.md\` / \`docs/adr/*\` the moment a decision crystallises. Do not summarize them back to the user. Load them, then start.`,
-};
-
-let changed = 0;
-for (const [name, body] of Object.entries(patches)) {
-  const file = join(root, name, "SKILL.md");
-  if (!existsSync(file)) {
-    console.log(`skip ${name}: not installed at ${file}`);
-    continue;
+  for (const entry of plan) {
+    if (entry.next === entry.original) {
+      console.log(`ok   ${entry.name}: already adapted`);
+    } else {
+      console.log(`adapt ${entry.name}: wrote ${entry.file}`);
+    }
   }
-  const text = readFileSync(file, "utf8");
-  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
-  if (!match) {
-    console.log(`skip ${name}: no frontmatter`);
-    continue;
-  }
-  const next = `${text.slice(0, match[0].length)}\n${ADAPTER_NOTE}\n\n${body}\n`;
-  if (next === text) {
-    console.log(`ok   ${name}: already adapted`);
-    continue;
-  }
-  writeFileSync(file, next);
-  changed += 1;
-  console.log(`adapt ${name}: wrote ${file}`);
+  if (!pending.length) console.log("nothing to do");
+  console.log(SCOPE_NOTE);
 }
-if (!changed) console.log("nothing to do");

@@ -32,13 +32,32 @@ def stable(version):
     return bool(re.fullmatch(r"\d+\.\d+\.\d+", version))
 
 
-def resolve(manifest, fetch=http_json):
-    rea = fetch(manifest["rea"]["metadata"])
-    version = rea.get("version", "")
-    if rea.get("name") != "rea-agents" or not stable(version):
-        raise InstallError("rea-agents latest 未指向可识别的稳定版；拒绝回退或安装预发布版")
-    if not rea.get("dist", {}).get("integrity") or not rea.get("engines", {}).get("node"):
-        raise InstallError("REA 元数据缺 dist.integrity 或 engines.node")
+COMPONENTS = ("rea", "spec_kit", "reverse")
+
+
+def resolve(manifest, fetch=http_json, components=None):
+    """Resolve only requested components; None keeps the historical all-components behavior."""
+    requested = list(COMPONENTS) if components is None else [str(key) for key in components]
+    for key in requested:
+        if key not in COMPONENTS:
+            raise InstallError(f"未知组件: {key}")
+    result = {}
+    if "rea" in requested:
+        rea = fetch(manifest["rea"]["metadata"])
+        version = rea.get("version", "")
+        if rea.get("name") != "rea-agents" or not stable(version):
+            raise InstallError("rea-agents latest 未指向可识别的稳定版；拒绝回退或安装预发布版")
+        if not rea.get("dist", {}).get("integrity") or not rea.get("engines", {}).get("node"):
+            raise InstallError("REA 元数据缺 dist.integrity 或 engines.node")
+        result["rea"] = {"version": version, "integrity": rea["dist"]["integrity"], "node_engine": rea["engines"]["node"], "repository": manifest["rea"]["repository"]}
+    if "spec_kit" in requested:
+        result["spec_kit"] = _resolve_spec_kit(manifest, fetch)
+    if "reverse" in requested:
+        result["reverse"] = _resolve_reverse(manifest, fetch)
+    return result
+
+
+def _resolve_spec_kit(manifest, fetch):
     spec = fetch(manifest["spec_kit"]["metadata"])
     candidates = []
     for ver, files in spec.get("releases", {}).items():
@@ -48,6 +67,10 @@ def resolve(manifest, fetch=http_json):
         raise InstallError("specify-cli 未找到非撤回的稳定发行版")
     specver = max(candidates, key=lambda v: tuple(map(int, v.split("."))))
     files = spec["releases"][specver]
+    return {"version": specver, "repository": manifest["spec_kit"]["repository"], "artifacts": [{"filename": f["filename"], "sha256": f.get("digests", {}).get("sha256"), "requires_python": f.get("requires_python")} for f in files if not f.get("yanked", False)]}
+
+
+def _resolve_reverse(manifest, fetch):
     api = manifest["reverse"]["api"]
     try:
         release = fetch(api + "/releases/latest")
@@ -67,8 +90,4 @@ def resolve(manifest, fetch=http_json):
         commit = fetch(api + "/commits/main")["sha"]
     if not re.fullmatch(r"[a-f0-9]{40}", commit):
         raise InstallError("reverse commit 身份无效")
-    return {
-        "rea": {"version": version, "integrity": rea["dist"]["integrity"], "node_engine": rea["engines"]["node"], "repository": manifest["rea"]["repository"]},
-        "spec_kit": {"version": specver, "repository": manifest["spec_kit"]["repository"], "artifacts": [{"filename": f["filename"], "sha256": f.get("digests", {}).get("sha256"), "requires_python": f.get("requires_python")} for f in files if not f.get("yanked", False)]},
-        "reverse": {"ref": ref, "commit": commit, "repository": manifest["reverse"]["repository"]},
-    }
+    return {"ref": ref, "commit": commit, "repository": manifest["reverse"]["repository"]}
