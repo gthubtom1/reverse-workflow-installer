@@ -834,6 +834,25 @@ class Fixture(unittest.TestCase):
         settings = load_json(self.agent / "settings.json")
         self.assertTrue(any(p == receipt["paths"]["project_continuity"] or (isinstance(p, dict) and p.get("source") == receipt["paths"]["project_continuity"]) for p in settings["packages"]))
 
+    def test_continuity_update_allows_intact_older_frozen_release(self):
+        self.args.without_project_continuity = False
+        first = self.install()
+        receipt_path = self.root / ".installer/receipt.json"
+        receipt = load_json(receipt_path)
+        plugin = Path(first["paths"]["project_continuity"])
+        package = load_json(plugin / "package.json")
+        package["version"] = "1.0.0"
+        atomic(plugin / "package.json", encode_json(package))
+        old_hash = w.pc.plugin_tree_hash(plugin)
+        receipt["project_continuity"]["version"] = "1.0.0"
+        receipt["components"]["project_continuity"]["version"] = "1.0.0"
+        receipt["project_continuity"]["tree_hash"] = old_hash
+        receipt["hashes"]["continuity_sha256"] = old_hash
+        atomic(receipt_path, encode_json(receipt))
+        (plugin.parents[3] / "complete.json").unlink()
+        updated = self.install()
+        self.assertEqual(updated["project_continuity"]["version"], "1.1.0")
+
     def test_continuity_explicit_optout_skips_plugin(self):
         self.args.without_project_continuity = True
         receipt = self.install()

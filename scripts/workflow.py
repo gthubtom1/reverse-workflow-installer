@@ -607,30 +607,38 @@ def write_host_file(journal, ownership, path, data, *, client, legacy=(), owner_
         entries[str(path.resolve())] = digest(data)
 
 
-def continuity_failures(receipt):
-    """Check mandatory receipt evidence without treating absent hashes as success."""
+def continuity_failures(receipt, manifest=None):
+    """Check the active receipt against its own frozen identity.
+
+    The installed version may legitimately be older than the manifest during
+    an update. Current plan validation checks the new release; this preflight
+    only proves that the old active installation is intact before replacement.
+    """
     failures = []
     stored = receipt.get("project_continuity") or {}
     frozen = (receipt.get("components") or {}).get("project_continuity") or {}
     plugin_root = stored.get("root")
     expected_hash = (receipt.get("hashes") or {}).get("continuity_sha256")
     try:
-        manifest = load_json(REPO / "components.json")
-        entry = manifest["project_continuity"]
+        current_manifest = manifest or load_json(REPO / "components.json")
+        entry = current_manifest["project_continuity"]
+        frozen_entry = {**entry, **{key: frozen[key] for key in ("repository", "plugin_dir", "package_name", "version", "expected_extension") if frozen.get(key)}}
+        compatibility_manifest = copy.deepcopy(current_manifest)
+        compatibility_manifest["project_continuity"] = frozen_entry
         if not plugin_root or (receipt.get("paths") or {}).get("project_continuity") != plugin_root:
             raise InstallError("插件路径缺失或不一致")
-        local = pc.validate_local_package(plugin_root, manifest)
+        local = pc.validate_local_package(plugin_root, compatibility_manifest)
         if not re.fullmatch(r"[0-9a-f]{64}", str(expected_hash)) or expected_hash != stored.get("tree_hash") or expected_hash != local["tree_hash"]:
             raise InstallError("插件 identity drift 或缺少 tree hash")
         if any(stored.get(field) != local[field] for field in ("root", "name", "version", "extensions")):
             raise InstallError("插件 manifest drift")
-        if stored.get("repository") != entry["repository"] or stored.get("plugin_dir") != entry["plugin_dir"] or stored.get("mode") != frozen.get("mode"):
+        if stored.get("repository") != frozen_entry["repository"] or stored.get("plugin_dir") != frozen_entry["plugin_dir"] or stored.get("mode") != frozen.get("mode"):
             raise InstallError("插件来源或模式不一致")
         if stored["mode"] == "clone-frozen-commit":
             commit = frozen.get("commit")
             if not re.fullmatch(r"[0-9a-f]{40}", str(commit)) or stored.get("commit") != commit:
                 raise InstallError("缺少精确 commit 或 receipt commit 不一致")
-            repository = Path(plugin_root).parents[len(Path(entry["plugin_dir"]).parts) - 1]
+            repository = Path(plugin_root).parents[len(Path(frozen_entry["plugin_dir"]).parts) - 1]
             if run(["git", "-C", repository, "rev-parse", "HEAD"], cwd=repository) != commit:
                 raise InstallError("插件 checkout commit drift")
         elif stored["mode"] == "read-only-local-package":

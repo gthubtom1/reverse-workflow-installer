@@ -1,4 +1,8 @@
-## 0.3.1 — 2026-11-06
+## 0.3.2 — 2026-11-06
+
+- Allow an intact older frozen project-continuity release to pass update preflight; the new plan still validates and installs the newer published identity.
+- Add an offline regression covering an older active plugin release during update.
+
 
 - Integrate project-continuity 1.1.0 with the published frozen tag and update tests/docs.
 - Roll back pending journals safely before a new install; stop when a later user edit makes rollback ambiguous.
