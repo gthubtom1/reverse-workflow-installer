@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -15,6 +16,24 @@ import install as cli
 import workflow as w
 from configuration import Journal, atomic, codex_merge, digest, encode_json, load_json, restore_journal
 from versions import InstallError, resolve
+
+
+def git(command, cwd):
+    completed = subprocess.run(["git", *command], cwd=str(cwd), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if completed.returncode:
+        raise AssertionError("git " + " ".join(command) + " failed: " + completed.stderr)
+    return completed.stdout
+
+
+def make_git_reverse(base):
+    repo = base / "git-reverse"
+    repo.mkdir()
+    git(["init", "-q"], repo)
+    atomic(repo / ".gitignore", b"work/\ntool-index.json\n")
+    for name in ("RULES.md", "skills/SKILL.md", "skills/config/routing.json", "skills/scripts/master-route.sh"):
+        atomic(repo / name, b"native source\n")
+    git(["add", "-A"], repo)
+    return repo
 
 LOCAL = REPO / ".local/tests"
 LOCAL.mkdir(parents=True, exist_ok=True)
@@ -691,6 +710,80 @@ class Fixture(unittest.TestCase):
         with self.assertRaisesRegex(InstallError, "不会覆盖既有项目"):
             self.install()
         self.assertEqual((self.project / "notes.txt").read_bytes(), b"user notes")
+
+
+    def test_default_node_path_is_canonicalized_for_plan_validation(self):
+        node_file = self.base / "node/node.exe"
+        self.assertTrue(node_file.is_file())
+        variants = [str(self.base / "node" / ".." / "node" / "node.exe"), str(self.base / "node" / node_file.name.upper())]
+        link = self.base / "node-link.exe"
+        try:
+            link.symlink_to(node_file)
+            variants.append(str(link))
+        except (OSError, NotImplementedError):
+            pass
+        self.args.node = None
+        for raw in variants:
+            with self.subTest(raw=raw):
+                expected = str(w.abs_path(raw))
+                with patch.object(w.shutil, "which", lambda name, raw=raw: {"node": raw, "uv": str(self.base / "uv"), "git": str(self.base / "git")}.get(name)):
+                    self.assertEqual(w.scope(self.args)["node"], expected)
+                    plan = w.make_plan(self.args, metadata)
+                    self.assertEqual(plan["scope"]["node"], expected)
+                    w.validate_plan(plan)
+                    w.install(plan, self.args)
+                self.assertTrue(w.verify(self.root)["ok"])
+
+    def test_default_node_when_absent_stays_none(self):
+        self.args.node = None
+        self.args.components = "reverse"
+        self.args.client = "none"
+        self.args.agent_dir = None
+        self.args.client_config = None
+        self.args.project = None
+        with patch.object(w.shutil, "which", lambda name: None if name == "node" else str(self.base / name)):
+            plan = w.make_plan(self.args, metadata)
+            self.assertIsNone(plan["scope"]["node"])
+            self.assertEqual(plan["missing_prerequisites"], [])
+            w.validate_plan(plan)
+            w.install(plan, self.args)
+        self.assertTrue(w.verify(self.root)["ok"])
+
+    @unittest.skipUnless(shutil.which("git"), "git is required")
+    def test_source_tree_hash_ignores_git_ignored_artifacts(self):
+        repo = make_git_reverse(self.base)
+        first = w.tree_hash(repo, exclude_git=True)
+        atomic(repo / "work/case/evidence.bin", b"runtime artifact")
+        atomic(repo / "tool-index.json", b'{"generated": true}')
+        self.assertEqual(w.tree_hash(repo, exclude_git=True), first)
+        atomic(repo / "RULES.md", b"edited source\n")
+        edited = w.tree_hash(repo, exclude_git=True)
+        self.assertNotEqual(edited, first)
+        atomic(repo / "RULES.md", b"native source\n")
+        self.assertEqual(w.tree_hash(repo, exclude_git=True), first)
+        atomic(repo / "new-note.md", b"untracked but not ignored")
+        self.assertNotEqual(w.tree_hash(repo, exclude_git=True), first)
+        git(["add", "-f", "tool-index.json"], repo)
+        atomic(repo / "tool-index.json", b'{"generated": "changed"}')
+        self.assertNotEqual(w.tree_hash(repo, exclude_git=True), first)
+        (repo / "RULES.md").unlink()
+        self.assertNotEqual(w.tree_hash(repo, exclude_git=True), first)
+
+    @unittest.skipUnless(shutil.which("git"), "git is required")
+    def test_reverse_verify_ignores_ignored_work_and_detects_source_edits(self):
+        repo = make_git_reverse(self.base)
+        self.args.reverse_root = str(repo)
+        self.install()
+        self.assertTrue(w.verify(self.root)["ok"])
+        atomic(repo / "work/case/evidence.bin", b"case artifact")
+        atomic(repo / "tool-index.json", b'{"index": 1}')
+        self.assertTrue(w.verify(self.root)["ok"])
+        atomic(repo / "new-case/notes.md", b"untracked source note")
+        self.assertFalse(w.verify(self.root)["ok"])
+        (repo / "new-case/notes.md").unlink()
+        self.assertTrue(w.verify(self.root)["ok"])
+        atomic(repo / "RULES.md", b"edited rules\n")
+        self.assertFalse(w.verify(self.root)["ok"])
 
 
 class VersionsAndIdentity(unittest.TestCase):

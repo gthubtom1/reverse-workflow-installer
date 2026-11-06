@@ -158,7 +158,9 @@ def scope(args):
     for directory in [root / "versions", root / ".installer", *[Path(p) for p in reuse.values() if p]]:
         if project and (project == directory or project.is_relative_to(directory) or directory.is_relative_to(project)):
             raise InstallError("成果项目与复用工具目录重叠")
-    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": str(abs_path(args.node)) if args.node else shutil.which("node"), "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse}
+    detection = None if args.node else shutil.which("node")
+    node = str(abs_path(args.node)) if args.node else (str(abs_path(detection)) if detection else None)
+    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse}
 
 
 def reverse_identity(path):
@@ -175,14 +177,72 @@ def reverse_identity(path):
         raise InstallError("reverse 缺少原生 master-route；不会生成第二套路由")
     commit = run(["git", "-C", path, "rev-parse", "HEAD"], cwd=path)
     dirty = bool(run(["git", "-C", path, "status", "--porcelain", "--untracked-files=normal"], cwd=path))
-    return {"root": str(path.resolve()), "commit": commit, "dirty": dirty, "entry_hashes": {name: digest((path / name).read_bytes()) for name in required + routers}, "working_tree_sha256": tree_hash(path, exclude_git=True), "routers": routers, "master": required[-1], "codex_plugin": str(path / "plugins/reverse-skill") if (path / "plugins/reverse-skill/.codex-plugin/plugin.json").is_file() else None}
+    source = source_tree_hash(path)
+    algorithm = "git-ls-files" if source is not None else "tree-walk"
+    return {"root": str(path.resolve()), "commit": commit, "dirty": dirty, "entry_hashes": {name: digest((path / name).read_bytes()) for name in required + routers}, "working_tree_sha256": source if source is not None else tree_hash(path, exclude_git=True), "source_hash_algorithm": algorithm, "routers": routers, "master": required[-1], "codex_plugin": str(path / "plugins/reverse-skill") if (path / "plugins/reverse-skill/.codex-plugin/plugin.json").is_file() else None}
+
+
+def reverse_identity_matches(stored, current):
+    """Compare stored identity fields; legacy receipts without the source-hash marker keep commit/dirty evidence."""
+    if not isinstance(stored, dict) or not isinstance(current, dict):
+        return False
+    for key, value in stored.items():
+        if key == "working_tree_sha256" and not stored.get("source_hash_algorithm"):
+            continue
+        if current.get(key) != value:
+            return False
+    return True
+
+
+def git_source_names(path):
+    """Read-only tracked plus non-ignored untracked file list; None when git refuses or is unavailable."""
+    environment = os.environ.copy()
+    environment.update({"GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0", "LC_ALL": "C"})
+    try:
+        completed = subprocess.run(["git", "-C", str(path), "ls-files", "--cached", "--others", "--exclude-standard", "-z"], capture_output=True, timeout=180, env=environment)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode:
+        return None
+    names = completed.stdout.decode("utf-8", "surrogateescape").split("\0")
+    return sorted({Path(name).as_posix() for name in names if name})
+
+
+def source_tree_hash(path):
+    """Hash only Git source content (tracked and non-ignored new files); ignored runtime artifacts stay out."""
+    directory = Path(path)
+    if not (directory / ".git").exists():
+        return None
+    names = git_source_names(directory)
+    if names is None:
+        return None
+    hasher = hashlib.sha256()
+    for name in names:
+        item = directory / name
+        relative = Path(name).as_posix()
+        if item.is_symlink():
+            hasher.update(relative.encode() + b"\0link\0" + os.readlink(item).encode())
+        elif item.is_file():
+            hasher.update(relative.encode() + b"\0")
+            with item.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    hasher.update(chunk)
+        else:
+            # A tracked file deleted from the worktree is a real source change.
+            hasher.update(relative.encode() + b"\0missing\0")
+    return hasher.hexdigest()
 
 
 def tree_hash(path, exclude_git=False):
-    """Hash stable files without writing bytecode; UV runtime symlinks are recorded."""
+    """Hash stable files without writing bytecode; Git roots use source-only hashing, others a plain walk."""
+    directory = Path(path)
+    if exclude_git:
+        source = source_tree_hash(directory)
+        if source is not None:
+            return source
     hasher = hashlib.sha256()
-    for item in sorted(Path(path).rglob("*")):
-        relative = item.relative_to(path)
+    for item in sorted(directory.rglob("*")):
+        relative = item.relative_to(directory)
         if "__pycache__" in relative.parts or item.suffix == ".pyc":
             continue
         if exclude_git and (".git" in relative.parts or "__pycache__" in relative.parts):
@@ -485,7 +545,7 @@ def _install(plan, args):
         if recorded_config is not None and config_rea_entry(client, config) != recorded_config:
             raise InstallError("活动 REA 配置含后续用户修改或已缺失；拒绝覆盖，请先审阅差异并保留/迁移自定义项")
     identity = components.get("reverse", {}).get("local_identity") if "reverse" in selection else None
-    if identity and reverse_identity(identity["root"]) != identity:
+    if identity and not reverse_identity_matches(identity, reverse_identity(identity["root"])):
         raise InstallError("reverse 工作副本自 plan 后发生漂移；重新 plan")
     if plan["missing_prerequisites"]:
         raise InstallError("缺少依赖: " + ", ".join(plan["missing_prerequisites"]) + "；请自行准备后重新 plan")
@@ -816,8 +876,9 @@ def verify(root):
         elif hashes.get("specify_sha256") and digest(Path(specify).read_bytes()) != hashes["specify_sha256"]:
             failures.append("specify executable identity drift")
     if "reverse" in selection:
-        stored_reverse = receipt.get("reverse")
-        if not stored_reverse or reverse_identity(stored_reverse["root"]) != stored_reverse:
+        stored_reverse = receipt.get("reverse") or {}
+        reverse_root = stored_reverse.get("root")
+        if not reverse_root or not reverse_identity_matches(stored_reverse, reverse_identity(reverse_root)):
             failures.append("reverse working copy drift")
         elif hashes.get("reverse_sha256") and hashes["reverse_sha256"] != stored_reverse.get("working_tree_sha256"):
             failures.append("reverse working copy identity drift")
