@@ -1,4 +1,7 @@
-## 0.3.4 — 2026-11-06
+## 0.3.5 — 2026-11-06
+
+- Refresh verification identity for reverse v1.7.2 and the final active remote deployment.
+
 
 - Record the isolated fresh-default installation and the current v0.3.3 verification documentation identity.
 
