@@ -17,12 +17,14 @@ def parser():
     result = argparse.ArgumentParser(description="官方 REA + Spec Kit + reverse-skill 安装与恢复；默认只预览")
     result.add_argument("command", choices=("plan", "install", "verify", "accept", "update", "restore"))
     result.add_argument("--root", required=True, help="组件及本机 receipt 根；必须在安装器源码仓库之外")
-    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit；范围冻结在 plan")
+    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit,project-continuity；范围冻结在 plan")
     result.add_argument("--client", choices=("pi", "codex", "claude", "auto", "none"), default="auto")
     result.add_argument("--agent-dir", help="显式 Pi agent 目录或 Codex HOME；不默写用户 profile")
     result.add_argument("--client-config", help="显式 Pi mcp.json 或 Codex config.toml；与 --agent-dir 必须一致")
     result.add_argument("--project", help="独立成果项目；首次 init 必须为空/不存在")
     result.add_argument("--reverse-root", help="只读复用本地 reverse 工作副本，记录实际 commit/脏状态/摘要")
+    result.add_argument("--continuity-root", help="只读复用本地 project-continuity 插件包，校验身份并要求匹配清单 name/version/extensions")
+    result.add_argument("--without-project-continuity", action="store_true", help="默认 all+pi 组合显式禁用 project-continuity 插件")
     result.add_argument("--node", help="旁置 Node 可执行文件；npm 必须来自同一分发包")
     result.add_argument("--rea-prefix", help="显式只读复用已有 npm prefix，须恰为冻结版本")
     result.add_argument("--spec-kit-tools", help="显式只读复用 UV_TOOL_DIR；与 --spec-kit-bin 配对")
@@ -60,7 +62,7 @@ def main(argv=None):
                 if result["scope"]["root"] != str(workflow.abs_path(arguments.root)):
                     raise InstallError("--root 与冻结 plan 不一致")
                 # Configuration/client scope comes entirely from the frozen file.
-                for flag in ("agent_dir", "client_config", "project", "reverse_root", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+                for flag in ("agent_dir", "client_config", "project", "reverse_root", "continuity_root", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
                     supplied = getattr(arguments, flag)
                     if supplied and str(workflow.abs_path(supplied)) != result["scope"].get(flag):
                         raise InstallError(f"--{flag.replace('_', '-')} 与冻结 plan 不一致")
@@ -68,7 +70,7 @@ def main(argv=None):
                     raise InstallError("--client 与冻结 plan 不一致")
                 if arguments.components != "all" and workflow.selected_components(arguments.components) != result["scope"]["components"]:
                     raise InstallError("--components 与冻结 plan 不一致")
-                if arguments.rea_manual or arguments.exclude_rea_skill:
+                if arguments.rea_manual or arguments.exclude_rea_skill or arguments.without_project_continuity:
                     raise InstallError("资源选择已冻结在 plan 中；请重新 plan 后再使用 --plan-file")
                 workflow.validate_plan(result)
             else:

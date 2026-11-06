@@ -18,5 +18,15 @@
     "repository": "https://github.com/gthubtom1/reverse-skill",
     "api": "https://api.github.com/repos/gthubtom1/reverse-skill",
     "policy": "latest-release-or-main-resolved-commit"
+  },
+  "project_continuity": {
+    "repository": "https://github.com/gthubtom1/agent-plugins",
+    "api": "https://api.github.com/repos/gthubtom1/agent-plugins",
+    "policy": "frozen-release-commit",
+    "release_ref": "project-continuity-v1.0.0",
+    "plugin_dir": "plugins/pi/project-continuity",
+    "package_name": "@toti/pi-project-continuity",
+    "version": "1.0.0",
+    "expected_extension": "./index.ts"
   }
 }
