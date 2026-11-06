@@ -1,4 +1,7 @@
-## 0.3.5 — 2026-11-06
+## 0.3.6 — 2026-11-06
+
+- Correct the verification document's installer release link to the current v0.3.5 docs release.
+
 
 - Refresh verification identity for reverse v1.7.2 and the final active remote deployment.
 
