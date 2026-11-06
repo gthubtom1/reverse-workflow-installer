@@ -715,7 +715,12 @@ class Fixture(unittest.TestCase):
     def test_default_node_path_is_canonicalized_for_plan_validation(self):
         node_file = self.base / "node/node.exe"
         self.assertTrue(node_file.is_file())
-        variants = [str(self.base / "node" / ".." / "node" / "node.exe"), str(self.base / "node" / node_file.name.upper())]
+        uppercase_node = node_file.with_name(node_file.name.upper())
+        # On case-sensitive systems this is a distinct valid executable path.
+        # Windows resolves the existing file's casing; Linux must preserve it.
+        if not uppercase_node.exists():
+            atomic(uppercase_node, node_file.read_bytes())
+        variants = [str(self.base / "node" / ".." / "node" / "node.exe"), str(uppercase_node)]
         link = self.base / "node-link.exe"
         try:
             link.symlink_to(node_file)
