@@ -1,6 +1,6 @@
 # Project Continuity 1.1.0 验收记录
 
-日期：2026-11-06。插件发布 tag 为 [`project-continuity-v1.1.0`](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.1.0)，提交 `11089f8549200a486c5b473e985262450ce11f0d`，插件 tree hash 由 installer receipt 冻结。安装器发布为 [`v0.3.2`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.3.2)，当前 reverse 正式发布为 [`v1.7.1`](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.7.1)。
+日期：2026-11-06。插件发布 tag 为 [`project-continuity-v1.1.0`](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.1.0)，提交 `11089f8549200a486c5b473e985262450ce11f0d`，插件 tree hash 由 installer receipt 冻结。安装器最新发布为 [`v0.3.3`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.3.3)（包含 v0.3.2 的更新修复），当前 reverse 正式发布为 [`v1.7.1`](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.7.1)。
 
 ## 当前版本检查
 
@@ -11,6 +11,7 @@
 | 安装器离线回归 | Python 103/103；grilling 门面回归保持通过 | 默认组合、旧版本 continuity update、事务恢复、重复 hub 注册拒绝、精确来源、漂移拒绝、过滤配置和 restore 保留用户设置 |
 | 当前活动部署 | 远程 plan 解析 reverse `v1.7.1` commit `c035cb0e5dbd12a5d3551971de43e93541e404` 与 continuity `v1.1.0` commit `11089f8`；verify 无 failures | 活动 checkout、manifest、独立插件注册和 tree hash 一致；reverse 不再使用本地 working copy |
 | 当前 accept | REA 6.8.0：229/229 tools；reverse identity/router 通过；Spec Kit 1.3.1 version/init 通过 | 四合一静态和基础宿主验收未被插件升级破坏；JADX provider 仍因缺少 caller-supplied bridge JAR 保持 optional failure |
+| 隔离 fresh-default | 新安装根和 agent/project，远程取得 reverse `v1.7.1` 与 continuity `v1.1.0`，Spec Kit 新项目 init；verify/accept 通过，JADX 仍为 optional missing bridge | 证明默认 `all` 路径在独立目录获取公开冻结版本并完成静态安装；复用本机已符合版本要求的官方工具，不冒充无工具裸机测试 |
 | 实际宿主扩展烟雾 | 新 trusted session 注册 `continuity_status`, `continuity_search`, `continuity_save` 与 `/continuity`；fresh → save → resume → untrusted 全部通过 | 当前已安装 release 可被实际 Pi Web bundled runtime 加载，项目隔离和 trust gate 生效 |
 
 `accept` 的 JADX 检查分类为 `missing_analysis_engine`：需要调用方通过 `REA_JADX_MCP_JAR` 提供 `jadx-headless-mcp 0.7.1`，REA 不自动下载或安装它。这不阻塞 continuity plugin、reverse router 或安装部署。宿主 loading、MCP schema、真实 reverse 任务和 Spec Kit 实际成果语义仍分别报告，机械验收不替代业务证明。

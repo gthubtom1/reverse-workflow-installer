@@ -1,4 +1,7 @@
-## 0.3.3 — 2026-11-06
+## 0.3.4 — 2026-11-06
+
+- Record the isolated fresh-default installation and the current v0.3.3 verification documentation identity.
+
 
 - Refresh public project-continuity verification for 1.1.0, reverse v1.7.1, the remote frozen deployment, and the separated host/semantic verification limits.
 
