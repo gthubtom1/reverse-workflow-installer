@@ -7,7 +7,7 @@
 | REA 6.8.0 | 官方 npm 包、Node engines、setup pi/codex、skill=false 与 scoped env | 模拟官方输出的配置保留、身份/失败/漂移检查 | 本机 MCP 基础验收通过，工具目录完整；具体目标 provider 和实际行为分别验证 |
 | Spec Kit 1.3.1 | 官方 `version --json` 与 `init`；pi/codex/claude integration 参数 | 模拟 init、扩展安装、更新保留项目文件 | 本机 Pi 临时 init 与版本检查通过；现有成果项目模板保留，不自动迁移 |
 | 增强 reverse release/main | 固定用户仓库；RULES → 原 master-route → PRIMARY；已有薄 Codex 插件 | 本地工作副本只读身份检查、回执定位 | 专业路由/端到端任务由主流程验证 |
-| Pi project-continuity 1.0.0 | 独立包 `@toti/pi-project-continuity`；固定 ref `project-continuity-v1.0.0`；实际入口依赖 runtime.mjs/store.mjs | 安装器 101 项测试通过；插件 80 项通过。覆盖旧安装 update、opt-out、精确 commit、hash/文件、注册过滤、漂移与 restore | Pi Web bundled SDK 1.5.0 与 CLI RPC 的真实生命周期通过 290 项断言（本地模拟模型）；外部模型三轮抽样通过：取消角色、保留另一约束、新会话恢复。具体安装回执及 Web 页面仍分别验收 |
+| Pi project-continuity 1.0.0 | 独立包 `@toti/pi-project-continuity`；固定 ref `project-continuity-v1.0.0`；实际入口依赖 runtime.mjs/store.mjs | 安装器 101 项测试通过；插件 80 项通过。覆盖旧安装 update、opt-out、精确 commit、hash/文件、注册过滤、漂移与 restore | Pi Web bundled SDK 1.5.0 与 CLI RPC 的真实生命周期通过 290 项断言（本地模拟模型）；外部模型三轮抽样通过：取消角色、保留另一约束、新会话恢复。实际 Web 页面、新会话状态命令、活动部署 verify 和隔离全新默认安装均通过；详见 [验收记录](project-continuity-verification.md) |
 | Pi grilling 伴随技能 | 上游 `grilling`、`grill-me`、`grill-with-docs`、`domain-modeling`；只适配两个门面 | Node 离线夹具验证缺依赖时零写入、幂等、旧路径检出，以及适配前后两个官方技能字节不变 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
 | Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并、全局/项目入口、子集扩展与升级反例 | 本机部署 verify 通过；Codex 新会话实际触发仍单独验收 |
