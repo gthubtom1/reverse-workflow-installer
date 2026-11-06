@@ -8,7 +8,7 @@ REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PR
 
 如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。零基础用户直接从其中的 [零基础一键开始](docs/reverse-workflow-playbook.md#零基础一键开始) 复制模板即可。
 
-安装器默认处理三件核心组件；Pi 的 `all` 安装与更新还会自动加入 `project-continuity`，包括原来仅有三组件的活动安装。用 `--without-project-continuity` 可在尚未安装该插件时退出默认选择。插件来源固定为 `project-continuity-v1.0.0`，只注册独立插件子目录；本地包可用 `--continuity-root` 只读复用。详见 [插件安装与更新](docs/project-continuity-install.md)。`grilling` 是 Pi 的官方伴随技能，不属于 `--components` 事务范围。三件核心组件可以分别安装；未选择的核心组件不会被解析、安装、注册或在 verify 中要求存在。Pi 的 `grilling` 请按 [Pi grilling 安装](docs/quick-start.md#pi-grilling-伴随技能) 单独安装并验收：上游官方安装器的逗号选择语法不可靠，四个技能必须一次安装一个。
+安装器默认处理三件核心组件；Pi 的 `all` 安装与更新还会自动加入 `project-continuity`，包括原来仅有三组件的活动安装。用 `--without-project-continuity` 可在尚未安装该插件时退出默认选择。插件来源固定为 `project-continuity-v1.1.0`，只注册独立插件子目录；本地包可用 `--continuity-root` 只读复用。详见 [插件安装与更新](docs/project-continuity-install.md)。`grilling` 是 Pi 的官方伴随技能，不属于 `--components` 事务范围。三件核心组件可以分别安装；未选择的核心组件不会被解析、安装、注册或在 verify 中要求存在。Pi 的 `grilling` 请按 [Pi grilling 安装](docs/quick-start.md#pi-grilling-伴随技能) 单独安装并验收：上游官方安装器的逗号选择语法不可靠，四个技能必须一次安装一个。
 
 ```text
 # 只装 reverse-skill；不需要宿主配置

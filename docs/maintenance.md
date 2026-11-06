@@ -23,7 +23,7 @@
 4. **对话抽样**：至少观察“已授权的两步检查不中途请求继续”和“新运行/联网范围保留必要确认”。检查实际工具事件，不能只凭模型自述。抽样通过不等于所有模型和困难目标已验证。
 5. **发布**：PR 检查通过后按保护规则合并；reverse 若仍有更早 release，发布指向已验证提交的新正式版本。重新检查安装器解析的确切 tag/commit，再记录本机与远程身份。
 
-project-continuity 由插件仓库维护方在最新 main 的独立 worktree 集成，不在 installer 任务修改插件代码；目标 tag 保持 `project-continuity-v1.0.0`。发布后再核对 tag 解析的精确 commit。tag 未发布时远程 plan 应明确失败，不回退 main；如用本地 worktree 先验收，必须对实际插件目录重新 plan，receipt 不宣称本地包等于远程 tag。本次 installer 离线回归与代码审查不代替插件发布、真实部署或 profile 变更。
+project-continuity 由插件仓库维护方在最新 main 的独立 worktree 集成，不在 installer 任务修改插件代码；目标 tag 保持 `project-continuity-v1.1.0`。发布后再核对 tag 解析的精确 commit。tag 未发布时远程 plan 应明确失败，不回退 main；如用本地 worktree 先验收，必须对实际插件目录重新 plan，receipt 不宣称本地包等于远程 tag。本次 installer 离线回归与代码审查不代替插件发布、真实部署或 profile 变更。
 
 `verify` 通过表示静态安装一致，`accept` 表示本机工具基本运行通过。只有真实目标的证据和测试才能说明功能正确；尚无证据时保持 unknown。
 

@@ -71,6 +71,31 @@ def validate_local_package(package_path, manifest):
     }
 
 
+def registration_source(value):
+    if isinstance(value, dict):
+        return value.get("source")
+    return value
+
+
+def exposes_plugin_registration(value, plugin_root, plugin_dir):
+    """Detect a hub/ancestor package that would load the same plugin twice."""
+    source = registration_source(value)
+    if not source:
+        return False
+    try:
+        source_path = Path(source).expanduser().resolve()
+        plugin_path = Path(plugin_root).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError):
+        return False
+    if source_path == plugin_path:
+        return False
+    try:
+        relative = plugin_path.relative_to(source_path)
+    except ValueError:
+        return False
+    return str(relative).replace("\\", "/") == plugin_dir or (source_path / plugin_dir).is_dir()
+
+
 def registration_matches(value, root):
     """Accept a plain directory source; resource overrides require user review."""
     return value == root or (

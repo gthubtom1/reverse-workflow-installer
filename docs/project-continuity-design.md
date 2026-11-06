@@ -1,6 +1,6 @@
 # 项目级续接扩展设计
 
-状态：1.0.0 实现；发布与验收结果见 [插件说明](https://github.com/gthubtom1/agent-plugins/tree/main/plugins/pi/project-continuity) 和 [安装说明](project-continuity-install.md)。实现源在插件仓库，安装仓库负责精确版本部署；本文保留设计原则，并明确首版边界。
+状态：1.1.0 实现；发布与验收结果见 [插件说明](https://github.com/gthubtom1/agent-plugins/tree/main/plugins/pi/project-continuity) 和 [安装说明](project-continuity-install.md)。实现源在插件仓库，安装仓库负责精确版本部署；本文记录当前边界。
 
 ## 要解决的问题
 
@@ -23,6 +23,14 @@
   - 不照搬独立 task_plan/findings/progress 系统、`/plan-execute` 审批、计划哈希批准门、按工具重述计划、agent_end 自动强制续跑。
 
 这是一项机制整合实现，不是安装两个扩展后让它们同时管理项目。固定提交的源码和许可作为设计参考，来源记录随插件发布；未直接合入两个上游扩展的源码。Pi 接口按当前宿主文档和真实 SDK/RPC 生命周期验收，不能据此宣称上游产品背书或任意模型都能正确使用。
+
+## 逆向项目的安全适用性
+
+当项目存在一个或多个 `work/<case>/scope.md` 时，`observation`、`claim`、`attempt` 和 `artifact` 不能脱离 case 写入当前恢复；存在 case 时还必须提供样本、提交或其他精确目标的 SHA-256 identity。当前 Git 分支会自动绑定；detached HEAD 使用 `detached:<commit>`。这两个绑定来自当前工作区，调用方不能在写入时伪造 branch。
+
+来源发生变化或消失后，查询仍保留历史记录和来源指针，但显示 `needs-review`；自动恢复隐藏旧正文。失败记录按 method/config/question 配对，仅在相同条件下抑制重复昂贵路线。取消决定是终态；同一 id 不能复活，替代方案必须使用新 id 并通过 supersedes 追踪。
+
+这些门禁保护机械适用性，不能证明 REA、逆向工具或模型推理的业务结论。真实验证仍归原 case 的 Evidence/Finding/Path；宿主加载和工具握手仍由安装器与实际运行验收分别记录。
 
 ## 职责归属
 

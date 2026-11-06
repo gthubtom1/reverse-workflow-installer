@@ -452,10 +452,42 @@ def process_env(root, paths, agent, client, node):
     return env
 
 
+def recover_pending_transactions(root):
+    """Rollback transactions interrupted before Journal.finish().
+
+    Recovery is automatic only when every owned file is still at its recorded
+    post-write state (or already at its pre-write state). A later user edit is
+    a hard stop so the installer never guesses which bytes to preserve.
+    """
+    root = Path(root)
+    directory = root / ".installer/transactions"
+    if not directory.is_dir():
+        return []
+    recovered = []
+    for journal_path in sorted(directory.glob("*/journal.json")):
+        data = load_json(journal_path, {})
+        if data.get("status") != "pending":
+            continue
+        preview = restore_journal(journal_path, apply=False)
+        conflicts = [item for item in preview if item.get("conflicts")]
+        if conflicts:
+            names = ", ".join(item["path"] for item in conflicts[:3])
+            raise InstallError(f"发现未完成事务 {journal_path.parent.name} 且文件已有后续修改；先审阅并 restore，拒绝继续安装: {names}")
+        restore_journal(journal_path, apply=True)
+        data["status"] = "recovered"
+        data["recovery"] = {"mode": "automatic-safe-rollback", "files": preview}
+        atomic(journal_path, encode_json(data))
+        recovered.append(journal_path.parent.name)
+    return recovered
+
+
 def install(plan, args):
     validate_plan(plan)
     root = Path(plan["scope"]["root"])
     with locked(root):
+        # A killed process leaves a pending journal. Reconcile it before
+        # resolving package identities or touching a new host configuration.
+        recover_pending_transactions(root)
         # Recheck after acquiring lock.
         validate_plan(plan)
         return _install(plan, args)
@@ -856,6 +888,10 @@ def _install(plan, args):
                 packages.append(wanted)
             old_continuity = (previous.get("project_continuity") or {}).get("root") if previous.get("installed") else None
             wanted_continuity = continuity["root"] if "project_continuity" in selection else None
+            if wanted_continuity:
+                duplicate_hubs = [p for p in packages if pc.exposes_plugin_registration(p, wanted_continuity, manifest["project_continuity"]["plugin_dir"])]
+                if duplicate_hubs:
+                    raise InstallError("Pi settings 包含会再次加载 project-continuity 的 hub/父目录注册；移除重复注册后重试: " + ", ".join(str(pc.registration_source(p)) for p in duplicate_hubs))
             for source in (old_continuity, wanted_continuity):
                 if source and any(isinstance(p, dict) and p.get("source") == source and not pc.registration_matches(p, source) for p in packages):
                     raise InstallError("Pi project-continuity 注册含用户资源过滤；拒绝覆盖或声明已启用")
@@ -1038,6 +1074,10 @@ def verify(root):
             plugin_root = (receipt.get("project_continuity") or {}).get("root")
             if not plugin_root or not any(pc.registration_matches(p, plugin_root) for p in packages):
                 failures.append("Pi project-continuity package registration missing or changed")
+            else:
+                duplicate_hubs = [p for p in packages if pc.exposes_plugin_registration(p, plugin_root, (receipt.get("project_continuity") or {}).get("plugin_dir", "plugins/pi/project-continuity"))]
+                if duplicate_hubs:
+                    failures.append("Pi project-continuity duplicate hub registration: " + ", ".join(str(pc.registration_source(p)) for p in duplicate_hubs))
         skills = settings.get("skills", [])
         skills = skills if isinstance(skills, list) else []
         for resource in resources.get("exclude_rea_skill") or []:

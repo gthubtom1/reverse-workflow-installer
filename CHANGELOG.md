@@ -1,4 +1,10 @@
-# 更新记录
+## 0.3.1 — 2026-11-06
+
+- Integrate project-continuity 1.1.0 with the published frozen tag and update tests/docs.
+- Roll back pending journals safely before a new install; stop when a later user edit makes rollback ambiguous.
+- Reject Pi package registrations that are hub/parent directories capable of loading project-continuity twice.
+- Clarify REA as a bounded backend and make APK decode/rebuild/Frida bootstrap explicit with `-AllowBootstrap` / `--allow-bootstrap`.
+- Clarify read-only reverse review mode and make completion artifacts conditional on applicability.
 
 ## 0.3.0 — 2026-11-06
 
