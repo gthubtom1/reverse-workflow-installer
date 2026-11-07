@@ -2,7 +2,7 @@
 
 工具更新和成果追版是不同操作。`update` 跟随官方 REA/Spec Kit stable 与增强 reverse release/main；上游产品 1.0→1.1 的差分、规格和测试由原 reverse 专业流程在成果项目中处理。
 
-Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行 `npx skills update` 后，要在安装器仓库根目录重新执行 `node scripts/pi-adapt-grill-skills.mjs`；这只重写 `grill-me` 和 `grill-with-docs` 门面，不修改官方 `grilling` 正文。核心安装器的 update/restore 不会自动回滚或升级 `~/.agents/skills/` 下的用户级技能。
+Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行 `npx skills update` 后，使用原来的 `--skills-root` / `--output-root` 重新执行 wrapper 生成和验证命令（见 [wrapper 指南](pi-grilling-wrappers.md)）；这只重建 installer-owned `pi-grill-me` 和 `pi-grill-with-docs` wrapper，不修改官方 `grilling`、`domain-modeling`、`grill-me` 或 `grill-with-docs` 文件。核心安装器的 update/restore 不会自动回滚或升级 `~/.agents/skills/` 下的官方技能。
 
 工具更新沿用相同 root、client、agent 和 project，重新 plan 并保存冻结文件。同一安装根允许保留或扩展所选组件；收缩或替换组件范围会明确拒绝，避免把仍存在的包与配置变成无人校验的残留。需要缩小范围时先审阅 restore，或使用独立的新 root。
 

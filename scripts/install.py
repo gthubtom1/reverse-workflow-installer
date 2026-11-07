@@ -27,6 +27,7 @@ def parser():
     result.add_argument("--without-project-continuity", action="store_true", help="默认 all+pi 组合显式禁用 project-continuity 插件")
     result.add_argument("--node", help="旁置 Node 可执行文件；npm 必须来自同一分发包")
     result.add_argument("--rea-prefix", help="显式只读复用已有 npm prefix，须恰为冻结版本")
+    result.add_argument("--spec-kit-version", help="显式选择 PyPI 已发布且未撤回的稳定版本（例如 1.3.1）；省略时选择最新稳定版，选择冻结在 plan")
     result.add_argument("--spec-kit-tools", help="显式只读复用 UV_TOOL_DIR；与 --spec-kit-bin 配对")
     result.add_argument("--spec-kit-bin", help="显式只读复用 UV_TOOL_BIN_DIR；含 specify 可执行文件")
     result.add_argument("--output", help="plan JSON 的显式输出文件；避免 shell 重定向产生 BOM")
@@ -47,6 +48,8 @@ def main(argv=None):
     try:
         if arguments.output and arguments.command != "plan":
             raise InstallError("--output 只适用于 plan")
+        if arguments.spec_kit_version is not None and arguments.command not in ("plan", "install", "update"):
+            raise InstallError("--spec-kit-version 只适用于 plan/install/update")
         if arguments.command == "verify":
             result = workflow.verify(workflow.abs_path(arguments.root))
             code = 0 if result["ok"] else 1
@@ -70,6 +73,11 @@ def main(argv=None):
                     raise InstallError("--client 与冻结 plan 不一致")
                 if arguments.components != "all" and workflow.selected_components(arguments.components) != result["scope"]["components"]:
                     raise InstallError("--components 与冻结 plan 不一致")
+                if arguments.spec_kit_version is not None:
+                    if "spec_kit" not in result["scope"]["components"]:
+                        raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
+                    if arguments.spec_kit_version != result["components"].get("spec_kit", {}).get("version"):
+                        raise InstallError("--spec-kit-version 与冻结 plan 不一致")
                 if arguments.rea_manual or arguments.exclude_rea_skill or arguments.without_project_continuity:
                     raise InstallError("资源选择已冻结在 plan 中；请重新 plan 后再使用 --plan-file")
                 workflow.validate_plan(result)

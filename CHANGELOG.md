@@ -1,3 +1,11 @@
+## 0.4.0 — 2026-11-07
+
+- Add explicit official `--spec-kit-version` pins, preserving latest-stable defaults and frozen replay/version/hash checks when existing official packages must remain unchanged.
+- Guided Pi entry uses stable result/scope/delivery cards, copied aliases and adaptive technical paths bounded by the original reverse case.
+- Independent Grilling wrappers preserve all official input bytes, track local hashes and reject output-path/ownership conflicts. Legacy adapted companions are reported without rewriting them.
+- Pin project-continuity 1.2.0 as a standalone child package; retain exact release/commit/tree validation and old-release update checks.
+- Clarify per-component authorization coverage, failed regressions, reconstruction levels, and separated mechanical/host/model validation.
+
 ## 0.3.6 — 2026-11-06
 
 - Correct the verification document's installer release link to the current v0.3.5 docs release.

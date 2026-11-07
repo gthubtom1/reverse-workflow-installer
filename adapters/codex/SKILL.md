@@ -11,4 +11,6 @@ description: 逆向、二进制、APK、前端签名、协议、API 安全、复
 
 如该版本没有原生薄插件，读取原 `skills/MASTER-ROUTING.md` 与回执 `reverse.master`，使用原生 `skills/scripts/master-route` 决定 PRIMARY，再读取其原 SKILL。只按原 RULES 建立 scope 与 case；不要在此入口另行路由。
 
+只读请求使用原 router 的 `-DryRun` / `--dry-run`，不创建 case 或 route-scope。交互沿原 `skills/ops/guided-operator-contract.md`：真实目标/范围/交付取舍才给 GOAL-* / SCOPE-* / DELIVERY-* 卡和可复制别名；技术方法内部选择。按原 authorization-coverage 契约逐组件核回归，不能把一个补丁算成整体完成。行为模型和 Evidence handoff 足够后才进入 reconstruction/Spec Kit；continuity 指针不是权限或 Evidence。
+
 REA 由官方 setup 在回执的 Codex 配置根注册，保留全部工具。Spec Kit 使用当前成果项目中官方 `--integration codex` 实际生成的原生技能。恢复、追版、知识维护均继续原 reverse 中立流程。报告回执中的未验证状态，不把安装视为任务通过。
