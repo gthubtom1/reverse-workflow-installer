@@ -1,6 +1,14 @@
 # Guided workflow 验收
 
-发布组合：installer 0.4.0、reverse-skill 1.8.0、project-continuity 1.2.0。下面分别记录机械契约、宿主生命周期和模型动作抽样；这些结果不构成任意真实目标的行为等价保证。
+发布组合：installer 0.4.0、reverse-skill 1.8.0、project-continuity 1.2.0。三个正式 release 已发布，公共冻结身份的全新安装与活动更新均完成 plan、install/update、verify、accept。下面分别记录机械契约、宿主生命周期和模型动作抽样；这些结果不构成任意真实目标的行为等价保证。
+
+| 组件 | 公共 tag | 冻结 commit |
+|---|---|---|
+| reverse-skill | [v1.8.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.8.0) | `b6c7abb0d5086dcf72d6136f3edac37fec916df8` |
+| installer | [v0.4.0](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.4.0) | `35fbe6ecba3269a0e7dcbc3b9f241384dc0afac0` |
+| project-continuity | [1.2.0](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.2.0) | `334725505b888492f011730c36c7713d8f1e6bf9` |
+
+PR、main 和 release tag 的公开 CI 均通过。合并树与经过测试的分支树一致。插件只安装独立子目录，hub 根版本保持1.1.0。
 
 | 验证层 | 结果 | 边界 |
 |---|---|---|
@@ -22,5 +30,11 @@
 四个 Grilling 文件保持原字节。旧 `grill-me` / `grill-with-docs` 已有历史 adapter 标记，单独报告为 legacy drift；新 wrapper 读取未改写的 `grilling` / `domain-modeling`。保持字节不等于认证上游来源。
 
 本机 Bash bootstrap-manifest 测试因 Windows Store 的 python3 占位程序退出49，未计为本地通过；公开 Linux CI 覆盖该套件。Windows CI 中 WSL占位入口和8.3临时路径比较问题已修正，未删除隔离断言。
+
+发布后终验复算了8个对象、14次摘要引用比较和39项总检查，全部通过。已安装 continuity 树 SHA-256为 `953010cb0ca016ba7ec07021171485348951bbdd3f175d333a71621f88e698f5`，reverse源码树 SHA-256为 `888ffac24d71a7531477d17b6ba04843eda5aeb520de8842619f291e611bd32e`；官方 REA、Spec Kit及四个 Grilling 文件均与基线一致。
+
+已安装插件在实际 Pi SDK1.5.0上再次通过344项断言，其中19项 RPC。SDK manifest的正式 `dist/bundle/cli.js` 也单独执行同一套344项断言通过；为选择该入口使用了外部临时校验器副本，没有改写已安装源码。这是同一覆盖集合的两次执行。
+
+实际 Pi Web0.15.0 / Pi1.5.0 新会话能显示续接状态、隔离候选标题/正文并隐藏过期来源；`/continuity candidates off` 后原生 `/reload` 保持关闭。命令建议能发现 reverse-workflow及两个 pi-grill wrapper。独立合成项目的新会话只恢复自己的已取消职责与仍有效约束，候选收集默认开启。命令检查不触发外部模型请求。运行中的旧会话需 reload 后才使用新扩展，安装不热替换正在执行的扩展实例。
 
 每次实际部署仍须记录公共 tag解析出的 commit/tree hash，运行 `verify`、`accept`，并在当前宿主重载或新会话检查。`accept` 不执行 continuity扩展事件，相关回执字段保持未验证，独立 SDK/UI记录不能伪造该字段。JADX可选桥接器缺口沿用既有报告；缺少调用方提供的 JAR 时不得声明其深度分析能力就绪。历史1.1.0验收见 [原记录](project-continuity-verification.md)。
