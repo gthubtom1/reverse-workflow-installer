@@ -1,6 +1,6 @@
 # project-continuity 插件安装
 
-本仓提供 Pi `project-continuity` 1.1.0 的安装集成，来源为已发布的 `project-continuity-v1.1.0`。默认首次安装与旧环境升级、实际 Pi Web 页面和 SDK/RPC 恢复流程已执行验证，具体证据及边界见 [验收记录](project-continuity-verification.md)。静态安装通过仍不能替代每台机器的宿主加载检查。
+本仓提供 Pi `project-continuity` 1.2.0 的安装集成，来源为已发布的 `project-continuity-v1.2.0`。既有 1.1.0 验收见 [历史记录](project-continuity-verification.md)；1.2.0 的回归、宿主与部署结果见 [本轮验收](guided-verification.md)。静态安装通过仍不能替代每台机器的宿主加载检查。
 
 ## 安装范围
 
@@ -27,7 +27,7 @@ Pi 注册支持插件目录字符串，或不带资源过滤的 `{"source": "<�
 
 `--continuity-root <插件包目录>` 可以复用父任务准备的独立 worktree 中的插件包。仅校验和读取，不 clone、checkout 或修改该目录。plan 冻结路径、manifest 身份和 tree hash；内容改变后旧计划不可应用。
 
-本地模式不查询远程 tag，也不宣称本地包等于公开发行 commit。正式发布来自最新 main 的独立 worktree 时，使用其实际插件目录重新生成 plan；不能将先前目录的 hash 复用到新 worktree。远程模式的 tag 名仍为 `project-continuity-v1.1.0`。
+本地模式不查询远程 tag，也不宣称本地包等于公开发行 commit。正式发布来自最新 main 的独立 worktree 时，使用其实际插件目录重新生成 plan；不能将先前目录的 hash 复用到新 worktree。远程模式的 tag 名仍为 `project-continuity-v1.2.0`。
 
 ## 首次安装与既有安装更新
 

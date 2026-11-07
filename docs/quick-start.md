@@ -2,7 +2,7 @@
 
 安装后不要先学习工具名称。你只需要把目标文件放到当前对话工作目录的根目录，在新对话里复制 [零基础一键开始](reverse-workflow-playbook.md#零基础一键开始) 的模板，由智能体在已授权范围内连续推进并汇报；它会自动处理 receipt、router、case 和 REA，只有真正需要你决定时才提问。
 
-这套环境由三个核心组件、Pi 项目续接插件和一个 Pi 伴随技能组成。核心组件与默认 Pi 组合中的 `project-continuity` 由本安装器管理；`grilling` 保持官方原文，由官方 `npx skills` 安装器单独安装，再由本仓库提供的 Pi 适配脚本处理门面技能：
+这套环境由三个核心组件、Pi 项目续接插件和一个 Pi 伴随技能组成。核心组件与默认 Pi 组合中的 `project-continuity` 由本安装器管理；`grilling` 和 `domain-modeling` 保持官方原文，由官方 `npx skills` 安装；本仓库只生成自己的 Pi wrapper，不修改官方文件。
 
 | 组件 | 负责内容 | 什么时候使用 |
 |---|---|---|
@@ -16,7 +16,7 @@
 
 ### 日常沟通顺序
 
-开场一次说明目标和允许的操作，之后由智能体连续推进并定期汇报。你无需每个阶段复制提示词或回复编号。
+开场一次说明目标、对象和允许的操作，之后由智能体连续推进并定期汇报。你不需要每个阶段复制提示词或回复编号；只有目标结果、影响/授权范围、交付取舍或用户独有材料存在真实分歧时，才复制相应的 `GOAL-*`、`SCOPE-*`、`DELIVERY-*` 卡。
 
 只有最终结果取舍、补充授权、用户独有材料或无法自行解决的阻碍才需要你回答。查文件、选择工具、核对结论、委派子代理和清理后的可用工具切换由智能体负责。
 
@@ -30,27 +30,20 @@
 
 ### Pi grilling 伴随技能
 
-在新电脑或新用户配置上，先在安装器仓库根目录逐个安装官方技能。不要把多个名字写进一次 `-s` 参数；上游安装器的逗号语法存在问题：
+逐个安装官方核心技能；installer wrapper 放到独立的 Pi 用户技能子目录，不写入官方目录。将 `<Pi用户目录>` 换成当前宿主实际使用的 agent 目录（通常为 `~/.pi/agent`）：
 
 ```text
 npx skills add mattpocock/skills -s grilling --agent pi --global
-npx skills add mattpocock/skills -s grill-me --agent pi --global
-npx skills add mattpocock/skills -s grill-with-docs --agent pi --global
 npx skills add mattpocock/skills -s domain-modeling --agent pi --global
-node scripts/pi-adapt-grill-skills.mjs
-node scripts/verify-pi-grill-skills.mjs
+node scripts/pi-adapt-grill-skills.mjs --output-root <Pi用户目录>/skills/pi-grilling
+node scripts/verify-pi-grill-skills.mjs --output-root <Pi用户目录>/skills/pi-grilling
 ```
 
-安装结果应出现在 `~/.agents/skills/` 下。`--agent pi --global` 明确选择 Pi 用户级安装；省略 `--global` 通常会装到当前项目，和上面的用户级适配根不一致。适配脚本会先检查四个技能都完整，再修改两个门面；缺少依赖时以非零退出，不会静默跳过。重复执行不会重复修改。本地检查证明的是适配结构与引用一致；没有上游基线时不证明官方正文的来源真实性。
+官方来源默认 `~/.agents/skills`；自定义来源用 `--skills-root`。生成的 `pi-grill-me` 与 `pi-grill-with-docs` 使用独立名称。Pi 递归发现用户 skills 目录下的技能，重载后核对实际加载路径；若输出放到其他位置，按 [wrapper 指南](pi-grilling-wrappers.md) 将生成包登记到对应 profile，避免重复注册。
 
-如果以后运行 `npx skills update`，上游可能重新写回两个门面；更新后再次执行：
+升级官方技能后，用相同参数重新生成并验证 wrapper。所有权清单检测手改冲突；不能因为有 adapter 标记就覆盖现有文件。旧 `grill-me`/`grill-with-docs` 中的历史适配会单独报告且保持原字节，新 wrapper 直接读取官方核心。
 
-```text
-node scripts/pi-adapt-grill-skills.mjs
-node scripts/verify-pi-grill-skills.mjs
-```
-
-这四个技能属于 Pi 用户级配置，和 `--root` 指定的 REA/reverse/Spec Kit 安装根分开保存。迁移电脑时要同时迁移安装器仓库、reverse 工作副本/远程来源、成果项目，以及按本节重装的用户级技能。安装器的 `verify` 不会把 grilling 算作核心事务的一部分，因此要单独检查四个目录和适配脚本输出。
+Grilling 是可选伴随技能，不属于 Python 核心组件事务；安装器的 verify/restore 不替代这里的独立验证和维护。清单证明本地摘要一致，不认证上游来源或真实对话行为。
 
 安装后不要凭感觉推进任务。针对 EXE、DLL、APK、JS、协议和已有 case 的分阶段操作、加壳/未加壳分流、REA work item、动态验证和可复制提示词，见 [Reverse 工作流使用手册](reverse-workflow-playbook.md)。
 
@@ -135,7 +128,7 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 
 请把选定功能做成独立项目，并与原版进行行为对比。
 
-先恢复或创建当前成果项目的 Spec Kit 工作流，再读取旧 case、证据、feature、plan 和 tasks。保留 unknown，不把文件存在、退出码为 0 或安装成功当成行为等价。
+先读取原 case、目标身份、行为 Evidence 和 unknown；证据足够后再交接到独立成果项目的 Spec Kit 工作流。已有 feature、plan 和 tasks 沿用。不把文件存在、退出码为 0 或安装成功当成行为等价。
 
 完成后分别报告：复用内容、新增内容、已验证行为、失败行为、未知项和下一步验证入口。
 ```

@@ -1,6 +1,6 @@
 # 兼容与验证状态
 
-本次 Pi 入口包为 0.3.0；安装事务协议保持 0.2.0，以兼容已有回执。Python 3.11+ 标准库。最新稳定版本在每次 plan 按所选组件解析，不把研究基线永久固定成安装目标。
+本次 Pi 入口包为 0.4.0；安装事务协议保持 0.2.0，以兼容已有回执。Python 3.11+ 标准库。最新稳定版本在每次 plan 按所选组件解析，不把研究基线永久固定成安装目标。
 
 | 项目 | 已核官方文档/源码 | 本仓离线验证 | 宿主真实加载/任务 |
 |---|---|---|---|
@@ -8,7 +8,7 @@
 | Spec Kit 1.3.1 | 官方 `version --json` 与 `init`；pi/codex/claude integration 参数 | 模拟 init、扩展安装、更新保留项目文件 | 本机 Pi 临时 init 与版本检查通过；现有成果项目模板保留，不自动迁移 |
 | 增强 reverse release/main | 固定用户仓库；RULES → 原 master-route → PRIMARY；已有薄 Codex 插件 | 本地工作副本只读身份检查、回执定位 | 专业路由/端到端任务由主流程验证 |
 | Pi project-continuity 1.1.0 | 独立包 `@toti/pi-project-continuity`；固定 ref `project-continuity-v1.1.0`；实际入口依赖 runtime.mjs/store.mjs | 安装器 102 项测试通过；插件 85 项通过。覆盖项目/目标/分支隔离、取消终态、ID/alias 碰撞、stale source、并行失败、事务恢复、旧安装 update、opt-out、精确 commit、hash/文件、注册过滤、漂移与 restore | Pi Web bundled SDK 1.5.0 与 CLI RPC 的真实生命周期通过 290 项断言（本地模拟模型）；外部模型抽样、实际 Web 页面、新会话状态命令、活动部署 verify 和隔离全新默认安装分别记录；详见 [验收记录](project-continuity-verification.md) |
-| Pi grilling 伴随技能 | 上游 `grilling`、`grill-me`、`grill-with-docs`、`domain-modeling`；只适配两个门面 | Node 离线夹具验证缺依赖时零写入、幂等、旧路径检出，以及适配前后两个官方技能字节不变 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
+| Pi grilling 伴随技能 | 官方 `grilling`、`domain-modeling`、`grill-me`、`grill-with-docs` 保持原文；installer 只生成 `pi-grill-me`、`pi-grill-with-docs` wrapper | Node 离线夹具验证缺依赖时零写入、幂等、官方文件不变、wrapper 路径和引用一致 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
 | Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并、全局/项目入口、子集扩展与升级反例 | 本机部署 verify 通过；Codex 新会话实际触发仍单独验收 |
 | Claude Desktop | 显式 JSON MCP 配置、全局 skill 与项目 CLAUDE.md；不依赖 Claude CLI | provider 环境保留、子集/完整安装、入口升级与项目扩展反例 | 本机既有部署 verify 通过；Desktop 实际加载和新对话触发仍单独验收 |
@@ -18,7 +18,7 @@
 
 CI 配置提供 Windows/Ubuntu × Python 3.11/3.12/3.13，未触发的 job 不计通过。没有对 macOS 或其他宿主作实测声明。
 
-project-continuity 的离线通过不单独证明发布 tag 或活动部署身份；本版本使用 `project-continuity-v1.1.0` tag，本机安装由 receipt 固定 commit/tree hash。本地 `--continuity-root` 只证明所选目录与冻结 hash 一致。accept 不运行扩展，所以应把静态安装、宿主加载、MCP/tools schema、跨会话恢复和真实任务语义分别记录；独立 SDK/RPC 和外部模型抽样不扩大静态回执字段。
+project-continuity 的离线通过不单独证明发布 tag 或活动部署身份；当前分发 pin 为 `project-continuity-v1.2.0` tag；本轮结果见 [guided verification](guided-verification.md)，本机安装由 receipt 固定 commit/tree hash。本地 `--continuity-root` 只证明所选目录与冻结 hash 一致。accept 不运行扩展，所以应把静态安装、宿主加载、MCP/tools schema、跨会话恢复和真实任务语义分别记录；独立 SDK/RPC 和外部模型抽样不扩大静态回执字段。
 
 每次真实验收应在本机私有记录中补上：精确宿主版本、三个核心组件身份、Pi 伴随技能目录与适配状态（如使用 Pi）、运行时版本、加载路径/资源清单、MCP 握手和 tools/schema、provider 状态、原 router 输出、实际 Spec Kit 模板执行、代表任务结果、第二会话恢复和显式入口触发结果。receipt 中的 `unverified` 不会因文件存在、`verify` 通过或安装器退出 0 自动转为 passed。
 

@@ -1,6 +1,6 @@
 # 项目级续接扩展设计
 
-状态：1.1.0 实现；发布与验收结果见 [插件说明](https://github.com/gthubtom1/agent-plugins/tree/main/plugins/pi/project-continuity) 和 [安装说明](project-continuity-install.md)。实现源在插件仓库，安装仓库负责精确版本部署；本文记录当前边界。
+状态：1.2.0 实现；本轮验证见 [guided verification](guided-verification.md)。发布与验收结果见 [插件说明](https://github.com/gthubtom1/agent-plugins/tree/main/plugins/pi/project-continuity) 和 [安装说明](project-continuity-install.md)。实现源在插件仓库，安装仓库负责精确版本部署；本文记录当前边界。
 
 ## 要解决的问题
 
@@ -141,9 +141,9 @@
 宿主相关逻辑放在 `agent-plugins/plugins/pi/project-continuity` 独立 package 中。reverse 入口继续是 skill-only package。Pi 的完整默认安装额外注册续接 package，可用 `--without-project-continuity` 退出；Codex/Claude 不被强装 Pi 扩展。安装/升级/verify/restore 由同一事务机制管理。
 
 - `before_agent_start`：提供稳定的保存/恢复规则，不替换整个系统提示词。
-- `context`：每次模型请求重新核对项目和分支，移除自身旧恢复/状态快照，注入有界当前状态。未初始化且没有原 case/feature 时不创建目录。
+- `context`：每次模型请求重新核对项目、分支、case 和目标身份，移除自身旧恢复/状态快照，注入有界当前状态。guided reverse context 可保存 goal/scope/authorization/phase/Evidence/unknown/blocker/delivery 指针，但不创建授权、任务或 Evidence authority。未初始化且没有原 case/feature 时不创建目录。
 - 重要用户决定、新证据、失败或产物/验证变化：主 agent 用 `continuity_save` 提交来源可追溯的增量记录。
-- `agent_settled`：已初始化且 case 不含糊时，保存最近自述为 candidate 和最近工具错误的条件摘要；不重复保存相同自述，不猜测技术根因。
+- `agent_settled`：已初始化且 case 不含糊时，保存最近自述为 candidate 和最近工具错误的条件摘要；不重复保存相同自述，不猜测技术根因。`/continuity candidates off` 可在本会话关闭自动自述捕获，仍允许显式 continuity_save。
 - 压缩、树导航、reload/resume/new 后：后续 `context` 从项目文件恢复；不修改压缩摘要，不依赖退出时才保存。
 - 多个 case 未选定时不自动合并技术摘要，按需查询显式传入 `caseRoot`；项目通用决定仍可记录。
 

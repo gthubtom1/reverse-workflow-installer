@@ -19,8 +19,7 @@
 | accept 的 reverse router 检查失败 | 先检查 reverse 工作副本 dirty/commit 和原生 master-route；不要在 installer 中复制第二套路由 |
 | accept 的 Spec Kit init 检查失败 | 检查官方 specify 版本、client integration 和临时目录权限；不要把失败模板写入用户成果项目 |
 | Pi 旧 REA 技能仍竞争 | 按宿主资源清单找准 SKILL 路径，重新 plan --exclude-rea-skill 精确排除；不编辑官方原文 |
-| Pi 的 grilling 没出现或门面行为异常 | 确认 `~/.agents/skills/{grilling,grill-me,grill-with-docs,domain-modeling}` 都存在；从安装器仓库运行 `node scripts/pi-adapt-grill-skills.mjs`，然后重启或 reload Pi。脚本只适配两个门面，不修改官方 `grilling` 正文 |
-| grilling 提出了本来可以查证的事实问题 | 让它先暂停提问，要求 agent/subagent/REA 查文件、跑工具或比对字节；事实返回后再继续方案 frontier |
+| Pi 的 grilling 没出现或 wrapper 异常 | 核官方 `grilling` / `domain-modeling` 路径及独立 `--output-root`；按 [wrapper 指南](pi-grilling-wrappers.md) 运行生成/verify 并重载。旧 companion 漂移只报告、不改写；所有权冲突先核用户修改，不强制覆盖。 || grilling 提出了本来可以查证的事实问题 | 让它先暂停提问，要求 agent/subagent/REA 查文件、跑工具或比对字节；事实返回后再继续方案 frontier |
 | 每个阶段都要求回复编号或“继续” | 汇报不是审批：当前目标、授权与预算内的事实检查和技术路线自动推进。沿用已答问题，不为选工具或形成结论重开 grilling；仅新目标取舍、授权或用户独有材料才暂停 |
 | grilling 和 reverse 输出格式混在一起 | reverse 负责阶段报告并继续常规工作，只有真实决策才给 2–5 项编号选项；grilling 访谈使用 Q1/推荐答案；先完成访谈并确认共识，再发实施指令 |
 

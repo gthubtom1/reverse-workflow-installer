@@ -46,7 +46,7 @@ def metadata(url):
         return {"info": {"name": "specify-cli"}, "releases": {"1.2.0": [{"filename": "old.whl"}], "1.3.0": [{"filename": "stable.whl", "digests": {"sha256": "f" * 64}}], "2.0.0rc1": [{"filename": "pre.whl"}], "9.0.0": [{"filename": "bad.whl", "yanked": True}]}}
     if url.endswith("/releases/latest"):
         raise InstallError("HTTP 404 fixture")
-    if url.endswith("/commits/main") or "/commits/v" in url or "project-continuity-v1.1.0" in url:
+    if url.endswith("/commits/main") or "/commits/v" in url or "project-continuity-v1.2.0" in url:
         return {"sha": "a" * 40}
     raise AssertionError(url)
 
@@ -99,7 +99,7 @@ class Fixture(unittest.TestCase):
             self.assertEqual(argv[-2], "https://github.com/gthubtom1/agent-plugins")
             target = Path(argv[-1])
             plugin = target / "plugins/pi/project-continuity"
-            atomic(plugin / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.1.0", "pi": {"extensions": ["./index.ts"]}}))
+            atomic(plugin / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.2.0", "pi": {"extensions": ["./index.ts"]}}))
             atomic(plugin / "index.ts", b'import { registerContinuity } from "./runtime.mjs";')
             atomic(plugin / "runtime.mjs", b'import "./store.mjs"; export function registerContinuity() {}')
             atomic(plugin / "store.mjs", b"continuity store fixture")
@@ -803,7 +803,7 @@ class Fixture(unittest.TestCase):
 
     def _plugin_root(self):
         root = self.base / "continuity-plugin"
-        atomic(root / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.1.0", "pi": {"extensions": ["./index.ts"]}}))
+        atomic(root / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.2.0", "pi": {"extensions": ["./index.ts"]}}))
         atomic(root / "index.ts", b'import { registerContinuity } from "./runtime.mjs";')
         atomic(root / "runtime.mjs", b'import "./store.mjs"; export function registerContinuity() {}')
         atomic(root / "store.mjs", b"continuity store fixture")
@@ -851,7 +851,7 @@ class Fixture(unittest.TestCase):
         atomic(receipt_path, encode_json(receipt))
         (plugin.parents[3] / "complete.json").unlink()
         updated = self.install()
-        self.assertEqual(updated["project_continuity"]["version"], "1.1.0")
+        self.assertEqual(updated["project_continuity"]["version"], "1.2.0")
 
     def test_continuity_explicit_optout_skips_plugin(self):
         self.args.without_project_continuity = True
@@ -1058,7 +1058,7 @@ class Fixture(unittest.TestCase):
             seen.append(url)
             return metadata(url)
         plan = w.make_plan(self.args, fetch)
-        self.assertEqual(seen, ["https://api.github.com/repos/gthubtom1/agent-plugins/commits/project-continuity-v1.1.0"])
+        self.assertEqual(seen, ["https://api.github.com/repos/gthubtom1/agent-plugins/commits/project-continuity-v1.2.0"])
         self.assertEqual(list(plan["components"]), ["project_continuity"])
         receipt = w.install(plan, self.args)
         self.assertTrue(w.verify(self.root)["ok"])
@@ -1164,7 +1164,7 @@ class Fixture(unittest.TestCase):
         with self.assertRaisesRegex(InstallError, "404"):
             w.make_plan(self.args, fetch)
         self.assertEqual(len(seen), 1)
-        self.assertTrue(seen[0].endswith("/commits/project-continuity-v1.1.0"))
+        self.assertTrue(seen[0].endswith("/commits/project-continuity-v1.2.0"))
 
     def test_continuity_wrong_checkout_does_not_activate(self):
         self._continuity_only()
