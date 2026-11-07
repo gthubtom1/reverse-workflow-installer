@@ -22,6 +22,8 @@
 
 `grilling` 适合你明确要求质询或目标取舍尚未确定时使用，也可以在开工时澄清目标；它不是每个结论、每次修改前的必经审批。纯报告核查先由 reverse/REA 取证，已经确定的决策不用重问。进入访谈后遵守官方共识规则。
 
+需要保留现有官方 Spec Kit 版本时，生成 plan 可用 `--spec-kit-version`，详见 [固定官方版本](version-pins.md)。上游更新不会让旧安装被冒充成新版通过。
+
 ### Pi project-continuity 插件
 
 新安装和旧三组件安装的默认 Pi `all` 更新都会加入该插件。未安装过插件时可用 `--without-project-continuity` 跳过；其他组件子集不会自动加入。插件只注册自身目录，不加载整个 agent-plugins hub；它不替代原 case、证据或 Spec Kit 文档。来源 tag、本地 worktree 复用、冻结计划和恢复命令见 [插件安装说明](project-continuity-install.md)。

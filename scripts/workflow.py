@@ -114,6 +114,12 @@ def detect_client(client, config=None, env=None):
 def scope(args):
     raw = str(getattr(args, "components", "") or "").strip().lower()
     components = selected_components(args.components)
+    spec_pin = getattr(args, "spec_kit_version", None)
+    if spec_pin is not None:
+        if "spec_kit" not in components:
+            raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
+        if not isinstance(spec_pin, str) or not stable(spec_pin):
+            raise InstallError("--spec-kit-version 必须是精确稳定版本（例如 1.3.1）")
     root = abs_path(args.root)
     explicit = abs_path(args.client_config) if args.client_config else None
     if needs_host(components):
@@ -180,7 +186,7 @@ def scope(args):
             raise InstallError("成果项目与复用工具目录重叠")
     detection = None if args.node else shutil.which("node")
     node = str(abs_path(args.node)) if args.node else (str(abs_path(detection)) if detection else None)
-    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "continuity_root": str(continuation) if continuation else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse}
+    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "continuity_root": str(continuation) if continuation else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **({"spec_kit_version": spec_pin} if spec_pin is not None else {})}
 
 
 def reverse_identity(path):
@@ -290,7 +296,8 @@ def make_plan(args, fetch=None):
     manifest = load_json(REPO / "components.json")
     # Resolve only selected components; explicit local working copies need no upstream lookup.
     keys = [key for key in selected["components"] if not (key in ("reverse", "project_continuity") and selected.get("reverse_root" if key == "reverse" else "continuity_root"))]
-    components = resolve(manifest, **({"fetch": fetch} if fetch else {}), components=keys)
+    components = resolve(manifest, **({"fetch": fetch} if fetch else {}), components=keys,
+                         **({"spec_kit_version": selected["spec_kit_version"]} if "spec_kit_version" in selected else {}))
     if "reverse" in selected["components"]:
         if selected["reverse_root"]:
             identity = reverse_identity(selected["reverse_root"])
@@ -363,6 +370,10 @@ def validate_plan(plan):
     for key in ("components", "root", "client", "agent_dir", "client_config", "project", "reverse_root", "continuity_root", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
         if checked[key] != selected.get(key):
             raise InstallError("冻结计划包含非规范路径或范围；重新 plan")
+    if checked.get("spec_kit_version") != selected.get("spec_kit_version"):
+        raise InstallError("冻结计划的 Spec Kit 版本选择不一致")
+    if selected.get("spec_kit_version") is not None and plan.get("components", {}).get("spec_kit", {}).get("version") != selected["spec_kit_version"]:
+        raise InstallError("冻结计划的 Spec Kit 版本与显式 pin 不一致")
     expected_configs = []
     if selected["client_config"]:
         expected_configs.append(Path(selected["client_config"]))

@@ -35,12 +35,17 @@ def stable(version):
 COMPONENTS = ("rea", "spec_kit", "reverse", "project_continuity")
 
 
-def resolve(manifest, fetch=http_json, components=None):
-    """Resolve only requested components; None resolves all known components."""
+def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
+    """Resolve requested components, optionally pinning Spec Kit to a stable release."""
     requested = list(COMPONENTS) if components is None else [str(key) for key in components]
     for key in requested:
         if key not in COMPONENTS:
             raise InstallError(f"未知组件: {key}")
+    if spec_kit_version is not None:
+        if "spec_kit" not in requested:
+            raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
+        if not isinstance(spec_kit_version, str) or not stable(spec_kit_version):
+            raise InstallError("--spec-kit-version 必须是精确稳定版本（例如 1.3.1）")
     result = {}
     if "rea" in requested:
         rea = fetch(manifest["rea"]["metadata"])
@@ -51,7 +56,7 @@ def resolve(manifest, fetch=http_json, components=None):
             raise InstallError("REA 元数据缺 dist.integrity 或 engines.node")
         result["rea"] = {"version": version, "integrity": rea["dist"]["integrity"], "node_engine": rea["engines"]["node"], "repository": manifest["rea"]["repository"]}
     if "spec_kit" in requested:
-        result["spec_kit"] = _resolve_spec_kit(manifest, fetch)
+        result["spec_kit"] = _resolve_spec_kit(manifest, fetch, spec_kit_version)
     if "reverse" in requested:
         result["reverse"] = _resolve_reverse(manifest, fetch)
     if "project_continuity" in requested:
@@ -59,7 +64,7 @@ def resolve(manifest, fetch=http_json, components=None):
     return result
 
 
-def _resolve_spec_kit(manifest, fetch):
+def _resolve_spec_kit(manifest, fetch, version=None):
     spec = fetch(manifest["spec_kit"]["metadata"])
     candidates = []
     for ver, files in spec.get("releases", {}).items():
@@ -67,9 +72,16 @@ def _resolve_spec_kit(manifest, fetch):
             candidates.append(ver)
     if spec.get("info", {}).get("name", "").replace("_", "-") != "specify-cli" or not candidates:
         raise InstallError("specify-cli 未找到非撤回的稳定发行版")
-    specver = max(candidates, key=lambda v: tuple(map(int, v.split("."))))
-    files = spec["releases"][specver]
-    return {"version": specver, "repository": manifest["spec_kit"]["repository"], "artifacts": [{"filename": f["filename"], "sha256": f.get("digests", {}).get("sha256"), "requires_python": f.get("requires_python")} for f in files if not f.get("yanked", False)]}
+    if version is not None and version not in candidates:
+        raise InstallError(f"指定的 specify-cli 版本 {version} 不存在、已撤回或没有发行文件")
+    specver = version if version is not None else max(candidates, key=lambda v: tuple(map(int, v.split("."))))
+    files = [f for f in spec["releases"][specver] if not f.get("yanked", False)]
+    if version is not None and any(not re.fullmatch(r"[a-f0-9]{64}", str(f.get("digests", {}).get("sha256", ""))) for f in files):
+        raise InstallError("指定的 specify-cli 发行文件缺少有效 SHA-256")
+    result = {"version": specver, "repository": manifest["spec_kit"]["repository"], "artifacts": [{"filename": f["filename"], "sha256": f.get("digests", {}).get("sha256"), "requires_python": f.get("requires_python")} for f in files]}
+    if version is not None:
+        result["version_selection"] = "explicit-pypi-stable-release"
+    return result
 
 
 def _resolve_project_continuity(manifest, fetch):
