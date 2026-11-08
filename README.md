@@ -6,6 +6,16 @@
 
 REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务；`grilling` 在 Pi 中负责方案决策树、隐含前提和结论审查。本仓库负责安装、范围明确的配置、更新与恢复，不修改 REA、Spec Kit 或 `grilling` 官方正文。
 
+## Pi user profiles and skills
+
+本仓库还提供两组简单的、可被 AI 安装代理读取的用户级资源：
+
+- [Pi profile templates](resources/pi-agent-profiles/README.md)：复制到当前 Pi agent 目录的 `AGENTS.md` 和 `agents/*.md`。
+- [Portable Pi development skills](resources/pi-agent-skills/README.md)：复制到当前用户的全局 skills 目录，通常是 `%USERPROFILE%\\.agents\\skills\\`。
+- [Profile 安装说明](docs/pi-agent-profiles.md) 和 [Skill 安装说明](docs/pi-agent-skills.md) 记录实际路径、冲突处理、reload 和新会话验收。
+
+这些资源不修改 Python 安装器协议，也不包含模型账号、凭据、settings、sessions 或 memory。安装代理应先读取对应说明，按目标电脑实际的 `PI_CODING_AGENT_DIR`、用户目录和 skills 根目录复制文件；已有内容不同的文件先报告冲突，不要静默覆盖。
+
 第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个核心组件和 Pi `grilling` 伴随技能的分工、官方技能安装与 Pi 适配、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
 
 如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。零基础用户直接从其中的 [零基础一键开始](docs/reverse-workflow-playbook.md#零基础一键开始) 复制模板即可。
@@ -86,7 +96,7 @@ python scripts/install.py restore --root ../workflow
 python scripts/install.py restore --root ../workflow --apply
 ```
 
-带 `--plan-file` 可保证展示与应用使用同一版本。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。旧 receipt 中若仍有 project-continuity，更新会按 receipt 识别唯一注册并移除；缺少唯一身份、出现重复或 hub 注册时停止。已经选中的 shell-guard 在 update 中继续保留，本地包复用路径也会沿用；旧 receipt 不会因此自动启用它。shell-guard 的 Everything 配置只合并 `shellGuard.everything.esPath`，保留用户其他配置。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
+带 `--plan-file` 可保证展示与应用使用同一版本。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。旧 receipt 中若仍有 project-continuity，更新会按 receipt 识别唯一注册并移除；缺少唯一身份、出现重复或 hub 注册时停止。已经选中的 shell-guard 在 update 中继续保留，本地包复用路径也会沿用；旧 receipt 不会因此自动启用它。shell-guard 的 Everything 配置只合并明确提供且由 receipt 管理的 `esPath`、`guiPath` 和 `autostart` 字段，保留用户其他配置。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
 
 本机回执、精确 paths/版本、配置 diff 摘要及完整恢复备份位于 `root/.installer/`。备份可能包含你原配置中的秘密，属于本地私有数据，禁止发布。`installed: true` **只表示包与指定配置事务已完成**。`verify` 核包、运行时、reverse 和注册身份，不启动宿主/MCP；它返回的 `validation` 保留加载、握手/schema、真实任务等未验证项。失败事务不会写成功回执，已有活动安装会回退保留。
 
