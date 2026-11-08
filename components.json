@@ -23,12 +23,12 @@
     "repository": "https://github.com/gthubtom1/agent-plugins",
     "api": "https://api.github.com/repos/gthubtom1/agent-plugins",
     "policy": "frozen-release-commit",
-    "release_ref": "shell-guard-v0.2.2",
-    "commit": "f160ffc039374a1be002ac3934681565a84c4257",
+    "release_ref": "shell-guard-v0.2.3",
+    "commit": "7b70e1d0233ce4210cf171c39cca0f095ea54b92",
     "plugin_dir": "plugins/pi/shell-guard",
     "package_name": "@toti/pi-shell-guard",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "expected_extension": "./index.ts",
-    "required_files": ["package.json", "index.ts", "runtime.mjs", "src/config.mjs", "src/everything.mjs", "src/grants.mjs", "src/paths.mjs", "src/policy.mjs", "src/split.mjs", "src/rules/interactive.mjs", "src/rules/rm.mjs", "src/rules/search.mjs", "src/rules/timeout.mjs", "src/rules/scripts.mjs", "src/wrappers.mjs"]
+    "required_files": ["package.json", "index.ts", "runtime.mjs", "src/config.mjs", "src/everything.mjs", "src/grants.mjs", "src/paths.mjs", "src/policy.mjs", "src/split.mjs", "src/rules/interactive.mjs", "src/rules/rm.mjs", "src/rules/search.mjs", "src/rules/timeout.mjs", "src/rules/scripts.mjs", "src/wrappers.mjs", "src/trash.mjs"]
   }
 }

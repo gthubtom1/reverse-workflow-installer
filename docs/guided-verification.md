@@ -1,6 +1,6 @@
 # Installer guided verification
 
-本记录对应 installer 与 Pi 入口包 0.6.0，事务协议保持 0.2.0。当前活动组件是 REA、Spec Kit、reverse，以及默认关闭的可选 shell-guard 0.2.2。
+本记录对应 installer 与 Pi 入口包 0.6.0，事务协议保持 0.2.0。当前活动组件是 REA、Spec Kit、reverse，以及默认关闭的可选 shell-guard 0.2.3。
 
 ## 离线验证范围
 
