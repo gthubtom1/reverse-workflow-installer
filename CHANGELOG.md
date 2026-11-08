@@ -1,6 +1,7 @@
 ## Next
 
-- 更新可选 shell-guard 到 0.2.3：主代理与子代理共用 TEMP 回收规则；普通项目内 `rm` 移动到 TEMP，系统/盘根等受保护目标被阻止。Bash 工具不再打开等待确认弹窗。
+- 更新可选 Pi shell-guard 到 0.3.0：借鉴 pi-trash 的 AST/Node-helper 机制，随包固定 ISC `unbash` 文件，无需目标机 npm 安装；放行常见只读循环，单个字面项目内 `rm` 移到 TEMP。移除旧文字授权、分级与确认分支，保留硬保护和 Everything。
+- 固定正式 tag `shell-guard-v0.3.0` 及 commit `ac5d92ec1a448ddb390049b40878bc1489c5dfb2`；必需文件包含只读 AST 模块、解析库与其许可证。
 
 ## 0.6.0 — 2026-11-08
 
