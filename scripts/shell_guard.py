@@ -54,11 +54,12 @@ def validate_package(root, entry, development=False):
 
 def executable_identity(value, option="--everything-es"):
     path = Path(value).expanduser()
+    label = "Everything CLI" if option == "--everything-es" else "Everything GUI"
     if not path.is_absolute() or not path.is_file():
-        raise InstallError(f"{option} 必须是现存 CLI 文件的绝对路径")
+        raise InstallError(f"{label}（{option}）必须是现存可执行文件的绝对路径")
     reject_links(path)
     if (os.name == "nt" and path.suffix.lower() != ".exe") or (os.name != "nt" and not os.access(path, os.X_OK)):
-        raise InstallError(f"{option} 必须指向可执行文件")
+        raise InstallError(f"{label}（{option}）必须指向可执行文件")
     return {"path": str(path.resolve()), "sha256": digest(path.read_bytes())}
 
 

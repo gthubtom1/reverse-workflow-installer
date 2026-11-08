@@ -499,6 +499,7 @@ class ShellGuardTests(unittest.TestCase):
         self.args.everything_es = str(self.exe())
         self.install()
         atomic(Path(self.args.everything_es), b"CLI edit")
+        Path(self.args.everything_es).chmod(0o755)
         self.assertFalse(w.verify(self.root)["ok"])
         with self.assertRaisesRegex(InstallError, "活动 shell-guard 漂移"):
             self.install()
@@ -532,6 +533,8 @@ class ShellGuardTests(unittest.TestCase):
             with self.subTest(target=target.name):
                 def drift(journal, path, data, kind="file", **kwargs):
                     result = original(journal, path, data, kind, **kwargs)
+                    if Path(path) == Path(self.args.everything_es):
+                        Path(path).chmod(0o755)
                     if Path(path) == self.agent / "settings.json":
                         atomic(target, b"changed after activation")
                     return result
