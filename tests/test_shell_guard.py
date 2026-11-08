@@ -533,8 +533,8 @@ class ShellGuardTests(unittest.TestCase):
             with self.subTest(target=target.name):
                 def drift(journal, path, data, kind="file", **kwargs):
                     result = original(journal, path, data, kind, **kwargs)
-                    if Path(path) == Path(self.args.everything_es):
-                        Path(path).chmod(0o755)
+                    if Path(path) == Path(self.args.everything_es) or Path(target) == Path(self.args.everything_es):
+                        Path(self.args.everything_es).chmod(0o755)
                     if Path(path) == self.agent / "settings.json":
                         atomic(target, b"changed after activation")
                     return result
