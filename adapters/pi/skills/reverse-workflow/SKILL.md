@@ -11,7 +11,7 @@ description: 逆向、二进制、APK、前端签名、协议、API 安全、复
 2. 由平台原生 `skills/scripts/master-route` 选择 PRIMARY，再读取对应原 `SKILL.md`。严格只读请求使用 `-DryRun` / `--dry-run`，不创建 route-scope/case；执行模式才按原授权门建立或复用 case。支持的参数以当前安装版本为准；旧版没有只读路由时读取配置审查，不能偷偷写元数据。
 3. PRIMARY 创建一个 bounded work item 后才调用官方 REA MCP。保留实际 schema、Evidence、unknown、预算、provider 和 cleanup。REA 是分析 backend，不选择总目标、scope、case 或完成结论。
 4. 独立实现前先有原目标的行为模型、成功标准和 Evidence handoff，再进入原 `reconstruction/SKILL.md`。Spec Kit 只用成果项目中实际生成的官方资源；不在工具仓库 init，也不以猜测规格替代缺失证据。
-5. 续接先核原 `scope.md`、`timeline.md`、`workitems.md`、Evidence 和 Spec Kit feature/tasks；continuity 仅是恢复指针。用户已有回答继续有效，只澄清缺失或被新证据推翻的决定。
+5. 先核对原 `scope.md`、`timeline.md`、`workitems.md`、Evidence 和 Spec Kit feature/tasks；用户已有回答继续有效，只澄清缺失或被新证据推翻的决定。
 
 按原仓库 `skills/ops/guided-operator-contract.md` 与 `skills/ops/beginner-operator-guidance.md` 交互：目标 `GOAL-*`、影响/授权范围 `SCOPE-*`、交付 `DELIVERY-*` 分开。用户可以复制整句选项、稳定 ID，或回复当前展示的 A/B/C、1/2/3。别名只对应同一 case/target 最近的明确选项；ID 本身不授予权限。清楚的自然语言决定直接沿用，不要求重选。
 

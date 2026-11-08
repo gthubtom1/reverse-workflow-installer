@@ -32,12 +32,12 @@ def stable(version):
     return bool(re.fullmatch(r"\d+\.\d+\.\d+", version))
 
 
-COMPONENTS = ("rea", "spec_kit", "reverse", "project_continuity")
+COMPONENTS = ("rea", "spec_kit", "reverse", "shell_guard")
 
 
 def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
     """Resolve requested components, optionally pinning Spec Kit to a stable release."""
-    requested = list(COMPONENTS) if components is None else [str(key) for key in components]
+    requested = [key for key in COMPONENTS if key != "shell_guard"] if components is None else [str(key) for key in components]
     for key in requested:
         if key not in COMPONENTS:
             raise InstallError(f"未知组件: {key}")
@@ -59,8 +59,17 @@ def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
         result["spec_kit"] = _resolve_spec_kit(manifest, fetch, spec_kit_version)
     if "reverse" in requested:
         result["reverse"] = _resolve_reverse(manifest, fetch)
-    if "project_continuity" in requested:
-        result["project_continuity"] = _resolve_project_continuity(manifest, fetch)
+    if "shell_guard" in requested:
+        from urllib.parse import quote
+        entry = manifest["shell_guard"]
+        resolved = fetch(entry["api"] + "/commits/" + quote(entry["release_ref"], safe=""))
+        commit = resolved.get("sha")
+        repository_tree = resolved.get("commit", {}).get("tree", {}).get("sha")
+        if not re.fullmatch(r"[a-f0-9]{40}", str(repository_tree)):
+            raise InstallError("shell-guard release 缺少冻结 Git tree")
+        if not re.fullmatch(r"[a-f0-9]{40}", str(commit)) or (entry.get("commit") is not None and commit != entry["commit"]):
+            raise InstallError("shell-guard release commit 与固定清单不符；拒绝移动 tag 或回退 main")
+        result["shell_guard"] = {**entry, "commit": commit, "repository_tree": repository_tree, "ref": entry["release_ref"], "mode": "clone-frozen-commit"}
     return result
 
 
@@ -82,25 +91,6 @@ def _resolve_spec_kit(manifest, fetch, version=None):
     if version is not None:
         result["version_selection"] = "explicit-pypi-stable-release"
     return result
-
-
-def _resolve_project_continuity(manifest, fetch):
-    from urllib.parse import quote
-    entry = manifest["project_continuity"]
-    ref = entry["release_ref"]
-    commit = fetch(entry["api"] + "/commits/" + quote(ref, safe=""))["sha"]
-    if not re.fullmatch(r"[a-f0-9]{40}", str(commit)):
-        raise InstallError("project_continuity commit 身份无效")
-    return {
-        "ref": ref,
-        "commit": str(commit),
-        "repository": entry["repository"],
-        "api": entry["api"],
-        "plugin_dir": entry["plugin_dir"],
-        "package_name": entry["package_name"],
-        "version": entry["version"],
-        "expected_extension": entry["expected_extension"],
-    }
 
 
 def _resolve_reverse(manifest, fetch):

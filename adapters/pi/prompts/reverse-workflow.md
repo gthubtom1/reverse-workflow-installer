@@ -8,6 +8,6 @@ argument-hint: "[任务]"
 
 重要阶段用白话报告：本轮做了什么、目前确认了什么、目前还不知道什么、当前阻碍和下一步。汇报不等于等待批准。技术方法在现有 scope、预算和 cleanup 内自动选择；范围外动作需要对应用户决定。
 
-单个授权补丁或功能成功不能宣称整体完成：按原 authorization-coverage 契约逐组件核 Evidence 和回归。行为证据充分后才进入 reconstruction 和成果项目 Spec Kit；按 L0–L6 报告实际支持等级和未知项。continuity 只保存指针，模型自述保持 candidate。Grilling 仅用于真实取舍或明确访谈，官方正文不改。
+单个授权补丁或功能成功不能宣称整体完成：按原 authorization-coverage 契约逐组件核 Evidence 和回归。行为证据充分后才进入 reconstruction 和成果项目 Spec Kit；按 L0–L6 报告实际支持等级和未知项。Grilling 仅用于真实取舍或明确访谈，官方正文不改。
 
 用户任务：$ARGUMENTS

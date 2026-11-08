@@ -5,13 +5,19 @@
 | auto 没有证据/宿主证据冲突 | 明确 `--client pi` 或 `--client codex` 并指定配置根；不输出环境值 |
 | Node engine 不满足 | 读 plan 的 node_engine；准备含 npm 的官方 Node 分发包，用 --node 指定可执行文件 |
 | 找不到 npm-cli.js/semver | 当前安装器支持官方 Node 分发布局；不混用另一个 Node 的 PATH npm |
-| GitHub 404 | 增强仓库可能尚无 main 或权限不可见；release 404 可回退解析 main，main 404 会明确失败 |
+| GitHub 404 | reverse 的 latest-release 404 可按其既有策略解析 main；shell-guard 固定 tag 不回退 main。shell-guard 0.2.1 tag 不可用或身份不符时停止，不能改装旧版本 |
 | GitHub 403/429/网络错误 | 安装器会停止，不把失败当作没有 release。若已登录 GitHub CLI，可在当前进程中设置 `GH_TOKEN` 后重新运行 plan，例如 PowerShell：`$env:GH_TOKEN = (gh auth token); python scripts/install.py plan ...`；token 只作为进程环境使用，不写入 receipt 或日志。没有认证时等待限流恢复；不会静默切换版本 |
 | 配置或 reverse 漂移 | 旧计划不会覆盖新文件；审阅变化后重新 plan |
+| 旧 receipt 仍含 project-continuity | 新计划不会加载它；更新只在 receipt 能定位唯一、未过滤的 Pi 包注册时移除该注册。缺少 root、重复/过滤/hub 注册或其他同名注册时，先清理并重新 plan；旧包目录会保留在历史版本目录 |
 | 首次成果目录非空 | 使用独立空项目；不会用 --force 吞掉旧文件 |
 | 官方 setup/init 接口不匹配 | 保留事务目录；按冻结版本核实际官方帮助/输出，再更新适配；不手改原包 |
 | 复用版本不符 | 准备确切版本的新独立 prefix/tool dirs，或省略复用参数让安装器自行安装 |
 | transaction.lock 残留 | 先确认没有活动安装/恢复进程，再删除该锁；按 journal 恢复中断事务 |
+| shell-guard 缺文件/版本不符 | `--shell-guard-root` 必须指向独立 0.2.1 包目录，含 `index.ts`、`runtime.mjs`、所需 `src` 与精确 manifest；hub 根或旧版本包不能冒充目标 |
+| shell-guard 重复/hub/过滤注册 | 审阅 plan 中的准确来源；开发迁移用 `--replace-shell-guard-root` 指定唯一旧包。先解决重复来源，安装器不静默去重或覆盖资源过滤 |
+| shell-guard 迁移源/CLI 漂移 | 旧包内容、注册和显式 CLI hash 在 plan 中冻结；审阅真实变化后重新 plan。活动插件漂移不能靠新 plan 覆盖原 receipt 身份 |
+| Everything 路径不合法/有用户配置 | `--everything-es` 与可选 `--everything-gui` 仅接受现存可执行文件的绝对路径；`--everything-autostart` 必须配 GUI。已有非本事务管理的不同路径配置会拒绝覆盖；其他 shellGuard 字段保留 |
+| shell-guard verify 通过但未拦截/无法查询 | 完整重启实际 Pi/Pi Web，核对唯一插件包和工具加载。保留的禁用开关、宿主 `PI_SHELL_GUARD_ES` 覆盖、Everything 服务/索引均需单独检查；静态校验不会启用这些能力 |
 | restore conflict | 已保留后续用户修改，逐项审阅冲突路径；不重复强制恢复 |
 | verify 通过但宿主没有技能/工具 | 确认启动所用 agent/CODEX_HOME、项目工作目录和信任设置；Pi /reload，核实际资源与 MCP，不把静态通过当加载通过 |
 | accept 的 REA 检查失败 | 先看 receipt 中的 Node、REA package 和环境；accept 使用官方 `rea mcp doctor`，不重复安装或修改官方包 |

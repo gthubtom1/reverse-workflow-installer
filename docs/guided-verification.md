@@ -1,40 +1,17 @@
-# Guided workflow 验收
+# Installer guided verification
 
-发布组合：installer 0.4.0、reverse-skill 1.8.0、project-continuity 1.2.0。三个正式 release 已发布，公共冻结身份的全新安装与活动更新均完成 plan、install/update、verify、accept。下面分别记录机械契约、宿主生命周期和模型动作抽样；这些结果不构成任意真实目标的行为等价保证。
+本记录对应 installer 与 Pi 入口包 0.6.0，事务协议保持 0.2.0。当前活动组件是 REA、Spec Kit、reverse，以及默认关闭的可选 shell-guard 0.2.1。
 
-| 组件 | 公共 tag | 冻结 commit |
-|---|---|---|
-| reverse-skill | [v1.8.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.8.0) | `b6c7abb0d5086dcf72d6136f3edac37fec916df8` |
-| installer | [v0.4.0](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.4.0) | `35fbe6ecba3269a0e7dcbc3b9f241384dc0afac0` |
-| project-continuity | [1.2.0](https://github.com/gthubtom1/agent-plugins/releases/tag/project-continuity-v1.2.0) | `334725505b888492f011730c36c7713d8f1e6bf9` |
+## 离线验证范围
 
-PR、main 和 release tag 的公开 CI 均通过。合并树与经过测试的分支树一致。插件只安装独立子目录，hub 根版本保持1.1.0。
+- 新计划的 `all` 和核心组件子集不会解析、安装、注册或写入 project-continuity。
+- 含 project-continuity 的旧 receipt 在更新时只进入退役兼容路径：receipt 能定位唯一、未过滤的 Pi `packages` 注册时，更新事务移除该注册；缺少 root/身份、重复注册、hub/父目录或其他同名注册时，plan 明确失败。
+- 退役更新写入的新 receipt 不包含 project-continuity 字段，旧包目录保留在历史版本目录中，不会被新 settings 加载。
+- REA、Spec Kit、reverse 的现有范围、入口、配置保留、项目模板和恢复逻辑继续按各自 receipt 组件执行。
+- shell-guard 继续按独立包的 commit/tree/hash、Pi 注册和 Everything CLI/GUI 配置规则执行；它不依赖已移除的组件模块。
 
-| 验证层 | 结果 | 边界 |
-|---|---|---|
-| 原路由与结构 | PowerShell/Bash 各192例；完整 smoke/coherence、兼容指纹、文档和安全边界检查通过 | 保留原 routing.json 和既有路由优先级 |
-| 授权面闭合 | 25项测试通过 | 固定清单分母，1/7、遗漏组件、身份/哈希不符、过期/失败回归、相邻组件重开、路径越界等反例；不证明人为提供的清单与证据语义真实 |
-| Reconstruction | 31项原交接测试通过 | 原 case/Evidence/Spec Kit 边界保留，L0–L6 明确区分 |
-| Installer | 116项 Python 测试通过 | 包括显式官方版本 pin、旧冻结计划、实际版本不符拒绝及配置/事务保护 |
-| Grilling wrappers | Windows107项：105通过、2项 POSIX FIFO 跳过；公开 Linux/Windows CI 验证 | 所有官方输入保持原字节；输出所有权、链接和手改冲突受检 |
-| Wrapper 宿主发现 | Pi Web SDK1.5.0 读取两个新技能，无诊断 | 静态资源发现，不代表所有访谈行为已验证 |
-| Continuity | 107项插件测试通过；真实 SDK与 bundled CLI/RPC 344项断言通过 | 包含候选隔离、指针新鲜度、case/target、取消、缺失case墓碑、reload/resume/tree、开关与 schema；模拟模型只用于生命周期验收 |
-| 真实模型动作抽样 | `magpie / gpt/gpt-6-astra`、`max`：7个代表场景动作门通过 | 使用惰性事件工具，无真实目标执行；12个离线错误变体被断言拒绝，不能称为其他弱模型实测 |
+## 运行边界
 
-模型场景覆盖：静态失败后的范围内转场、仅静态范围、单个授权面成功、回归失败、复制当前卡、过期别名和行为证据不足。初轮四项在115秒上限超时；改用300秒推理上限，并收紧过期别名的最小澄清规则后，受影响五项重新实跑通过。两个无关场景沿用已审查适用性的旧快照，不冒充一次全新整批实跑。
+离线 Python 测试使用模拟官方 CLI/HTTP 和临时目录，不下载、不运行真实 npm/uv/setup/init，也不接触用户 profile。Node grilling 门面测试单独验证其文件与 wrapper 契约。`verify` 只检查静态包身份、配置、receipt 和注册；Pi/Web 实际加载、shell 拦截、Everything 可用性、REA MCP 真实握手、reverse 代表任务与 Spec Kit 真实成果仍需按目标机器单独验收。
 
-请求均设置 `max_output_tokens=6000`，但一次 provider 用量报告为7794。因此动作门通过，**服务端 token 上限执行仍未验证**；不能把发出上限参数当成上限已强制执行。未运行真实加壳样本、真实设备、完整源码复刻或所有 provider 的业务验收。
-
-官方 REA6.8.0 与 Spec Kit1.3.1 的实际树摘要与基线回执一致。验收期间 PyPI 默认变为 Spec Kit1.3.2，原有1.3.1包与新计划的冲突被正确拒绝；新增 [显式版本 pin](version-pins.md) 从官方发行元数据选择1.3.1，保持现有包不变，不修改生成计划或回执伪造通过。
-
-四个 Grilling 文件保持原字节。旧 `grill-me` / `grill-with-docs` 已有历史 adapter 标记，单独报告为 legacy drift；新 wrapper 读取未改写的 `grilling` / `domain-modeling`。保持字节不等于认证上游来源。
-
-本机 Bash bootstrap-manifest 测试因 Windows Store 的 python3 占位程序退出49，未计为本地通过；公开 Linux CI 覆盖该套件。Windows CI 中 WSL占位入口和8.3临时路径比较问题已修正，未删除隔离断言。
-
-发布后终验复算了8个对象、14次摘要引用比较和39项总检查，全部通过。已安装 continuity 树 SHA-256为 `953010cb0ca016ba7ec07021171485348951bbdd3f175d333a71621f88e698f5`，reverse源码树 SHA-256为 `888ffac24d71a7531477d17b6ba04843eda5aeb520de8842619f291e611bd32e`；官方 REA、Spec Kit及四个 Grilling 文件均与基线一致。
-
-已安装插件在实际 Pi SDK1.5.0上再次通过344项断言，其中19项 RPC。SDK manifest的正式 `dist/bundle/cli.js` 也单独执行同一套344项断言通过；为选择该入口使用了外部临时校验器副本，没有改写已安装源码。这是同一覆盖集合的两次执行。
-
-实际 Pi Web0.15.0 / Pi1.5.0 新会话能显示续接状态、隔离候选标题/正文并隐藏过期来源；`/continuity candidates off` 后原生 `/reload` 保持关闭。命令建议能发现 reverse-workflow及两个 pi-grill wrapper。独立合成项目的新会话只恢复自己的已取消职责与仍有效约束，候选收集默认开启。命令检查不触发外部模型请求。运行中的旧会话需 reload 后才使用新扩展，安装不热替换正在执行的扩展实例。
-
-每次实际部署仍须记录公共 tag解析出的 commit/tree hash，运行 `verify`、`accept`，并在当前宿主重载或新会话检查。`accept` 不执行 continuity扩展事件，相关回执字段保持未验证，独立 SDK/UI记录不能伪造该字段。JADX可选桥接器缺口沿用既有报告；缺少调用方提供的 JAR 时不得声明其深度分析能力就绪。历史1.1.0验收见 [原记录](project-continuity-verification.md)。
+不要把旧 receipt 中的历史字段当作当前组件支持声明；更新后的活动 receipt 只记录新计划选择的组件。若旧 receipt 无法安全迁移，应先审阅并清理确切 Pi 注册，再重新生成 plan。不会用手改 receipt 伪造通过。

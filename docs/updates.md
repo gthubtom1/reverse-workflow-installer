@@ -4,6 +4,10 @@
 
 Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行 `npx skills update` 后，使用原来的 `--skills-root` / `--output-root` 重新执行 wrapper 生成和验证命令（见 [wrapper 指南](pi-grilling-wrappers.md)）；这只重建 installer-owned `pi-grill-me` 和 `pi-grill-with-docs` wrapper，不修改官方 `grilling`、`domain-modeling`、`grill-me` 或 `grill-with-docs` 文件。核心安装器的 update/restore 不会自动回滚或升级 `~/.agents/skills/` 下的官方技能。
 
+可选 shell-guard 仅支持 Pi，默认关闭。首次加入需 `--with-shell-guard` 或显式选择 `shell-guard` 组件；更新已有组合应保留完整原组件范围。旧 receipt 不会自动新增它；已选中的 shell-guard 会继续保留，本地只读包路径在未重传时沿用。更新前验证活动包、注册和已管理的 Everything CLI/配置；漂移不能通过重新 plan 自动认领。新目标固定为已发布的 `shell-guard-v0.2.1`；远程身份不符时停止，不降级旧版本、不回退 main。
+
+`--replace-shell-guard-root` 只用于首次认领准确开发包注册：plan 冻结其路径、内容 hash 和原注册对象，应用前再次比对；重复、过滤注册与 hub 碰撞均拒绝。成功后旧开发目录原字节保留。事务 restore 恢复原注册和我方写入的 `shellGuard.everything.esPath`，保留后来修改的用户字段；同字段后改列为 conflict。旧 receipt 中的 project-continuity 不会被新计划加载；更新只有在 receipt 能定位唯一注册时才移除该注册，否则明确失败。具体命令见 [shell-guard 安装与迁移](shell-guard-install.md)。
+
 工具更新沿用相同 root、client、agent 和 project，重新 plan 并保存冻结文件。同一安装根允许保留或扩展所选组件；收缩或替换组件范围会明确拒绝，避免把仍存在的包与配置变成无人校验的残留。需要缩小范围时先审阅 restore，或使用独立的新 root。
 
 宿主入口更新按上一事务记录的摘要判断归属：我方旧版入口可以升级，用户修改会保留并报冲突；同一个 agent 不允许两个安装根争用同名入口。Pi 活动适配器目录按适配源码摘要切换，旧目录保留作恢复依据。选中 REA/Spec Kit 的重复安装复用已核摘要的原包；发生漂移时拒绝重新记成“通过”。
@@ -16,7 +20,7 @@ Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行
 
 `restore --root <root>` 默认预览最近活动事务；加 `--apply` 后实际恢复。可显式 `--transaction <ID>`，但有活动安装时只允许最近事务，避免跨版本覆盖。连续 restore 按最新到最旧回退。
 
-恢复遵循三方条件：原始值 B、安装后 A、现在 C。C 等于 A 才退回 B；C 有用户改动则保留。JSON 按字段/精确资源项处理，Codex TOML 按 REA 子表处理，项目/适配文件按完整字节处理。其他 MCP、模型和后来加入的 package 保留；变更过的本方字段/表或项目文件列 conflict，CLI 非零返回。conflict 并不表示用户改动被删除；先读取结果再决定如何人工整理。暂不自动合并用户修改过的同一 TOML 子表或同一项目文件。
+恢复遵循三方条件：原始值 B、安装后 A、现在 C。C 等于 A 才退回 B；C 有用户改动则保留。JSON 按字段/精确资源项处理，Codex TOML 按 REA 子表处理，项目/适配文件按完整字节处理。其他 MCP、模型和后来加入的 package 保留；变更过的本方字段/表或项目文件列 conflict，CLI 非零返回。conflict 并不表示用户改动被删除；先读取结果再决定如何人工整理。存在 conflict 时保留当前活动 receipt，安全字段可先恢复；处理后可对同一事务再次 restore，全部恢复完成才回退 receipt。迁移后的新注册被用户编辑或移除时，不会又自动加入旧开发包。暂不自动合并用户修改过的同一 TOML 子表或同一项目文件。
 
 重复安装不会重复下载完成且摘要一致的版本，不重复 init，不重复注册资源。失败留下的并列版本目录保留供诊断，重试用新的隔离目录；不覆盖旧目录。旧包、缓存、备份不自动删除或卸载。若外部修改了包，verify 报漂移，不能将该包冒充原安装身份。
 

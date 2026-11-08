@@ -19,14 +19,16 @@
     "api": "https://api.github.com/repos/gthubtom1/reverse-skill",
     "policy": "latest-release-or-main-resolved-commit"
   },
-  "project_continuity": {
+  "shell_guard": {
     "repository": "https://github.com/gthubtom1/agent-plugins",
     "api": "https://api.github.com/repos/gthubtom1/agent-plugins",
     "policy": "frozen-release-commit",
-    "release_ref": "project-continuity-v1.2.0",
-    "plugin_dir": "plugins/pi/project-continuity",
-    "package_name": "@toti/pi-project-continuity",
-    "version": "1.2.0",
-    "expected_extension": "./index.ts"
+    "release_ref": "shell-guard-v0.2.1",
+    "commit": "c3c4988794be5f0146569e6baf40c586f4c56dd9",
+    "plugin_dir": "plugins/pi/shell-guard",
+    "package_name": "@toti/pi-shell-guard",
+    "version": "0.2.1",
+    "expected_extension": "./index.ts",
+    "required_files": ["package.json", "index.ts", "runtime.mjs", "src/config.mjs", "src/everything.mjs", "src/grants.mjs", "src/paths.mjs", "src/policy.mjs", "src/split.mjs", "src/rules/interactive.mjs", "src/rules/rm.mjs", "src/rules/search.mjs", "src/rules/timeout.mjs", "src/rules/scripts.mjs", "src/wrappers.mjs"]
   }
 }

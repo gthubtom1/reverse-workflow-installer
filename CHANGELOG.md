@@ -1,3 +1,18 @@
+## 0.6.0 — 未发布
+
+- 从 installer 的活动组件、manifest、resolver、CLI、计划、事务、receipt、verify/accept 与文档中移除 project-continuity；新 `all` 与所有子集都不会解析或加载它。
+- 旧 receipt 更新增加安全退役迁移：receipt 能唯一识别未过滤 Pi 包注册时，在同一事务移除该注册；缺少身份、重复、hub 或其他同名注册时明确失败。旧包目录保留在历史版本目录中。
+- 保留 REA、Spec Kit、reverse 与可选 shell-guard 的现有范围和配置行为；shell-guard 改用通用包身份工具，不再依赖已移除模块。
+- 安装器与 Pi 入口包升级至 0.6.0，事务协议保持 0.2.0；补充旧回执兼容回归和更新后的 README、快速开始、兼容性、更新、维护与故障排查文档。
+
+## 0.5.0 — 未发布
+
+- 新增 Pi 独立可选 shell-guard：`--with-shell-guard` 默认关闭，旧 `all` 与旧 receipt 不自动启用，已选插件在 update 中保留。
+- 支持 `--shell-guard-root` 只读复用精确 0.2.1 包；冻结远程 tag/commit/Git tree、本地包 hash、包名/版本及 index/runtime/src，拒绝漂移、额外资源、重复注册与 hub 碰撞。`--everything-gui` 与 `--everything-autostart` 的配置身份和漂移也纳入事务校验。
+- 新增准确开发注册迁移与 Everything CLI 参数；冻结旧注册/hash 和 CLI SHA256，只管理 `shellGuard.everything.esPath`。Windows 等价路径按规范身份比较，保留用户原写法及其他配置。
+- 强化 restore：保留后来编辑的注册，避免复活旧副本；处理首次创建的资源列表；部分恢复可安全重试，冲突解决前保留当前 receipt。
+- 目标 `shell-guard-v0.2.1` 已发布并固定 commit/tree；远程身份变化时停止，不回退 main 或旧版本。
+
 ## 0.4.0 — 2026-11-07
 
 - Add explicit official `--spec-kit-version` pins, preserving latest-stable defaults and frozen replay/version/hash checks when existing official packages must remain unchanged.

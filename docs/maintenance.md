@@ -9,7 +9,7 @@
 | reverse 行为规则 | `RULES.md`、`RULES_zh.md`、master skill、对应 ops 契约与实际 PRIMARY；不修改原始路由语义来迁就测试 |
 | 用户沟通方式 | Pi skill 与短 prompt、Claude/Codex 入口、quick-start、usage、playbook；阶段汇报不能被模板变成每步审批 |
 | 安装/更新/恢复 | 冻结 plan、上一事务的文件归属、receipt、verify、配置保留、组件子集与完整安装的离线反例测试 |
-| project-continuity 分发 | components.json 的固定 tag 与包身份；只注册插件子目录；冻结计划、旧三组件 update 扩展、runtime/index/store/package 完整性、必需 hash、漂移/restore 反例及 project-continuity-install、README、quick-start、compatibility |
+| shell-guard 分发 | Pi 可选默认关闭；0.2.1 tag、独立包 name/version/index/runtime/src、commit/tree/hash、旧回执、准确迁移、CLI/GUI/自动启动配置保留、重复/hub 拒绝、漂移/回退反例和 shell-guard-install/README/quick-start/updates/compatibility/troubleshooting |
 | grilling wrapper | 独立输出目录、所有权/hash、链接与手改冲突 fixture；四个官方技能文件保持只读，旧门面漂移单独报告 |
 | 发布和换电脑部署 | GitHub 默认分支、必需 CI、reverse 正式 release；仅推 main 不会覆盖安装器优先选择的旧 release |
 
@@ -23,7 +23,7 @@
 4. **对话抽样**：至少观察“已授权的两步检查不中途请求继续”和“新运行/联网范围保留必要确认”。检查实际工具事件，不能只凭模型自述。抽样通过不等于所有模型和困难目标已验证。
 5. **发布**：PR 检查通过后按保护规则合并；reverse 若仍有更早 release，发布指向已验证提交的新正式版本。重新检查安装器解析的确切 tag/commit，再记录本机与远程身份。
 
-project-continuity 由插件仓库维护方在最新 main 的独立 worktree 集成，不在 installer 任务修改插件代码；目标 tag 保持 `project-continuity-v1.2.0`。发布后再核对 tag 解析的精确 commit。tag 未发布时远程 plan 应明确失败，不回退 main；如用本地 worktree 先验收，必须对实际插件目录重新 plan，receipt 不宣称本地包等于远程 tag。本次 installer 离线回归与代码审查不代替插件发布、真实部署或 profile 变更。
+旧 project-continuity receipt 的退役兼容只在 installer 中处理：新计划不解析或加载该组件；更新时冻结唯一注册并通过事务移除，无法识别则停止。插件仓库和其他 agent-plugins 目录不在本仓任务范围内。shell-guard P4/P5 维护 installer 与 0.2.1 的 CLI/GUI 配置及自动启动接线；发布前对审查通过的 commit 设置清单 pin，并重新核 tag 身份、完整文件与运行验收。
 
 `verify` 通过表示静态安装一致，`accept` 表示本机工具基本运行通过。只有真实目标的证据和测试才能说明功能正确；尚无证据时保持 unknown。
 
