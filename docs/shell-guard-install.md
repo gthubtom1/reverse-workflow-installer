@@ -2,7 +2,7 @@
 
 Installer 与 Pi 入口包版本为 **0.6.0**，事务协议保持 0.2.0。shell-guard 是独立、可选的 Pi 扩展：默认关闭，默认 `all` 只选择原三组件。它检查部分 shell 命令形式，并提供 Everything 文件名/路径索引查询；不是操作系统沙箱，也不能保证所有命令均被识别或没有误判。历史回放不是未来无绕过保证。
 
-目标固定为 `shell-guard-v0.2.1`、包名 `@toti/pi-shell-guard`、版本 `0.2.1`。该 tag 已发布并由 installer 冻结 commit/tree；远程 tag 不存在或身份漂移时 plan 明确失败，不回退 main 或旧版本。插件运行时、发布和真实部署由插件主流程处理。
+目标固定为 `shell-guard-v0.2.2`、包名 `@toti/pi-shell-guard`、版本 `0.2.2`。该 tag 已发布并由 installer 冻结 commit/tree；远程 tag 不存在或身份漂移时 plan 明确失败，不回退 main 或旧版本。插件运行时、发布和真实部署由插件主流程处理。
 
 ## 选择与冻结计划
 
@@ -26,7 +26,7 @@ agent-plugins 的 shell-guard 克隆目录使用 `agent-plugins-shell-guard`；�
 python scripts/install.py plan --components shell-guard --client pi --agent-dir ../guard-agent --root ../guard-install --shell-guard-root ../agent-plugins/plugins/pi/shell-guard --output .local/guard-plan.json
 ```
 
-目录必须恰好是独立的 **0.2.1** 包，并包含完整运行文件；不能指向仓库根或旧版本包。plan 不查询该插件的网络来源，不 clone、checkout、安装依赖或改动本地源码，冻结实际内容 hash、包名、版本和资源声明。应用前或安装期间内容变化都会拒绝/回退。本地 hash 一致不证明该目录等于远程发行 commit。
+目录必须恰好是独立的 **0.2.2** 包，并包含完整运行文件；不能指向仓库根或旧版本包。plan 不查询该插件的网络来源，不 clone、checkout、安装依赖或改动本地源码，冻结实际内容 hash、包名、版本和资源声明。应用前或安装期间内容变化都会拒绝/回退。本地 hash 一致不证明该目录等于远程发行 commit。
 
 ## Everything CLI
 

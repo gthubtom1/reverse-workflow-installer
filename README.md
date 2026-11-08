@@ -1,6 +1,6 @@
 # Reverse Workflow Installer
 
-安装器与 Pi 入口包版本 **0.6.0**。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。目标来源为已发布的 `shell-guard-v0.2.1`，安装器冻结其 commit/tree，不回退 main 或旧版本。本仓实现与离线验证不代表每台机器的宿主加载或 Everything 索引已经可用。
+安装器与 Pi 入口包版本 **0.6.0**。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。目标来源为已发布的 `shell-guard-v0.2.2`，安装器冻结其 commit/tree，不回退 main 或旧版本。本仓实现与离线验证不代表每台机器的宿主加载或 Everything 索引已经可用。
 
 把官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill)、官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 和可选的官方 [grilling](https://github.com/mattpocock/skills) 访谈技能接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
 
@@ -54,7 +54,7 @@ python scripts/install.py verify --root ../workflow
 
 Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--client codex --agent-dir ../workflow/codex-home`。启动宿主时，Pi 使用 `PI_CODING_AGENT_DIR` 指向同一 agent 目录，Codex 使用 `CODEX_HOME` 指向同一目录，并从成果项目工作。环境变量仅对该进程设置；无需修改系统设置。Pi Web/SDK 必须核对实际启动配置，不能把 CLI 示例当作 Web 已加载的证据。
 
-`plan` 输出完整 JSON：范围、来源、精确版本、Node 要求、命令摘要、现有配置摘要、缺少依赖和未验证项。`--output` 将 UTF-8 无 BOM 计划保存到指定文件。**install/update/restore 不带 `--apply` 都只预览**；plan 可以查询网络和读取 Git，不运行包管理器。冻结计划应用前检测配置和 reverse 工作副本漂移，变化后重新 plan。shell-guard 还冻结独立包身份与内容、远程 commit/Git tree、显式 Everything CLI 的文件摘要，以及开发注册迁移源的旧 hash。`--shell-guard-root` 只读复用精确 0.2.1 包；`--everything-es` 接受现存 CLI 的绝对路径；`--everything-gui` 接受现存 Everything GUI 的绝对路径，`--everything-autostart` 仅在 CLI 报告 IPC/服务不可用时允许插件启动该 GUI 并重试一次；`--replace-shell-guard-root` 只迁移准确的单个开发包注册。重复注册、hub 碰撞或漂移会拒绝。
+`plan` 输出完整 JSON：范围、来源、精确版本、Node 要求、命令摘要、现有配置摘要、缺少依赖和未验证项。`--output` 将 UTF-8 无 BOM 计划保存到指定文件。**install/update/restore 不带 `--apply` 都只预览**；plan 可以查询网络和读取 Git，不运行包管理器。冻结计划应用前检测配置和 reverse 工作副本漂移，变化后重新 plan。shell-guard 还冻结独立包身份与内容、远程 commit/Git tree、显式 Everything CLI 的文件摘要，以及开发注册迁移源的旧 hash。`--shell-guard-root` 只读复用精确 0.2.2 包；`--everything-es` 接受现存 CLI 的绝对路径；`--everything-gui` 接受现存 Everything GUI 的绝对路径，`--everything-autostart` 仅在 CLI 报告 IPC/服务不可用时允许插件启动该 GUI 并重试一次；`--replace-shell-guard-root` 只迁移准确的单个开发包注册。重复注册、hub 碰撞或漂移会拒绝。
 
 `--client auto` 只使用宿主标记或明确配置 schema 证据。不确定时会明确要求 `--client pi|codex`；机器安装了几个 CLI、模型叫不叫 Codex 都不能决定身份。可用 `--client-config` 替代 `--agent-dir`：Pi 必须指向 `mcp.json`，Codex 必须指向 `config.toml`，Pi 的 `settings.json` 在同目录。
 

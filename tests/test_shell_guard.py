@@ -21,7 +21,7 @@ class ShellGuardTests(unittest.TestCase):
     tearDown = fixtures.Fixture.tearDown
     install = fixtures.Fixture.install
 
-    def package(self, root=None, version="0.2.1"):
+    def package(self, root=None, version="0.2.2"):
         root = root or self.base / "standalone-guard"
         entry = load_json(self.source / "components.json")["shell_guard"]
         for name in entry["required_files"]:
@@ -38,8 +38,8 @@ class ShellGuardTests(unittest.TestCase):
             self.args.shell_guard_root = str(self.package())
 
     def fetch(self, url):
-        if url.endswith("/commits/shell-guard-v0.2.1"):
-            return {"sha": "c3c4988794be5f0146569e6baf40c586f4c56dd9", "commit": {"tree": {"sha": "c" * 40}}}
+        if url.endswith("/commits/shell-guard-v0.2.2"):
+            return {"sha": "f160ffc039374a1be002ac3934681565a84c4257", "commit": {"tree": {"sha": "c" * 40}}}
         return metadata(url)
 
     def plan(self):
@@ -55,7 +55,7 @@ class ShellGuardTests(unittest.TestCase):
                 return ""
         if "rev-parse" in args and "agent-plugins-shell-guard" in str(cwd):
             self.calls.append(args)
-            return ("c" * 40 if "HEAD^{tree}" in args else "c3c4988794be5f0146569e6baf40c586f4c56dd9")
+            return ("c" * 40 if "HEAD^{tree}" in args else "f160ffc039374a1be002ac3934681565a84c4257")
         return fixtures.Fixture.fake_run(self, argv, cwd=cwd, env=env)
 
     def exe(self, name="es.exe"):
@@ -156,7 +156,7 @@ class ShellGuardTests(unittest.TestCase):
             return self.fetch(url)
         plan = w.make_plan(self.args, fetch)
         self.assertEqual(len(seen), 1)
-        self.assertTrue(any(url.endswith("/commits/shell-guard-v0.2.1") for url in seen))
+        self.assertTrue(any(url.endswith("/commits/shell-guard-v0.2.2") for url in seen))
         receipt = w.install(plan, self.args)
         clone_targets = [c[-1] for c in self.calls if "clone" in c]
         self.assertEqual(len(set(clone_targets)), 1)
@@ -173,7 +173,7 @@ class ShellGuardTests(unittest.TestCase):
             raise InstallError("HTTP 404 unpublished")
         with self.assertRaisesRegex(InstallError, "404"):
             w.make_plan(self.args, unavailable)
-        self.assertEqual(seen, ["https://api.github.com/repos/gthubtom1/agent-plugins/commits/shell-guard-v0.2.1"])
+        self.assertEqual(seen, ["https://api.github.com/repos/gthubtom1/agent-plugins/commits/shell-guard-v0.2.2"])
         with self.assertRaisesRegex(InstallError, "tree"):
             w.make_plan(self.args, lambda url: {"sha": "b" * 40})
         self.assertFalse(self.calls)
