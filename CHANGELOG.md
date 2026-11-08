@@ -1,4 +1,8 @@
-## 0.6.0 — 未发布
+## Next
+
+- 更新可选 shell-guard 到 0.2.3：主代理与子代理共用 TEMP 回收规则；普通项目内 `rm` 移动到 TEMP，系统/盘根等受保护目标被阻止。Bash 工具不再打开等待确认弹窗。
+
+## 0.6.0 — 2026-11-08
 
 - 从 installer 的活动组件、manifest、resolver、CLI、计划、事务、receipt、verify/accept 与文档中移除 project-continuity；新 `all` 与所有子集都不会解析或加载它。
 - 旧 receipt 更新增加安全退役迁移：receipt 能唯一识别未过滤 Pi 包注册时，在同一事务移除该注册；缺少身份、重复、hub 或其他同名注册时明确失败。旧包目录保留在历史版本目录中。

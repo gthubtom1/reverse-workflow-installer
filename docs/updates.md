@@ -4,7 +4,7 @@
 
 Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行 `npx skills update` 后，使用原来的 `--skills-root` / `--output-root` 重新执行 wrapper 生成和验证命令（见 [wrapper 指南](pi-grilling-wrappers.md)）；这只重建 installer-owned `pi-grill-me` 和 `pi-grill-with-docs` wrapper，不修改官方 `grilling`、`domain-modeling`、`grill-me` 或 `grill-with-docs` 文件。核心安装器的 update/restore 不会自动回滚或升级 `~/.agents/skills/` 下的官方技能。
 
-可选 shell-guard 仅支持 Pi，默认关闭。首次加入需 `--with-shell-guard` 或显式选择 `shell-guard` 组件；更新已有组合应保留完整原组件范围。旧 receipt 不会自动新增它；已选中的 shell-guard 会继续保留，本地只读包路径在未重传时沿用。更新前验证活动包、注册和已管理的 Everything CLI/配置；漂移不能通过重新 plan 自动认领。新目标固定为已发布的 `shell-guard-v0.2.2`；远程身份不符时停止，不降级旧版本、不回退 main。
+可选 shell-guard 仅支持 Pi，默认关闭。首次加入需 `--with-shell-guard` 或显式选择 `shell-guard` 组件；更新已有组合应保留完整原组件范围。旧 receipt 不会自动新增它；已选中的 shell-guard 会继续保留，本地只读包路径在未重传时沿用。更新前验证活动包、注册和已管理的 Everything CLI/配置；漂移不能通过重新 plan 自动认领。新目标固定为已发布的 `shell-guard-v0.2.3`；远程身份不符时停止，不降级旧版本、不回退 main。
 
 `--replace-shell-guard-root` 只用于首次认领准确开发包注册：plan 冻结其路径、内容 hash 和原注册对象，应用前再次比对；重复、过滤注册与 hub 碰撞均拒绝。成功后旧开发目录原字节保留。事务 restore 恢复原注册和我方写入的 `shellGuard.everything.esPath`，保留后来修改的用户字段；同字段后改列为 conflict。旧 receipt 中的 project-continuity 不会被新计划加载；更新只有在 receipt 能定位唯一注册时才移除该注册，否则明确失败。具体命令见 [shell-guard 安装与迁移](shell-guard-install.md)。
 

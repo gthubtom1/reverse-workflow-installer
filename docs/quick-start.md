@@ -26,9 +26,9 @@
 
 ### Pi shell-guard 可选插件
 
-默认 `all` 不会启用它。安装或更新时增加 `--with-shell-guard`；本地独立 0.2.2 包可加 `--shell-guard-root ../agent-plugins/plugins/pi/shell-guard`。Everything CLI 使用 `--everything-es <现存CLI绝对路径>`，GUI 使用 `--everything-gui <现存Everything.exe绝对路径>`，需要自动启动时增加 `--everything-autostart`。只有 CLI 明确报告 IPC/服务不可用时，插件才会启动该 GUI 并重试一次；不会自动查 PATH、安装 Everything 或启动任意程序。已有禁用开关、自定义规则和其他设置保留。已有开发注册需准确的 `--replace-shell-guard-root`，不能注册整个 hub。详见 [shell-guard 安装与迁移](shell-guard-install.md)。
+默认 `all` 不会启用它。安装或更新时增加 `--with-shell-guard`；本地独立 0.2.3 包可加 `--shell-guard-root ../agent-plugins/plugins/pi/shell-guard`。Everything CLI 使用 `--everything-es <现存CLI绝对路径>`，GUI 使用 `--everything-gui <现存Everything.exe绝对路径>`，需要自动启动时增加 `--everything-autostart`。只有 CLI 明确报告 IPC/服务不可用时，插件才会启动该 GUI 并重试一次；不会自动查 PATH、安装 Everything 或启动任意程序。已有禁用开关、自定义规则和其他设置保留。已有开发注册需准确的 `--replace-shell-guard-root`，不能注册整个 hub。详见 [shell-guard 安装与迁移](shell-guard-install.md)。
 
-目标 tag `shell-guard-v0.2.2` 已发布并按 commit/tree 冻结；远程 plan 失败时不会改装旧版本。已选中的插件在后续 update 保留；旧 receipt 仍默认关闭。`verify` 只核身份和注册，`accept` 不运行拦截事件。更新插件后完整重启 Pi/Pi Web，再单独检查加载、命令拦截和 Everything 查询。`PI_SHELL_GUARD_ES` 可在宿主进程覆盖设置中的路径；安装器不更改或认证该进程环境。历史回放结果不能保证未来命令没有误判或绕过。
+目标 tag `shell-guard-v0.2.3` 已发布并按 commit/tree 冻结；远程 plan 失败时不会改装旧版本。已选中的插件在后续 update 保留；旧 receipt 仍默认关闭。`verify` 只核身份和注册，`accept` 不运行拦截事件。更新插件后完整重启 Pi/Pi Web，再单独检查加载、命令拦截和 Everything 查询。`PI_SHELL_GUARD_ES` 可在宿主进程覆盖设置中的路径；安装器不更改或认证该进程环境。历史回放结果不能保证未来命令没有误判或绕过。
 
 ### Pi grilling 伴随技能
 
