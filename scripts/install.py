@@ -17,14 +17,18 @@ def parser():
     result = argparse.ArgumentParser(description="官方 REA + Spec Kit + reverse-skill 安装与恢复；默认只预览")
     result.add_argument("command", choices=("plan", "install", "verify", "accept", "update", "restore"))
     result.add_argument("--root", required=True, help="组件及本机 receipt 根；必须在安装器源码仓库之外")
-    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit,project-continuity；范围冻结在 plan")
+    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit,shell-guard；shell-guard 默认关闭，范围冻结在 plan")
     result.add_argument("--client", choices=("pi", "codex", "claude", "auto", "none"), default="auto")
     result.add_argument("--agent-dir", help="显式 Pi agent 目录或 Codex HOME；不默写用户 profile")
     result.add_argument("--client-config", help="显式 Pi mcp.json 或 Codex config.toml；与 --agent-dir 必须一致")
     result.add_argument("--project", help="独立成果项目；首次 init 必须为空/不存在")
     result.add_argument("--reverse-root", help="只读复用本地 reverse 工作副本，记录实际 commit/脏状态/摘要")
-    result.add_argument("--continuity-root", help="只读复用本地 project-continuity 插件包，校验身份并要求匹配清单 name/version/extensions")
-    result.add_argument("--without-project-continuity", action="store_true", help="默认 all+pi 组合显式禁用 project-continuity 插件")
+    result.add_argument("--with-shell-guard", action="store_true", help="Pi 可选独立 shell-guard 插件；默认关闭")
+    result.add_argument("--shell-guard-root", help="只读复用独立 shell-guard 包；需显式选择组件")
+    result.add_argument("--replace-shell-guard-root", help="仅迁移此准确开发包的已有注册；plan 冻结路径与 tree hash")
+    result.add_argument("--everything-es", help="Everything CLI 的现存绝对文件路径；仅写 shellGuard.everything.esPath")
+    result.add_argument("--everything-gui", help="Everything GUI 的现存绝对文件路径；仅写 shellGuard.everything.guiPath")
+    result.add_argument("--everything-autostart", action="store_true", help="明确允许 Everything IPC 失败时启动已配置 GUI 并重试一次")
     result.add_argument("--node", help="旁置 Node 可执行文件；npm 必须来自同一分发包")
     result.add_argument("--rea-prefix", help="显式只读复用已有 npm prefix，须恰为冻结版本")
     result.add_argument("--spec-kit-version", help="显式选择 PyPI 已发布且未撤回的稳定版本（例如 1.3.1）；省略时选择最新稳定版，选择冻结在 plan")
@@ -50,6 +54,8 @@ def main(argv=None):
             raise InstallError("--output 只适用于 plan")
         if arguments.spec_kit_version is not None and arguments.command not in ("plan", "install", "update"):
             raise InstallError("--spec-kit-version 只适用于 plan/install/update")
+        if (arguments.with_shell_guard or arguments.shell_guard_root or arguments.replace_shell_guard_root or arguments.everything_es or arguments.everything_gui or arguments.everything_autostart) and arguments.command not in ("plan", "install", "update"):
+            raise InstallError("shell-guard 选择参数只适用于 plan/install/update")
         if arguments.command == "verify":
             result = workflow.verify(workflow.abs_path(arguments.root))
             code = 0 if result["ok"] else 1
@@ -65,20 +71,33 @@ def main(argv=None):
                 if result["scope"]["root"] != str(workflow.abs_path(arguments.root)):
                     raise InstallError("--root 与冻结 plan 不一致")
                 # Configuration/client scope comes entirely from the frozen file.
-                for flag in ("agent_dir", "client_config", "project", "reverse_root", "continuity_root", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+                for flag in ("agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
                     supplied = getattr(arguments, flag)
+                    if supplied and flag == "everything_es":
+                        workflow.sg.executable_identity(supplied)
+                    if supplied and flag == "everything_gui":
+                        workflow.sg.gui_identity(supplied)
+                    if supplied and flag in ("shell_guard_root", "replace_shell_guard_root"):
+                        workflow.sg.reject_links(Path(supplied).expanduser().absolute())
                     if supplied and str(workflow.abs_path(supplied)) != result["scope"].get(flag):
                         raise InstallError(f"--{flag.replace('_', '-')} 与冻结 plan 不一致")
                 if arguments.client != "auto" and arguments.client != result["scope"]["client"]:
                     raise InstallError("--client 与冻结 plan 不一致")
-                if arguments.components != "all" and workflow.selected_components(arguments.components) != result["scope"]["components"]:
+                supplied_components = workflow.selected_components(arguments.components)
+                if arguments.with_shell_guard and "shell_guard" not in supplied_components:
+                    supplied_components.append("shell_guard")
+                if arguments.components != "all" and supplied_components != result["scope"]["components"]:
                     raise InstallError("--components 与冻结 plan 不一致")
+                if arguments.with_shell_guard and "shell_guard" not in result["scope"]["components"]:
+                    raise InstallError("--with-shell-guard 与冻结 plan 不一致")
+                if arguments.everything_autostart != bool(result["scope"].get("everything_autostart")):
+                    raise InstallError("--everything-autostart 与冻结 plan 不一致")
                 if arguments.spec_kit_version is not None:
                     if "spec_kit" not in result["scope"]["components"]:
                         raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
                     if arguments.spec_kit_version != result["components"].get("spec_kit", {}).get("version"):
                         raise InstallError("--spec-kit-version 与冻结 plan 不一致")
-                if arguments.rea_manual or arguments.exclude_rea_skill or arguments.without_project_continuity:
+                if arguments.rea_manual or arguments.exclude_rea_skill:
                     raise InstallError("资源选择已冻结在 plan 中；请重新 plan 后再使用 --plan-file")
                 workflow.validate_plan(result)
             else:

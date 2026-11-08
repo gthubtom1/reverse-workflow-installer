@@ -46,7 +46,7 @@ def metadata(url):
         return {"info": {"name": "specify-cli"}, "releases": {"1.2.0": [{"filename": "old.whl"}], "1.3.0": [{"filename": "stable.whl", "digests": {"sha256": "f" * 64}}], "2.0.0rc1": [{"filename": "pre.whl"}], "9.0.0": [{"filename": "bad.whl", "yanked": True}]}}
     if url.endswith("/releases/latest"):
         raise InstallError("HTTP 404 fixture")
-    if url.endswith("/commits/main") or "/commits/v" in url or "project-continuity-v1.2.0" in url:
+    if url.endswith("/commits/main") or "/commits/v" in url:
         return {"sha": "a" * 40}
     raise AssertionError(url)
 
@@ -73,7 +73,7 @@ class Fixture(unittest.TestCase):
         self.fake_patch.start()
         self.which = patch.object(w.shutil, "which", lambda name: str(self.base / name))
         self.which.start()
-        self.args = cli.parser().parse_args(["install", "--root", str(self.root), "--agent-dir", str(self.agent), "--client", "pi", "--project", str(self.project), "--reverse-root", str(self.reverse), "--node", str(self.node), "--without-project-continuity", "--apply"])
+        self.args = cli.parser().parse_args(["install", "--root", str(self.root), "--agent-dir", str(self.agent), "--client", "pi", "--project", str(self.project), "--reverse-root", str(self.reverse), "--node", str(self.node), "--apply"])
         self.before = {"defaultModel": "keep-me", "packages": ["user-package"], "skills": ["user-skill"]}
         atomic(self.agent / "settings.json", encode_json(self.before))
         atomic(self.agent / "mcp.json", encode_json({"mcpServers": {"user": {"command": "user-owned"}}, "future": 7}))
@@ -97,12 +97,6 @@ class Fixture(unittest.TestCase):
             return ""
         if "clone" in argv and "--no-checkout" in argv:
             self.assertEqual(argv[-2], "https://github.com/gthubtom1/agent-plugins")
-            target = Path(argv[-1])
-            plugin = target / "plugins/pi/project-continuity"
-            atomic(plugin / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.2.0", "pi": {"extensions": ["./index.ts"]}}))
-            atomic(plugin / "index.ts", b'import { registerContinuity } from "./runtime.mjs";')
-            atomic(plugin / "runtime.mjs", b'import "./store.mjs"; export function registerContinuity() {}')
-            atomic(plugin / "store.mjs", b"continuity store fixture")
             return ""
         if "-e" in argv:
             return "24.22.1"
@@ -801,14 +795,6 @@ class Fixture(unittest.TestCase):
         atomic(repo / "RULES.md", b"edited rules\n")
         self.assertFalse(w.verify(self.root)["ok"])
 
-    def _plugin_root(self):
-        root = self.base / "continuity-plugin"
-        atomic(root / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.2.0", "pi": {"extensions": ["./index.ts"]}}))
-        atomic(root / "index.ts", b'import { registerContinuity } from "./runtime.mjs";')
-        atomic(root / "runtime.mjs", b'import "./store.mjs"; export function registerContinuity() {}')
-        atomic(root / "store.mjs", b"continuity store fixture")
-        return root
-
     def test_pending_transaction_is_safely_rolled_back_before_next_install(self):
         target = self.root / "owned.txt"
         atomic(target, b"before")
@@ -818,468 +804,68 @@ class Fixture(unittest.TestCase):
         self.assertEqual(w.recover_pending_transactions(self.root), ["interrupted"])
         self.assertEqual(target.read_bytes(), b"before")
         self.assertEqual(load_json(self.root / ".installer/transactions/interrupted/journal.json")["status"], "recovered")
-
-    def test_continuity_registration_detects_hub_ancestor(self):
-        hub = self.base / "agent-plugins-hub"
-        plugin = hub / "plugins/pi/project-continuity"
-        atomic(plugin / "package.json", b"{}\n")
-        self.assertTrue(w.pc.exposes_plugin_registration(str(hub), str(plugin), "plugins/pi/project-continuity"))
-
-        self.args.without_project_continuity = False
-        receipt = self.install()
-        self.assertIn("project_continuity", receipt["scope"]["components"])
-        self.assertEqual(receipt["project_continuity"]["mode"], "clone-frozen-commit")
-        self.assertTrue(w.verify(self.root)["ok"])
-        self.assertTrue(Path(receipt["paths"]["project_continuity"]).is_dir())
-        settings = load_json(self.agent / "settings.json")
-        self.assertTrue(any(p == receipt["paths"]["project_continuity"] or (isinstance(p, dict) and p.get("source") == receipt["paths"]["project_continuity"]) for p in settings["packages"]))
-
-    def test_continuity_update_allows_intact_older_frozen_release(self):
-        self.args.without_project_continuity = False
+    def _seed_retired_continuity(self, filtered=False, duplicate=False):
         first = self.install()
+        old_root = self.base / "old-continuity-package"
+        atomic(old_root / "package.json", encode_json({"name": "@toti/pi-project-continuity", "version": "1.2.0"}))
+        settings = load_json(self.agent / "settings.json")
+        registration = str(old_root)
+        if filtered:
+            registration = {"source": registration, "extensions": []}
+        settings["packages"].append(registration)
+        if duplicate:
+            settings["packages"].append(str(old_root))
+        atomic(self.agent / "settings.json", encode_json(settings))
         receipt_path = self.root / ".installer/receipt.json"
         receipt = load_json(receipt_path)
-        plugin = Path(first["paths"]["project_continuity"])
-        package = load_json(plugin / "package.json")
-        package["version"] = "1.0.0"
-        atomic(plugin / "package.json", encode_json(package))
-        old_hash = w.pc.plugin_tree_hash(plugin)
-        receipt["project_continuity"]["version"] = "1.0.0"
-        receipt["components"]["project_continuity"]["version"] = "1.0.0"
-        receipt["project_continuity"]["tree_hash"] = old_hash
-        receipt["hashes"]["continuity_sha256"] = old_hash
+        receipt["scope"]["components"].append("project_continuity")
+        receipt["paths"]["project_continuity"] = str(old_root)
+        receipt["project_continuity"] = {"root": str(old_root), "plugin_dir": "plugins/pi/project-continuity", "name": "@toti/pi-project-continuity"}
+        receipt["components"]["project_continuity"] = {"package_name": "@toti/pi-project-continuity"}
         atomic(receipt_path, encode_json(receipt))
-        (plugin.parents[3] / "complete.json").unlink()
-        updated = self.install()
-        self.assertEqual(updated["project_continuity"]["version"], "1.2.0")
+        return first, receipt, settings, old_root
 
-    def test_continuity_explicit_optout_skips_plugin(self):
-        self.args.without_project_continuity = True
-        receipt = self.install()
-        self.assertNotIn("project_continuity", receipt["scope"]["components"])
-        self.assertIsNone(receipt.get("project_continuity"))
-        self.assertTrue(w.verify(self.root)["ok"])
-
-    def test_continuity_local_package_reuse(self):
-        self.args.without_project_continuity = False
-        self.args.continuity_root = str(self._plugin_root())
-        receipt = self.install()
-        self.assertEqual(receipt["project_continuity"]["mode"], "read-only-local-package")
-        self.assertEqual(receipt["project_continuity"]["name"], "@toti/pi-project-continuity")
-        self.assertFalse(any("clone" in c or "checkout" in c for c in self.calls))
-        self.assertTrue(w.verify(self.root)["ok"])
-
-    def test_continuity_local_package_wrong_identity_rejected(self):
-        self.args.without_project_continuity = False
-        root = self.base / "bad-plugin"
-        atomic(root / "package.json", encode_json({"name": "not-continuity", "version": "1.0.0", "pi": {"extensions": ["./index.ts"]}}))
-        atomic(root / "index.ts", b"x")
-        atomic(root / "runtime.mjs", b"runtime")
-        atomic(root / "store.mjs", b"y")
-        self.args.continuity_root = str(root)
-        with self.assertRaisesRegex(InstallError, "包名不符"):
-            self.plan()
-
-    def test_continuity_explicit_component_rejected_for_non_pi(self):
-        self.args.client = "codex"
-        self.args.components = "project-continuity"
-        self.args.project = str(self.base / "codex-project")
-        with self.assertRaisesRegex(InstallError, "仅适用于 Pi"):
-            self.plan()
-
-    def test_continuity_root_requires_pi_and_component(self):
-        # Non-default reverse-only scope never auto-enables continuity.
-        self.args.components = "reverse"
-        self.args.continuity_root = str(self._plugin_root())
-        with self.assertRaisesRegex(InstallError, "continuity-root"):
-            self.plan()
-
-    def test_continuity_plan_fetches_only_when_selected(self):
-        self.args.without_project_continuity = True
-        seen = []
-
-        def fetch(url):
-            seen.append(url)
-            if "project-continuity" in url:
-                raise AssertionError("continutity must not resolve when opted out")
-            return metadata(url)
-
-        plan = w.make_plan(self.args, fetch)
-        self.assertNotIn("project_continuity", plan["scope"]["components"])
-        w.validate_plan(plan)
-
-    def test_continuity_missing_plugin_dir_rejected(self):
-        self.args.without_project_continuity = False
-
-        def failing_clone(argv, *, cwd, env=None):
-            self.calls.append([str(a) for a in argv])
-            if "clone" in argv and "--no-checkout" in argv:
-                # Clone succeeds but the expected plugin subdir is absent.
-                target = Path(argv[-1])
-                atomic(target / "other/marker.txt", b"unrelated")
-                return ""
-            return self.fake_run(argv, cwd=cwd, env=env)
-
-        with patch.object(w, "run", failing_clone):
-            with self.assertRaisesRegex(InstallError, "缺少 package.json|plugin.*无效|project-continuity"):
-                self.install()
-
-    def test_continuity_repeat_no_duplicate_registration(self):
-        self.args.without_project_continuity = False
-        first = self.install()
-        self.calls.clear()
-        second = self.install()
-        self.assertEqual(first["paths"]["project_continuity"], second["paths"]["project_continuity"])
-        self.assertFalse(any("clone" in c or "checkout" in c for c in self.calls))
-        packages = load_json(self.agent / "settings.json")["packages"]
-        matches = [p for p in packages if p == first["paths"]["project_continuity"] or (isinstance(p, dict) and p.get("source") == first["paths"]["project_continuity"])]
-        self.assertEqual(len(matches), 1)
-        self.assertTrue(w.verify(self.root)["ok"])
-
-    def test_continuity_frozen_plan_cli_replay(self):
-        import contextlib
-        import io
-        self.args.without_project_continuity = False
+    def test_default_plan_does_not_select_retired_component(self):
         plan = self.plan()
-        path = self.base / "pc-frozen.json"
-        atomic(path, encode_json(plan))
-        with patch.object(w, "resolve", side_effect=AssertionError("must not fetch again")), contextlib.redirect_stdout(io.StringIO()):
-            code = cli.main(["install", "--root", str(self.root), "--plan-file", str(path), "--apply"])
-        self.assertEqual(code, 0)
-        self.assertTrue(w.verify(self.root)["ok"])
-        receipt = load_json(self.root / ".installer/receipt.json")
-        self.assertIn("project_continuity", receipt["scope"]["components"])
+        self.assertEqual(plan["scope"]["components"], ["rea", "spec_kit", "reverse"])
+        self.assertNotIn("project_continuity", plan["components"])
+        self.assertNotIn("project_continuity", plan["scope"])
 
-    def test_continuity_frozen_plan_round_trip(self):
-        self.args.without_project_continuity = False
+    def test_update_retires_uniquely_identified_continuity_registration(self):
+        first, _, _, old_root = self._seed_retired_continuity()
         plan = self.plan()
-        w.validate_plan(plan)
-        w.install(plan, self.args)
-        self.assertTrue(w.verify(self.root)["ok"])
-
-    def test_continuity_not_enabled_for_codex(self):
-        self.args.client = "codex"
-        self.args.project = str(self.base / "codex-project")
-        self.args.without_project_continuity = False
-        receipt = self.install()
-        self.assertNotIn("project_continuity", receipt["scope"]["components"])
-        self.assertTrue(w.verify(self.root)["ok"])
-
-    def test_continuity_detects_plugin_drift(self):
-        self.args.without_project_continuity = False
-        receipt = self.install()
-        plugin = Path(receipt["paths"]["project_continuity"])
-        atomic(plugin / "index.ts", b"tampered continuity")
-        self.assertFalse(w.verify(self.root)["ok"])
-
-    def test_continuity_restore_removes_package_keeps_user_edits(self):
-        self.args.without_project_continuity = False
-        receipt = self.install()
-        plugin = receipt["paths"]["project_continuity"]
+        self.assertEqual(plan["retired_project_continuity"]["root"], str(old_root.resolve()))
+        updated = w.install(plan, self.args)
         settings = load_json(self.agent / "settings.json")
-        settings["packages"].append("later-package")
-        atomic(self.agent / "settings.json", encode_json(settings))
-        w.restore(self.root, apply=True)
-        restored = load_json(self.agent / "settings.json")
-        self.assertIn("later-package", restored["packages"])
-        self.assertIn("user-package", restored["packages"])
-        # Installer-owned plugin package registration is removed on restore.
-        self.assertNotIn(plugin, restored["packages"])
-        self.assertNotIn(receipt["adapter"]["root"], restored["packages"])
-        self.assertTrue(Path(plugin).is_dir())
-
-
-    def _continuity_only(self, local=False):
-        self.args.components = "project-continuity"
-        self.args.without_project_continuity = False
-        self.args.project = None
-        self.args.reverse_root = None
-        if local:
-            self.args.continuity_root = str(self._plugin_root())
-
-    def test_continuity_default_update_expands_existing_scope_and_restores(self):
-        import contextlib
-        import io
-        first = self.install()  # Historic three-component installation.
-        user_file = self.project / "user-notes.txt"
-        atomic(user_file, b"keep project work")
-        self.args.without_project_continuity = False
-        plan_path = self.base / "update.json"
-        atomic(plan_path, encode_json(self.plan()))
-        self.calls.clear()
-        with patch.object(w, "resolve", side_effect=AssertionError("frozen update must not resolve")), contextlib.redirect_stdout(io.StringIO()):
-            code = cli.main(["update", "--root", str(self.root), "--plan-file", str(plan_path), "--apply"])
-        self.assertEqual(code, 0)
-        second = load_json(self.root / ".installer/receipt.json")
-        self.assertEqual(second["scope"]["components"], ["rea", "spec_kit", "reverse", "project_continuity"])
-        self.assertFalse(any("init" in call for call in self.calls))
-        self.assertEqual(user_file.read_bytes(), b"keep project work")
+        self.assertNotIn(str(old_root), settings["packages"])
+        self.assertTrue((old_root / "package.json").is_file())
+        self.assertNotIn("project_continuity", updated["scope"]["components"])
+        self.assertNotIn("project_continuity", updated)
+        self.assertNotIn("project_continuity", updated["paths"])
         self.assertTrue(w.verify(self.root)["ok"])
+        self.assertNotEqual(updated["transaction"], first["transaction"])
+
+    def test_update_accepts_continuity_already_removed_from_settings(self):
+        first, _, _, old_root = self._seed_retired_continuity()
         settings = load_json(self.agent / "settings.json")
-        later = {"source": "user-later", "extensions": []}
-        settings["packages"].append(later)
+        settings["packages"] = [p for p in settings["packages"] if p != str(old_root)]
         atomic(self.agent / "settings.json", encode_json(settings))
-        w.restore(self.root, apply=True)
-        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
-        packages = load_json(self.agent / "settings.json")["packages"]
-        self.assertNotIn(second["project_continuity"]["root"], packages)
-        self.assertIn(first["adapter"]["root"], packages)
-        self.assertIn(later, packages)
-        self.assertIn("user-package", packages)
-        self.assertTrue(w.verify(self.root)["ok"])
+        updated = w.install(self.plan(), self.args)
+        self.assertNotIn(str(old_root), load_json(self.agent / "settings.json").get("packages", []))
+        self.assertNotIn("project_continuity", updated)
+        self.assertNotEqual(updated["transaction"], first["transaction"])
 
-    def test_continuity_optout_update_stays_three_components(self):
-        self.install()
-        self.args.command = "update"
-        self.calls.clear()
-        receipt = self.install()
-        self.assertNotIn("project_continuity", receipt["scope"]["components"])
-        self.assertFalse(any("clone" in call for call in self.calls))
-        self.assertTrue(w.verify(self.root)["ok"])
-
-    def test_continuity_all_non_pi_does_not_query_plugin(self):
-        for client in ("codex", "claude"):
-            with self.subTest(client=client):
-                self.args.client = client
-                self.args.without_project_continuity = False
-                seen = []
-                def fetch(url):
-                    seen.append(url)
-                    self.assertNotIn("agent-plugins", url)
-                    return metadata(url)
-                plan = w.make_plan(self.args, fetch)
-                self.assertNotIn("project_continuity", plan["components"])
-                w.validate_plan(plan)
-
-    def test_continuity_selected_only_resolves_exact_tag(self):
-        self._continuity_only()
-        seen = []
-        def fetch(url):
-            seen.append(url)
-            return metadata(url)
-        plan = w.make_plan(self.args, fetch)
-        self.assertEqual(seen, ["https://api.github.com/repos/gthubtom1/agent-plugins/commits/project-continuity-v1.2.0"])
-        self.assertEqual(list(plan["components"]), ["project_continuity"])
-        receipt = w.install(plan, self.args)
-        self.assertTrue(w.verify(self.root)["ok"])
-        self.assertFalse(any("setup" in c or "install" in c or "init" in c for c in self.calls))
-        self.assertIsNone(receipt["adapter"]["root"])
-        self.assertEqual(load_json(self.agent / "settings.json")["packages"], ["user-package", receipt["project_continuity"]["root"]])
-        self.assertTrue(w.accept(self.root)["unverified"])
-
-    def test_continuity_local_only_has_no_metadata_queries(self):
-        self._continuity_only(local=True)
-        plan = w.make_plan(self.args, lambda url: self.fail("unexpected lookup: " + url))
-        self.assertEqual(len(plan["components"]["project_continuity"]["tree_hash"]), 64)
-        w.install(plan, self.args)
-        self.assertEqual(self.calls, [])
-
-    def test_continuity_missing_required_file_is_rejected(self):
-        self._continuity_only(local=True)
-        root = Path(self.args.continuity_root)
-        for name in ("package.json", "index.ts", "runtime.mjs", "store.mjs"):
-            with self.subTest(name=name):
-                moved = self.base / (name + ".held")
-                (root / name).rename(moved)
-                try:
-                    with self.assertRaisesRegex(InstallError, "缺少 " + name.replace(".", r"\.")):
-                        self.plan()
-                finally:
-                    moved.rename(root / name)
-        self.assertEqual(self.calls, [])
-
-    def test_continuity_extra_resources_and_dependencies_rejected(self):
-        self._continuity_only(local=True)
-        package = Path(self.args.continuity_root) / "package.json"
-        original = load_json(package)
-        mutations = [
-            {"pi": {"extensions": ["./index.ts", "../../personality/index.ts"]}},
-            {"pi": {"extensions": ["./index.ts"], "skills": ["../../skills"]}},
-            {"dependencies": {"another-package": "*"}},
-            {"optionalDependencies": {"another-package": "*"}},
-            {"pi": ["invalid"]},
-        ]
-        for mutation in mutations:
-            with self.subTest(mutation=mutation):
-                atomic(package, encode_json({**original, **mutation}))
-                with self.assertRaises(InstallError):
-                    self.plan()
-        atomic(package, encode_json(original))
-
-    def test_continuity_local_drift_after_plan_rejected_before_commands(self):
-        self._continuity_only(local=True)
-        plan = self.plan()
-        atomic(Path(self.args.continuity_root) / "runtime.mjs", b"changed after plan")
-        with self.assertRaisesRegex(InstallError, "漂移"):
-            w.install(plan, self.args)
-        self.assertEqual(self.calls, [])
-        self.assertEqual(load_json(self.agent / "settings.json"), self.before)
-        self.assertFalse((self.root / ".installer/receipt.json").exists())
-
-    def test_continuity_frozen_identity_tampering_rejected(self):
-        self._continuity_only()
-        original = self.plan()
-        for field, value in (("commit", "main"), ("commit", None), ("mode", "read-only-local-package"), ("plugin_dir", "."), ("repository", "https://example.invalid/hub"), ("version", "9.0.0"), ("expected_extension", "../index.ts"), ("ref", "main")):
-            with self.subTest(field=field):
-                plan = copy.deepcopy(original)
-                plan["components"]["project_continuity"][field] = value
-                with self.assertRaises(InstallError):
-                    w.install(plan, self.args)
-        self.assertEqual(self.calls, [])
-
-    def test_continuity_frozen_local_identity_is_required(self):
-        self._continuity_only(local=True)
-        original = self.plan()
-        for field in ("tree_hash", "root", "extensions", "mode"):
-            with self.subTest(field=field):
-                plan = copy.deepcopy(original)
-                plan["components"]["project_continuity"].pop(field)
-                with self.assertRaises(InstallError):
-                    w.install(plan, self.args)
-        self.assertEqual(self.calls, [])
-
-    def test_continuity_plan_file_rejects_optout_override(self):
-        import contextlib
-        import io
-        self._continuity_only()
-        path = self.base / "frozen.json"
-        atomic(path, encode_json(self.plan()))
-        with contextlib.redirect_stderr(io.StringIO()):
-            code = cli.main(["update", "--root", str(self.root), "--plan-file", str(path), "--without-project-continuity", "--apply"])
-        self.assertEqual(code, 1)
-        self.assertEqual(self.calls, [])
-
-    def test_continuity_explicit_optout_conflict_is_rejected(self):
-        self._continuity_only()
-        self.args.without_project_continuity = True
-        with self.assertRaisesRegex(InstallError, "互斥"):
+    def test_update_refuses_unidentifiable_continuity_registration(self):
+        _, _, settings, _ = self._seed_retired_continuity(filtered=True)
+        with self.assertRaisesRegex(InstallError, "唯一的精确 Pi 包注册"):
             self.plan()
-
-    def test_continuity_missing_tag_does_not_fallback_to_main(self):
-        self._continuity_only()
-        seen = []
-        def fetch(url):
-            seen.append(url)
-            raise InstallError("HTTP 404 fixture tag unpublished")
-        with self.assertRaisesRegex(InstallError, "404"):
-            w.make_plan(self.args, fetch)
-        self.assertEqual(len(seen), 1)
-        self.assertTrue(seen[0].endswith("/commits/project-continuity-v1.2.0"))
-
-    def test_continuity_wrong_checkout_does_not_activate(self):
-        self._continuity_only()
-        def wrong_head(argv, **kwargs):
-            return "b" * 40 if "rev-parse" in argv else self.fake_run(argv, **kwargs)
-        with patch.object(w, "run", wrong_head):
-            with self.assertRaisesRegex(InstallError, "checkout commit"):
-                self.install()
-        self.assertEqual(load_json(self.agent / "settings.json"), self.before)
-        self.assertFalse((self.root / ".installer/receipt.json").exists())
-
-    def test_continuity_verify_requires_receipt_hash_and_commit(self):
-        self._continuity_only()
-        original = self.install()
-        receipt_file = self.root / ".installer/receipt.json"
-        for section, field in (("hashes", "continuity_sha256"), ("project_continuity", "tree_hash"), ("project_continuity", "commit"), ("paths", "project_continuity")):
-            with self.subTest(field=field):
-                changed = copy.deepcopy(original)
-                changed[section].pop(field)
-                atomic(receipt_file, encode_json(changed))
-                self.assertFalse(w.verify(self.root)["ok"])
-        atomic(receipt_file, encode_json(original))
-        with patch.object(w, "run", return_value="b" * 40):
-            self.assertFalse(w.verify(self.root)["ok"])
-
-    def test_continuity_update_rejects_local_drift_without_blessing_new_hash(self):
-        self._continuity_only(local=True)
-        first = self.install()
-        atomic(Path(self.args.continuity_root) / "runtime.mjs", b"changed since install")
-        with self.assertRaisesRegex(InstallError, "活动 project-continuity 漂移"):
-            self.install()  # Even a newly generated plan must not bless active drift.
-        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
-        self.assertFalse(w.verify(self.root)["ok"])
-
-    def test_continuity_complete_hash_required_for_reuse(self):
-        self._continuity_only()
-        first = self.install()
-        complete_file = Path(first["project_continuity"]["root"]).parents[3] / "complete.json"
-        data = load_json(complete_file)
-        data.pop("continuity_sha256")
-        data["unrelated_fixture_hash"] = "f" * 64
-        atomic(complete_file, encode_json(data))
-        with self.assertRaisesRegex(InstallError, "缺少 hash"):
-            self.install()
-        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
-
-    def test_continuity_disabled_registration_is_not_verified_or_overwritten(self):
-        self._continuity_only()
-        receipt = self.install()
-        settings = load_json(self.agent / "settings.json")
-        plugin = receipt["project_continuity"]["root"]
-        settings["packages"] = [{"source": p, "extensions": []} if p == plugin else p for p in settings["packages"]]
-        atomic(self.agent / "settings.json", encode_json(settings))
-        self.assertFalse(w.verify(self.root)["ok"])
-        with self.assertRaisesRegex(InstallError, "资源过滤"):
-            self.install()
-        self.assertEqual(load_json(self.agent / "settings.json"), settings)
-        w.restore(self.root, apply=True)
-        self.assertIn({"source": plugin, "extensions": []}, load_json(self.agent / "settings.json")["packages"])
-
-    def test_continuity_plain_object_registration_preserved(self):
-        self._continuity_only()
-        receipt = self.install()
-        plugin = receipt["project_continuity"]["root"]
-        settings = load_json(self.agent / "settings.json")
-        settings["packages"] = [{"source": p} if p == plugin else p for p in settings["packages"]]
-        atomic(self.agent / "settings.json", encode_json(settings))
-        self.assertTrue(w.verify(self.root)["ok"])
-        self.install()
         self.assertEqual(load_json(self.agent / "settings.json"), settings)
 
-    def test_continuity_optout_cannot_silently_uninstall_active_plugin(self):
-        self.args.without_project_continuity = False
-        first = self.install()
-        settings = load_json(self.agent / "settings.json")
-        self.args.without_project_continuity = True
-        with self.assertRaisesRegex(InstallError, "收缩"):
-            self.install()
+    def test_update_refuses_duplicate_continuity_registration(self):
+        _, _, settings, _ = self._seed_retired_continuity(duplicate=True)
+        with self.assertRaisesRegex(InstallError, "唯一的精确 Pi 包注册"):
+            self.plan()
         self.assertEqual(load_json(self.agent / "settings.json"), settings)
-        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
-
-    def test_continuity_clone_mutation_during_install_rolls_back(self):
-        self.args.without_project_continuity = False
-        plugin = None
-        def mutate(argv, **kwargs):
-            nonlocal plugin
-            result = self.fake_run(argv, **kwargs)
-            if "clone" in argv:
-                plugin = Path(argv[-1]) / "plugins/pi/project-continuity"
-            if "setup" in argv and "--yes" in argv:
-                atomic(plugin / "runtime.mjs", b"modified while staging")
-            return result
-        with patch.object(w, "run", mutate):
-            with self.assertRaisesRegex(InstallError, "安装期间发生漂移"):
-                self.install()
-        self.assertEqual(load_json(self.agent / "settings.json"), self.before)
-        self.assertFalse((self.root / ".installer/receipt.json").exists())
-
-    def test_continuity_failed_addition_keeps_previous_receipt(self):
-        first = self.install()
-        before = load_json(self.agent / "settings.json")
-        self.args.without_project_continuity = False
-        def incomplete(argv, **kwargs):
-            result = self.fake_run(argv, **kwargs)
-            if "clone" in argv:
-                plugin = Path(argv[-1]) / "plugins/pi/project-continuity"
-                (plugin / "runtime.mjs").rename(plugin / "runtime.mjs.held")
-            return result
-        with patch.object(w, "run", incomplete):
-            with self.assertRaisesRegex(InstallError, "缺少 runtime"):
-                self.install()
-        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
-        self.assertEqual(load_json(self.agent / "settings.json"), before)
-        self.assertTrue(w.verify(self.root)["ok"])
-
 
 class VersionsAndIdentity(unittest.TestCase):
     def test_stable_non_yanked_and_main_fallback(self):

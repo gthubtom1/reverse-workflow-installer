@@ -16,10 +16,12 @@ from datetime import datetime, timezone
 
 from configuration import Journal, atomic, codex_merge, digest, encode_json, load_json, restore_journal, toml_parts
 from versions import COMPONENTS, InstallError, resolve, stable
-import project_continuity as pc
+import package_utils as pu
+import shell_guard as sg
 
 REPO = Path(__file__).resolve().parents[1]
-ADAPTER_VERSION = "0.2.0"
+ADAPTER_VERSION = "0.2.0"  # Transaction protocol; old receipts remain readable.
+INSTALLER_VERSION = "0.6.0"
 
 
 def run(args, *, cwd, env=None):
@@ -55,12 +57,12 @@ def abs_path(value):
 def selected_components(value):
     if value is None or str(value).strip().lower() in ("", "all"):
         return ["rea", "spec_kit", "reverse"]
-    aliases = {"rea": "rea", "spec-kit": "spec_kit", "spec_kit": "spec_kit", "reverse": "reverse", "project-continuity": "project_continuity", "project_continuity": "project_continuity"}
+    aliases = {"rea": "rea", "spec-kit": "spec_kit", "spec_kit": "spec_kit", "reverse": "reverse", "shell-guard": "shell_guard", "shell_guard": "shell_guard"}
     result = []
     for raw in str(value).split(","):
         key = aliases.get(raw.strip().lower())
         if key is None or key in result:
-            raise InstallError("--components 只能包含不重复的 rea, spec-kit, reverse, project-continuity，或 all")
+            raise InstallError("--components 只能包含不重复的 rea, spec-kit, reverse, shell-guard，或 all")
         result.append(key)
     if not result:
         raise InstallError("--components 不能为空")
@@ -68,7 +70,7 @@ def selected_components(value):
 
 
 def needs_host(components):
-    return "rea" in components or "spec_kit" in components or "project_continuity" in components
+    return any(key in components for key in ("rea", "spec_kit", "shell_guard"))
 
 
 def needs_project(components):
@@ -76,7 +78,7 @@ def needs_project(components):
 
 
 def needs_agent(components, client):
-    return "rea" in components or ("reverse" in components and client in ("pi", "codex", "claude")) or ("project_continuity" in components and client == "pi")
+    return "rea" in components or ("reverse" in components and client in ("pi", "codex", "claude")) or ("shell_guard" in components and client == "pi")
 
 
 def detect_client(client, config=None, env=None):
@@ -114,6 +116,13 @@ def detect_client(client, config=None, env=None):
 def scope(args):
     raw = str(getattr(args, "components", "") or "").strip().lower()
     components = selected_components(args.components)
+    if getattr(args, "with_shell_guard", False) and "shell_guard" not in components:
+        components.append("shell_guard")
+    root = abs_path(args.root)
+    previous = load_json(root / ".installer/receipt.json", {})
+    # Only a current managed selection survives updates; historic all never opts in.
+    if previous.get("installed") and "shell_guard" in receipt_components(previous) and "shell_guard" not in components:
+        components.append("shell_guard")
     spec_pin = getattr(args, "spec_kit_version", None)
     if spec_pin is not None:
         if "spec_kit" not in components:
@@ -121,6 +130,21 @@ def scope(args):
         if not isinstance(spec_pin, str) or not stable(spec_pin):
             raise InstallError("--spec-kit-version 必须是精确稳定版本（例如 1.3.1）")
     root = abs_path(args.root)
+    guard_options = {}
+    for key in ("shell_guard_root", "replace_shell_guard_root"):
+        raw_path = getattr(args, key, None)
+        if raw_path:
+            sg.reject_links(Path(raw_path).expanduser().absolute())
+        guard_options[key] = str(abs_path(raw_path)) if raw_path else None
+    if "shell_guard" in components and not guard_options["shell_guard_root"] and (previous.get("shell_guard") or {}).get("mode") == "read-only-local-package":
+        guard_options["shell_guard_root"] = previous["shell_guard"]["root"]
+    raw_es = getattr(args, "everything_es", None)
+    guard_options["everything_es"] = sg.executable_identity(raw_es)["path"] if raw_es else None
+    raw_gui = getattr(args, "everything_gui", None)
+    guard_options["everything_gui"] = sg.gui_identity(raw_gui)["path"] if raw_gui else None
+    guard_options["everything_autostart"] = bool(getattr(args, "everything_autostart", False))
+    if any(guard_options.values()) and "shell_guard" not in components:
+        raise InstallError("shell-guard 路径/配置参数需要 --with-shell-guard 或显式 shell-guard 组件")
     explicit = abs_path(args.client_config) if args.client_config else None
     if needs_host(components):
         if args.client == "none":
@@ -142,30 +166,15 @@ def scope(args):
         raise InstallError("所选 Spec Kit 组件需要 --project 指定独立成果项目")
     if client in ("codex", "claude") and "reverse" in components and project is None:
         raise InstallError(f"{client} 使用 reverse 入口需要 --project 写入项目入口")
-    # Default all + resolved Pi + reverse enables the project-continuity plugin unless explicitly opted out.
-    if (
-        "project_continuity" not in components
-        and "reverse" in components
-        and raw in ("", "all")
-        and client == "pi"
-        and not getattr(args, "without_project_continuity", False)
-    ):
-        components.append("project_continuity")
     reverse = abs_path(args.reverse_root) if args.reverse_root else None
-    continuation = abs_path(args.continuity_root) if getattr(args, "continuity_root", None) else None
-    if "project_continuity" in components and client != "pi":
-        raise InstallError("project-continuity 插件仅适用于 Pi；codex/claude 不注册该插件")
-    if "project_continuity" in components and getattr(args, "without_project_continuity", False):
-        raise InstallError("project-continuity 与 --without-project-continuity 互斥")
-    if continuation is not None and "project_continuity" not in components:
-        raise InstallError("--continuity-root 需要 project-continuity 组件（默认 all+pi 组合或显式 project-continuity）")
+    if "shell_guard" in components and client != "pi":
+        raise InstallError("shell-guard 插件仅适用于 Pi")
     tools = [REPO, root / "versions", root / ".installer"]
     if agent:
         tools.append(agent)
     if reverse:
         tools.append(reverse)
-    if continuation:
-        tools.append(continuation)
+    tools.extend(Path(p) for key, p in guard_options.items() if p and key in ("shell_guard_root", "replace_shell_guard_root", "everything_gui"))
     if project:
         for tool in tools:
             if project == tool or project.is_relative_to(tool) or tool.is_relative_to(project):
@@ -186,7 +195,7 @@ def scope(args):
             raise InstallError("成果项目与复用工具目录重叠")
     detection = None if args.node else shutil.which("node")
     node = str(abs_path(args.node)) if args.node else (str(abs_path(detection)) if detection else None)
-    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "continuity_root": str(continuation) if continuation else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **({"spec_kit_version": spec_pin} if spec_pin is not None else {})}
+    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **guard_options, **({"spec_kit_version": spec_pin} if spec_pin is not None else {})}
 
 
 def reverse_identity(path):
@@ -291,11 +300,48 @@ def specify_init_args(specify, target, client):
     return args
 
 
+def retired_project_continuity_migration(selected):
+    """Freeze one safe removal of the retired package from an old Pi receipt."""
+    previous = load_json(Path(selected["root"]) / ".installer/receipt.json", {})
+    recorded = (previous.get("scope") or {}).get("components") or []
+    old = previous.get("project_continuity")
+    if not previous.get("installed") or (not isinstance(old, dict) and "project_continuity" not in recorded):
+        return None
+    if selected.get("client") != "pi" or not selected.get("agent_dir"):
+        raise InstallError("活动 receipt 含已移除的 project-continuity，但当前计划没有可管理的 Pi agent；拒绝静默保留插件")
+    old = old if isinstance(old, dict) else {}
+    paths = previous.get("paths") or {}
+    root = old.get("root") or paths.get("project_continuity")
+    plugin_dir = old.get("plugin_dir")
+    package_name = old.get("name") or ((previous.get("components") or {}).get("project_continuity") or {}).get("package_name")
+    if not root or not plugin_dir or not package_name:
+        raise InstallError("活动 receipt 含已移除的 project-continuity，但缺少可识别的包路径/身份；请先人工移除其 Pi 注册")
+    root = str(abs_path(root))
+    settings = sg.settings_at(selected["agent_dir"])
+    packages = settings.get("packages", [])
+    matches = [item for item in packages if pu.registration_matches(item, root, selected["agent_dir"])]
+    same_sources = [item for item in packages if pu.same_registration_source(item, root, selected["agent_dir"])]
+    if len(matches) > 1 or (not matches and same_sources):
+        raise InstallError("活动 receipt 含 project-continuity，但未找到唯一的精确 Pi 包注册；拒绝静默保留插件")
+    registration = matches[0] if matches else None
+
+    for item in packages:
+        if pu.exposes_plugin_registration(item, root, plugin_dir, selected["agent_dir"]):
+            raise InstallError("活动 receipt 含 project-continuity，且 Pi settings 还有 hub/父目录注册；请先清理重复注册")
+        source = pu.registration_source(item)
+        package_root = pu.resolved_registration_source(item, selected["agent_dir"])
+        package = load_json(package_root / "package.json", {}) if package_root and (package_root / "package.json").is_file() else {}
+        if (isinstance(package, dict) and package.get("name") == package_name and not pu.same_registration_source(item, root, selected["agent_dir"])) or (isinstance(source, str) and package_name in source and not pu.same_registration_source(item, root, selected["agent_dir"])):
+            raise InstallError("活动 receipt 含 project-continuity，且 settings 还有无法归属的同名注册；拒绝静默保留插件")
+    return {"root": root, "plugin_dir": plugin_dir, "package_name": package_name, "registration": registration}
+
+
 def make_plan(args, fetch=None):
     selected = scope(args)
     manifest = load_json(REPO / "components.json")
     # Resolve only selected components; explicit local working copies need no upstream lookup.
-    keys = [key for key in selected["components"] if not (key in ("reverse", "project_continuity") and selected.get("reverse_root" if key == "reverse" else "continuity_root"))]
+    local_keys = {"reverse": "reverse_root", "shell_guard": "shell_guard_root"}
+    keys = [key for key in selected["components"] if not selected.get(local_keys.get(key, ""))]
     components = resolve(manifest, **({"fetch": fetch} if fetch else {}), components=keys,
                          **({"spec_kit_version": selected["spec_kit_version"]} if "spec_kit_version" in selected else {}))
     if "reverse" in selected["components"]:
@@ -304,12 +350,15 @@ def make_plan(args, fetch=None):
             components["reverse"] = {"repository": manifest["reverse"]["repository"], "ref": "local-working-copy", "commit": identity["commit"], "published_commit": None, "local_identity": identity, "mode": "read-only-working-copy"}
         else:
             components["reverse"]["mode"] = "clone-frozen-commit"
-    if "project_continuity" in selected["components"]:
-        if selected.get("continuity_root"):
-            identity = pc.validate_local_package(selected["continuity_root"], manifest)
-            components["project_continuity"] = {**identity, "mode": "read-only-local-package", "plugin_dir": manifest["project_continuity"]["plugin_dir"], "repository": manifest["project_continuity"]["repository"]}
-        else:
-            components["project_continuity"]["mode"] = "clone-frozen-commit"
+    retirement = retired_project_continuity_migration(selected)
+    guard_migration = executable = gui_executable = None
+    if "shell_guard" in selected["components"]:
+        entry = manifest["shell_guard"]
+        if selected.get("shell_guard_root"):
+            local = sg.validate_package(selected["shell_guard_root"], entry)
+            components["shell_guard"] = {**local, "mode": "read-only-local-package", "plugin_dir": entry["plugin_dir"], "repository": entry["repository"]}
+        previous = load_json(Path(selected["root"]) / ".installer/receipt.json", {})
+        guard_migration, executable, gui_executable = sg.plan_inputs(selected, previous, entry)
     missing = []
     if "rea" in selected["components"]:
         if not selected["node"]: missing.append("node")
@@ -317,8 +366,9 @@ def make_plan(args, fetch=None):
         missing.append("uv")
     if "reverse" in selected["components"] and not selected["reverse_root"] and not selected["git"]:
         missing.append("git")
-    if "project_continuity" in selected["components"] and not selected.get("continuity_root") and not selected["git"]:
-        missing.append("git")
+    for key, option in (("shell_guard", "shell_guard_root"),):
+        if key in selected["components"] and not selected.get(option) and not selected["git"]:
+            missing.append("git")
     config = Path(selected["client_config"]) if selected["client_config"] else None
     settings = Path(selected["agent_dir"]) / "settings.json" if selected["agent_dir"] and selected["client"] == "pi" else None
     input_paths = [p for p in (config, settings) if p is not None]
@@ -334,11 +384,13 @@ def make_plan(args, fetch=None):
         commands.append(("核验只读复用 Spec Kit tools/bin: " + selected["spec_kit_tools"] + " / " + selected["spec_kit_bin"] + " @" + components["spec_kit"]["version"]) if selected["spec_kit_tools"] else ("uv --no-config tool install --default-index https://pypi.org/simple specify-cli==" + components["spec_kit"]["version"]))
         init_preview = specify_init_args("<specify>", "<staging-project>", selected["client"])
         commands.append(" ".join(init_preview))
-    if "project_continuity" in selected["components"]:
-        component = components["project_continuity"]
-        commands.append(("核验只读 project-continuity 包及冻结 tree hash: " + component["root"]) if selected.get("continuity_root") else ("git clone --no-checkout " + component["repository"] + " <version>/agent-plugins; git checkout --detach " + component["commit"]))
-        commands.append("仅注册 project-continuity 插件子目录到 Pi settings.json.packages；不注册 hub")
-    return {"schema_version": 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill], "without_project_continuity": bool(getattr(args, "without_project_continuity", False))}, "limits": limits()}
+    if retirement:
+        commands.append("移除旧 receipt 中可唯一识别的 project-continuity Pi 包注册；旧包目录保留在历史版本目录")
+    if "shell_guard" in selected["components"]:
+        component = components["shell_guard"]
+        commands.append(("核验只读 shell-guard 独立包与冻结 tree hash: " + component["root"]) if selected.get("shell_guard_root") else ("git clone --no-checkout " + component["repository"] + " <version>/agent-plugins-shell-guard; git checkout --detach " + component["commit"]))
+        commands.append("仅注册 shell-guard 独立子目录；Everything 只合并明确提供的 esPath/guiPath/autostart；迁移按冻结旧注册/hash 条件替换")
+    return {"installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
 
 
 PI_RECEIPT_LINE = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
@@ -366,9 +418,11 @@ def validate_plan(plan):
     if plan.get("schema_version") != 1 or plan.get("adapter_version") != ADAPTER_VERSION:
         raise InstallError("计划 schema/adapter 版本不兼容；重新 plan")
     selected = plan["scope"]
+    if "project_continuity" in selected.get("components", []):
+        raise InstallError("冻结计划仍选择已移除的 project-continuity；请重新 plan")
     checked = scope(SimpleNamespace(**{**selected, **plan["resource_selection"], "components": ",".join(selected["components"]), "node": selected.get("node"), "uv": selected.get("uv"), "git": selected.get("git")}))
-    for key in ("components", "root", "client", "agent_dir", "client_config", "project", "reverse_root", "continuity_root", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
-        if checked[key] != selected.get(key):
+    for key in ("components", "root", "client", "agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+        if checked.get(key) != selected.get(key):
             raise InstallError("冻结计划包含非规范路径或范围；重新 plan")
     if checked.get("spec_kit_version") != selected.get("spec_kit_version"):
         raise InstallError("冻结计划的 Spec Kit 版本选择不一致")
@@ -382,6 +436,9 @@ def validate_plan(plan):
     if set(plan["config_inputs"]) != {str(p) for p in expected_configs}:
         raise InstallError("冻结计划的配置输入范围不一致")
     manifest = load_json(REPO / "components.json")
+    retirement = retired_project_continuity_migration(selected)
+    if plan.get("retired_project_continuity") != retirement:
+        raise InstallError("旧 receipt 的 project-continuity 退役信息自 plan 后发生变化；重新 plan")
     planned = plan.get("components") or {}
     for key in selected["components"]:
         component = planned.get(key)
@@ -391,22 +448,10 @@ def validate_plan(plan):
             raise InstallError("计划缺少精确稳定版本")
         if key == "reverse" and not re.fullmatch(r"[0-9a-f]{40}", str(component.get("commit"))):
             raise InstallError("计划缺少精确 reverse commit")
-        if key == "project_continuity":
-            entry = manifest[key]
-            if component.get("plugin_dir") != entry["plugin_dir"]:
-                raise InstallError("project-continuity 插件子目录与来源清单不符")
-            if selected.get("continuity_root"):
-                if component.get("mode") != "read-only-local-package" or component.get("root") != selected["continuity_root"]:
-                    raise InstallError("project-continuity 本地包范围与模式不符")
-                local = pc.validate_local_package(selected["continuity_root"], manifest)
-                if any(component.get(field) != local[field] for field in ("root", "name", "version", "extensions", "tree_hash")):
-                    raise InstallError("project-continuity 本地包自 plan 后发生漂移或缺少冻结身份；重新 plan")
-            else:
-                if component.get("mode") != "clone-frozen-commit" or not re.fullmatch(r"[0-9a-f]{40}", str(component.get("commit"))):
-                    raise InstallError("计划缺少精确 project_continuity commit 或克隆模式不符")
-                expected = {"ref": entry["release_ref"], **{field: entry[field] for field in ("api", "package_name", "version", "expected_extension")}}
-                if any(component.get(field) != value for field, value in expected.items()):
-                    raise InstallError("project-continuity 冻结来源字段与清单不符")
+    if "shell_guard" in selected["components"]:
+        sg.validate_plan(plan, manifest["shell_guard"])
+    elif plan.get("shell_guard_migration") or plan.get("everything_es_identity") or plan.get("everything_gui_identity") or selected.get("everything_autostart"):
+        raise InstallError("未选择 shell-guard 却包含配置/迁移身份")
     for name, expected in plan["config_inputs"].items():
         p = Path(name)
         if (digest(p.read_bytes()) if p.exists() else None) != expected:
@@ -450,7 +495,7 @@ def node_and_npm(node, engine, cwd, env):
 
 def package_paths(version_dir):
     directory = Path(version_dir)
-    return {"rea_prefix": directory / "rea", "rea_package": directory / "rea/node_modules/rea-agents", "uv_tools": directory / "spec-kit/tools", "uv_bin": directory / "spec-kit/bin", "reverse": directory / "reverse-skill", "agent_plugins": directory / "agent-plugins"}
+    return {"rea_prefix": directory / "rea", "rea_package": directory / "rea/node_modules/rea-agents", "uv_tools": directory / "spec-kit/tools", "uv_bin": directory / "spec-kit/bin", "reverse": directory / "reverse-skill", "shell_guard_repo": directory / "agent-plugins-shell-guard"}
 
 
 def process_env(root, paths, agent, client, node):
@@ -525,7 +570,7 @@ def receipt_components(receipt):
     if recorded:
         return list(recorded)
     # Legacy receipts recorded before project_continuity existed: expect the historic three.
-    return [key for key in ALL_COMPONENTS if key != "project_continuity"]
+    return ["rea", "spec_kit", "reverse"]
 
 
 def config_rea_entry(client, config):
@@ -618,50 +663,6 @@ def write_host_file(journal, ownership, path, data, *, client, legacy=(), owner_
         entries[str(path.resolve())] = digest(data)
 
 
-def continuity_failures(receipt, manifest=None):
-    """Check the active receipt against its own frozen identity.
-
-    The installed version may legitimately be older than the manifest during
-    an update. Current plan validation checks the new release; this preflight
-    only proves that the old active installation is intact before replacement.
-    """
-    failures = []
-    stored = receipt.get("project_continuity") or {}
-    frozen = (receipt.get("components") or {}).get("project_continuity") or {}
-    plugin_root = stored.get("root")
-    expected_hash = (receipt.get("hashes") or {}).get("continuity_sha256")
-    try:
-        current_manifest = manifest or load_json(REPO / "components.json")
-        entry = current_manifest["project_continuity"]
-        frozen_entry = {**entry, **{key: frozen[key] for key in ("repository", "plugin_dir", "package_name", "version", "expected_extension") if frozen.get(key)}}
-        compatibility_manifest = copy.deepcopy(current_manifest)
-        compatibility_manifest["project_continuity"] = frozen_entry
-        if not plugin_root or (receipt.get("paths") or {}).get("project_continuity") != plugin_root:
-            raise InstallError("插件路径缺失或不一致")
-        local = pc.validate_local_package(plugin_root, compatibility_manifest)
-        if not re.fullmatch(r"[0-9a-f]{64}", str(expected_hash)) or expected_hash != stored.get("tree_hash") or expected_hash != local["tree_hash"]:
-            raise InstallError("插件 identity drift 或缺少 tree hash")
-        if any(stored.get(field) != local[field] for field in ("root", "name", "version", "extensions")):
-            raise InstallError("插件 manifest drift")
-        if stored.get("repository") != frozen_entry["repository"] or stored.get("plugin_dir") != frozen_entry["plugin_dir"] or stored.get("mode") != frozen.get("mode"):
-            raise InstallError("插件来源或模式不一致")
-        if stored["mode"] == "clone-frozen-commit":
-            commit = frozen.get("commit")
-            if not re.fullmatch(r"[0-9a-f]{40}", str(commit)) or stored.get("commit") != commit:
-                raise InstallError("缺少精确 commit 或 receipt commit 不一致")
-            repository = Path(plugin_root).parents[len(Path(frozen_entry["plugin_dir"]).parts) - 1]
-            if run(["git", "-C", repository, "rev-parse", "HEAD"], cwd=repository) != commit:
-                raise InstallError("插件 checkout commit drift")
-        elif stored["mode"] == "read-only-local-package":
-            if frozen.get("root") != plugin_root or frozen.get("tree_hash") != expected_hash:
-                raise InstallError("本地包冻结身份不一致")
-        else:
-            raise InstallError("未知插件来源模式")
-    except (InstallError, OSError, ValueError, IndexError) as exc:
-        failures.append("project-continuity: " + str(exc))
-    return failures
-
-
 def _install(plan, args):
     selected, components = plan["scope"], plan["components"]
     selection = list(selected["components"])
@@ -678,12 +679,15 @@ def _install(plan, args):
     if installed:
         if normalized_identity(previous.get("scope")) != normalized_identity(selected):
             raise InstallError("安装根已属于另一客户端/agent/项目范围；请选新 root，或 restore 后安装")
-        if not set(previous_selection) <= set(selection):
+        removed = set(previous_selection) - set(selection)
+        if removed and (removed != {"project_continuity"} or not plan.get("retired_project_continuity")):
             raise InstallError("不能在同一 root 收缩或更换组件范围（已安装 " + ", ".join(previous_selection) + "；本次 " + ", ".join(selection) + "）；请 restore 到目标组件的事务，或用新 root 安装")
-        if "project_continuity" in previous_selection:
-            failures = continuity_failures(previous)
+        if "project_continuity" in previous_selection and not plan.get("retired_project_continuity"):
+            raise InstallError("活动 receipt 含已移除的 project-continuity，但没有安全退役计划；拒绝静默保留插件")
+        if "shell_guard" in previous_selection:
+            failures = sg.failures(previous, manifest["shell_guard"], run)
             if failures:
-                raise InstallError("活动 project-continuity 漂移；拒绝更新: " + "; ".join(failures))
+                raise InstallError("活动 shell-guard 漂移；拒绝更新: " + "; ".join(failures))
         recorded_config = previous.get("managed_rea_config")
         if recorded_config is not None and config_rea_entry(client, config) != recorded_config:
             raise InstallError("活动 REA 配置含后续用户修改或已缺失；拒绝覆盖，请先审阅差异并保留/迁移自定义项")
@@ -692,7 +696,7 @@ def _install(plan, args):
         raise InstallError("reverse 工作副本自 plan 后发生漂移；重新 plan")
     if plan["missing_prerequisites"]:
         raise InstallError("缺少依赖: " + ", ".join(plan["missing_prerequisites"]) + "；请自行准备后重新 plan")
-    version_key = digest(encode_json({"components": {key: components[key] for key in selection}, "node": selected.get("node"), "adapter": ADAPTER_VERSION}))[:20]
+    version_key = digest(encode_json({"components": {key: components[key] for key in selection}, "node": selected.get("node"), "adapter": ADAPTER_VERSION, "installer": INSTALLER_VERSION}))[:20]
     version_dir = root / "versions" / version_key
     if version_dir.exists() and not (version_dir / "complete.json").exists():
         completed = sorted((root / "versions").glob(version_key + "-*/complete.json"))
@@ -706,8 +710,9 @@ def _install(plan, args):
         paths["uv_bin"] = Path(selected["spec_kit_bin"])
     if "reverse" in selection and selected.get("reverse_root"):
         paths["reverse"] = Path(selected["reverse_root"])
-    if "project_continuity" in selection and selected.get("continuity_root"):
-        paths["agent_plugins"] = None
+    retirement = plan.get("retired_project_continuity")
+    if retirement and not installed:
+        raise InstallError("旧 project-continuity 退役计划要求活动 installed receipt")
     transaction = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:8]
     tx = root / ".installer/transactions" / transaction
     journal = Journal(tx)
@@ -770,32 +775,20 @@ def _install(plan, args):
                 reverse = reverse_identity(paths["reverse"])
             if reverse["commit"] != components["reverse"]["commit"]:
                 raise InstallError("reverse checkout commit 不符")
-        continuity = None
-        continuity_plugin = None
-        continuity_commit = None
-        if "project_continuity" in selection:
-            entry = manifest["project_continuity"]
-            plugin_dir = entry["plugin_dir"]
-            if selected.get("continuity_root"):
-                continuity_plugin = Path(selected["continuity_root"])
-                local = pc.validate_local_package(continuity_plugin, manifest)
-                continuity = {**local, "mode": "read-only-local-package", "plugin_dir": plugin_dir, "repository": entry["repository"]}
-            else:
-                plugins_root = paths["agent_plugins"]
-                if complete and not plugins_root.is_dir():
-                    raise InstallError("既有 project-continuity 仓库缺失；拒绝复用")
+        guard = None
+        if "shell_guard" in selection:
+            entry = manifest["shell_guard"]
+            component = components["shell_guard"]
+            guard_root = Path(selected["shell_guard_root"]) if selected.get("shell_guard_root") else paths["shell_guard_repo"] / entry["plugin_dir"]
+            if not selected.get("shell_guard_root"):
                 if not complete:
-                    run([selected["git"], "clone", "--no-checkout", components["project_continuity"]["repository"], plugins_root], cwd=root, env=env)
-                    run([selected["git"], "-C", plugins_root, "checkout", "--detach", components["project_continuity"]["commit"]], cwd=root, env=env)
-                continuity_commit = run([selected["git"], "-C", plugins_root, "rev-parse", "HEAD"], cwd=plugins_root)
-                if continuity_commit != components["project_continuity"]["commit"]:
-                    raise InstallError("project_continuity checkout commit 不符")
-                continuity_plugin = plugins_root / plugin_dir
-                local = pc.validate_local_package(continuity_plugin, manifest)
-                continuity = {"mode": "clone-frozen-commit", "root": str(continuity_plugin.resolve()), "commit": continuity_commit, "repository": entry["repository"], "plugin_dir": plugin_dir, "name": local["name"], "version": local["version"], "extensions": local["extensions"]}
-            continuity["tree_hash"] = local["tree_hash"]
-            if complete and complete.get("continuity_sha256") != continuity["tree_hash"]:
-                raise InstallError("project-continuity 插件发生漂移或缺少 hash；拒绝复用")
+                    run([selected["git"], "clone", "--no-checkout", component["repository"], paths["shell_guard_repo"]], cwd=root, env=env)
+                    run([selected["git"], "-C", paths["shell_guard_repo"], "checkout", "--detach", component["commit"]], cwd=root, env=env)
+                sg.checkout_identity(guard_root, component, run)
+            local = sg.validate_package(guard_root, entry)
+            if complete and complete.get("shell_guard_sha256") != local["tree_hash"]:
+                raise InstallError("shell-guard 插件发生漂移或缺少 hash；拒绝复用")
+            guard = {**component, **local}
         desired_config = None
         managed_rea = None
         if "rea" in selection:
@@ -893,7 +886,7 @@ def _install(plan, args):
             write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
             entry = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
             write_host_file(journal, ownership, project / "CLAUDE.md", entry, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
-        if client == "pi" and agent is not None and (adapter is not None or resources["exclude_rea_skill"] or "project_continuity" in selection):
+        if client == "pi" and agent is not None and (adapter is not None or resources["exclude_rea_skill"] or retirement or "shell_guard" in selection):
             settings_path = agent / "settings.json"
             settings = load_json(settings_path, {})
             before_settings = copy.deepcopy(settings)
@@ -905,18 +898,11 @@ def _install(plan, args):
             packages = [p for p in packages if not (old_adapter and old_adapter != wanted and (p == old_adapter or (isinstance(p, dict) and p.get("source") == old_adapter)))]
             if wanted and not any(p == wanted or (isinstance(p, dict) and p.get("source") == wanted) for p in packages):
                 packages.append(wanted)
-            old_continuity = (previous.get("project_continuity") or {}).get("root") if previous.get("installed") else None
-            wanted_continuity = continuity["root"] if "project_continuity" in selection else None
-            if wanted_continuity:
-                duplicate_hubs = [p for p in packages if pc.exposes_plugin_registration(p, wanted_continuity, manifest["project_continuity"]["plugin_dir"])]
-                if duplicate_hubs:
-                    raise InstallError("Pi settings 包含会再次加载 project-continuity 的 hub/父目录注册；移除重复注册后重试: " + ", ".join(str(pc.registration_source(p)) for p in duplicate_hubs))
-            for source in (old_continuity, wanted_continuity):
-                if source and any(isinstance(p, dict) and p.get("source") == source and not pc.registration_matches(p, source) for p in packages):
-                    raise InstallError("Pi project-continuity 注册含用户资源过滤；拒绝覆盖或声明已启用")
-            packages = [p for p in packages if not (old_continuity and old_continuity != wanted_continuity and pc.registration_matches(p, old_continuity))]
-            if wanted_continuity and not any(pc.registration_matches(p, wanted_continuity) for p in packages):
-                packages.append(wanted_continuity)
+            if retirement and retirement.get("registration") is not None:
+                matches = [p for p in packages if pu.registration_matches(p, retirement["root"], agent)]
+                if len(matches) != 1 or matches[0] != retirement["registration"]:
+                    raise InstallError("旧 project-continuity 注册自 plan 后发生变化；拒绝静默保留插件")
+                packages.remove(matches[0])
             skills = settings.get("skills", [])
             if not isinstance(skills, list):
                 raise InstallError("Pi settings.skills 必须是数组")
@@ -938,8 +924,24 @@ def _install(plan, args):
                 settings["skills"] = skills
             else:
                 settings.pop("skills", None)
+            if "shell_guard" in selection:
+                settings = sg.merge_settings(settings, selected, guard["root"], previous, plan.get("shell_guard_migration"), manifest["shell_guard"])
             if settings != before_settings:
-                journal.write(settings_path, encode_json(settings), "json")
+                observed = digest(settings_path.read_bytes()) if settings_path.exists() else None
+                if observed != plan["config_inputs"][str(settings_path)]:
+                    raise InstallError("Pi settings 在激活前发生漂移；事务回退")
+                replacements = []
+                if "shell_guard" in selection:
+                    old_root = ((previous.get("shell_guard") or {}).get("root") or (plan.get("shell_guard_migration") or {}).get("root"))
+                    if old_root and guard and not sg.same_path(old_root, guard["root"]):
+                        old_items = [p for p in before_settings.get("packages", []) if sg.same_path(sg.local_source(p, agent), old_root)]
+                        new_items = [p for p in settings.get("packages", []) if sg.same_path(sg.local_source(p, agent), guard["root"])]
+                        if old_items and new_items:
+                            replacements.append({"before": old_items[0], "after": new_items[0]})
+                if replacements:
+                    journal.write(settings_path, encode_json(settings), "json", replacements=replacements)
+                else:
+                    journal.write(settings_path, encode_json(settings), "json")
         if desired_config is not None:
             observed = digest(config.read_bytes()) if config.exists() else None
             if observed != plan["config_inputs"][str(config)]:
@@ -963,10 +965,19 @@ def _install(plan, args):
             complete["spec_kit_sha256"] = spec_tree_hash
         if "reverse" in selection:
             complete["reverse_sha256"] = tree_hash(paths["reverse"], exclude_git=True)
-        if "project_continuity" in selection:
-            if pc.plugin_tree_hash(continuity_plugin) != continuity["tree_hash"]:
-                raise InstallError("project-continuity 插件在安装期间发生漂移；事务回退")
-            complete["continuity_sha256"] = continuity["tree_hash"]
+        if "shell_guard" in selection:
+            guard_migration = plan.get("shell_guard_migration")
+            if guard_migration and sg.validate_package(guard_migration["root"], manifest["shell_guard"], development=True)["tree_hash"] != guard_migration["tree_hash"]:
+                raise InstallError("shell-guard 迁移源在安装期间漂移；事务回退")
+            if plan.get("everything_es_identity") and not sg.same_executable(sg.executable_identity(selected["everything_es"]), plan["everything_es_identity"]):
+                raise InstallError("Everything CLI 在安装期间漂移；事务回退")
+            if plan.get("everything_gui_identity") and not sg.same_executable(sg.gui_identity(selected["everything_gui"]), plan["everything_gui_identity"]):
+                raise InstallError("Everything GUI 在安装期间漂移；事务回退")
+            if sg.tree_hash(guard["root"]) != guard["tree_hash"]:
+                raise InstallError("shell-guard 插件在安装期间漂移；事务回退")
+            if guard["mode"] == "clone-frozen-commit":
+                sg.checkout_identity(guard["root"], components["shell_guard"], run)
+            complete["shell_guard_sha256"] = guard["tree_hash"]
         atomic(version_dir / "complete.json", encode_json(complete))
         receipt_paths = {}
         if "rea" in selection:
@@ -975,11 +986,8 @@ def _install(plan, args):
             receipt_paths.update({"uv_tools": str(paths["uv_tools"]), "uv_bin": str(paths["uv_bin"])})
         if "reverse" in selection:
             receipt_paths["reverse"] = str(paths["reverse"])
-        if "project_continuity" in selection:
-            if selected.get("continuity_root"):
-                receipt_paths["project_continuity"] = continuity["root"]
-            else:
-                receipt_paths["project_continuity"] = str(paths["agent_plugins"] / manifest["project_continuity"]["plugin_dir"])
+        if "shell_guard" in selection:
+            receipt_paths["shell_guard"] = guard["root"]
         checks = {"selected_components": "passed", "scoped_config": "passed"}
         if "rea" in selection:
             checks["package_identity"] = "passed"
@@ -987,11 +995,20 @@ def _install(plan, args):
         if "spec_kit" in selection:
             checks["specify_version"] = "passed"
         checks["project_init"] = "passed" if init_project else "preserved-existing"
+        managed_shell_guard = copy.deepcopy(previous.get("shell_guard_config") or {})
+        if selected.get("everything_es"):
+            managed_shell_guard.update({"esPath": selected["everything_es"], "executable": plan["everything_es_identity"]})
+        if selected.get("everything_gui"):
+            managed_shell_guard.update({"guiPath": selected["everything_gui"], "gui_executable": plan["everything_gui_identity"]})
+        if selected.get("everything_autostart"):
+            managed_shell_guard["autostart"] = True
+        managed_shell_guard = managed_shell_guard or None
         receipt = {
             "schema_version": 1,
             "installed": True,
             "meaning": "official packages and scoped configuration installed; host acceptance is separate",
             "adapter_version": ADAPTER_VERSION,
+            "installer_version": INSTALLER_VERSION,
             "client_version": "unverified; host CLI not executed",
             "transaction": transaction,
             "history": list(previous.get("history") or []) + [transaction],
@@ -1001,7 +1018,8 @@ def _install(plan, args):
             "paths": receipt_paths,
             "runtime": {"node": node, "node_version": node_version, "node_sha256": digest(Path(node).read_bytes()) if node else None, "specify": str(specify) if specify else None},
             "reverse": reverse,
-            "project_continuity": continuity,
+            "shell_guard": guard,
+            "shell_guard_config": managed_shell_guard,
             "adapter": {"root": str(adapter) if adapter else None, "key": adapter_key, "codex_plugin_reference": (reverse or {}).get("codex_plugin")},
             "resource_selection": resources,
             "entry_hashes": entry_hashes,
@@ -1075,8 +1093,8 @@ def verify(root):
             failures.append("reverse working copy drift")
         elif hashes.get("reverse_sha256") and hashes["reverse_sha256"] != stored_reverse.get("working_tree_sha256"):
             failures.append("reverse working copy identity drift")
-    if "project_continuity" in selection:
-        failures.extend(continuity_failures(receipt))
+    if "shell_guard" in selection:
+        failures.extend(sg.failures(receipt, load_json(REPO / "components.json")["shell_guard"], run))
     resources = receipt.get("resource_selection") or {}
     if client == "pi":
         settings = load_json(agent / "settings.json", {}) if agent else {}
@@ -1089,14 +1107,6 @@ def verify(root):
             global_skill = agent / "skills/reverse-workflow/SKILL.md"
             if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
                 failures.append("Pi global skill missing or receipt path drift")
-        if "project_continuity" in selection:
-            plugin_root = (receipt.get("project_continuity") or {}).get("root")
-            if not plugin_root or not any(pc.registration_matches(p, plugin_root) for p in packages):
-                failures.append("Pi project-continuity package registration missing or changed")
-            else:
-                duplicate_hubs = [p for p in packages if pc.exposes_plugin_registration(p, plugin_root, (receipt.get("project_continuity") or {}).get("plugin_dir", "plugins/pi/project-continuity"))]
-                if duplicate_hubs:
-                    failures.append("Pi project-continuity duplicate hub registration: " + ", ".join(str(pc.registration_source(p)) for p in duplicate_hubs))
         skills = settings.get("skills", [])
         skills = skills if isinstance(skills, list) else []
         for resource in resources.get("exclude_rea_skill") or []:
@@ -1137,7 +1147,9 @@ def accept(root):
     if not receipt.get("installed"):
         raise InstallError("没有活动 installed receipt；先 install --apply")
     selected = set(receipt.get("scope", {}).get("components", ["rea", "spec_kit", "reverse"]))
-    result = {"ok": True, "root": str(root), "components": sorted(selected), "checks": [], "unverified": ["project-continuity host loading and cross-session recovery"] if "project_continuity" in selected else []}
+    result = {"ok": True, "root": str(root), "components": sorted(selected), "checks": [], "unverified": []}
+    if "shell_guard" in selected:
+        result["unverified"].append("shell-guard host loading, tool interception and Everything availability; not a sandbox")
     def check(name, ok, detail, fatal=True):
         result["checks"].append({"name": name, "ok": bool(ok), "detail": detail})
         if not ok and fatal: result["ok"] = False
@@ -1212,5 +1224,5 @@ def restore(root, transaction=None, apply=False):
         raise InstallError("只允许恢复活动事务；请按最新到最旧依次回退，避免跨版本覆盖")
     if apply:
         with locked(root):
-            return {"transaction": transaction, "applied": True, "files": restore_journal(path, apply=True)}
-    return {"transaction": transaction, "applied": False, "files": restore_journal(path)}
+            return {"transaction": transaction, "applied": True, "files": restore_journal(path, apply=True, defer_receipt=root / ".installer/receipt.json")}
+    return {"transaction": transaction, "applied": False, "files": restore_journal(path, defer_receipt=root / ".installer/receipt.json")}

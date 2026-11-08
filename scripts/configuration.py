@@ -47,6 +47,8 @@ def load_json(path, default=None):
 
 def merge_restore(before, after, current, conflicts, key="$"):
     """Undo only values still equal to our write; retain subsequent user edits."""
+    if current == before:
+        return current
     if current == after:
         return copy.deepcopy(before) if before is not MISSING else MISSING
     if before == after:
@@ -62,8 +64,10 @@ def merge_restore(before, after, current, conflicts, key="$"):
             else:
                 result[k] = restored
         return result
-    if isinstance(before, list) and isinstance(after, list) and isinstance(current, list):
+    if (isinstance(before, list) or before is MISSING) and isinstance(after, list) and isinstance(current, list):
         # Installer owns added/removed exact resources, not the entire user list.
+        original_missing = before is MISSING
+        before = [] if original_missing else before
         result = copy.deepcopy(current)
         for item in after:
             if item not in before and item in result:
@@ -71,7 +75,7 @@ def merge_restore(before, after, current, conflicts, key="$"):
         for item in before:
             if item not in after and item not in result:
                 result.append(item)
-        return result
+        return MISSING if original_missing and not result else result
     conflicts.append(key)
     return current
 
@@ -121,12 +125,14 @@ class Journal:
     def save(self):
         atomic(self.path, encode_json(self.data))
 
-    def write(self, path, data, kind="file"):
+    def write(self, path, data, kind="file", *, replacements=None):
         path = Path(path).resolve()
         before = path.read_bytes() if path.exists() else None
         if before == data:
             return
         entry = {"path": str(path), "kind": kind, "before": None if before is None else base64.b64encode(before).decode(), "after": base64.b64encode(data).decode(), "before_sha256": None if before is None else digest(before), "after_sha256": digest(data)}
+        if replacements:
+            entry["package_replacements"] = copy.deepcopy(replacements)
         # Persist the recovery material BEFORE mutation, including on partial failure.
         self.data["files"].append(entry)
         self.save()
@@ -137,11 +143,18 @@ class Journal:
         self.save()
 
 
-def restore_journal(path, apply=False):
+def restore_journal(path, apply=False, defer_receipt=None):
     data = load_json(path)
     results = []
-    for entry in reversed(data["files"]):
+    entries = list(reversed(data["files"]))
+    if defer_receipt is not None:
+        defer_receipt = str(Path(defer_receipt).resolve())
+        entries.sort(key=lambda e: e["path"] == defer_receipt)
+    for entry in entries:
         target = Path(entry["path"])
+        if str(target) == defer_receipt and any(item["conflicts"] for item in results):
+            results.append({"path": str(target), "conflicts": ["restore-incomplete"], "changed": False})
+            continue
         before = None if entry["before"] is None else base64.b64decode(entry["before"])
         after = base64.b64decode(entry["after"])
         current = target.read_bytes() if target.exists() else None
@@ -152,7 +165,17 @@ def restore_journal(path, apply=False):
             result = before
         elif entry["kind"] == "json" and current is not None:
             try:
-                value = merge_restore(MISSING if before is None else json.loads(before), json.loads(after), json.loads(current), conflicts)
+                original, installed, present = (MISSING if before is None else json.loads(before)), json.loads(after), json.loads(current)
+                # A replaced package is one logical registration. If the user
+                # edited/removed its new item, do not resurrect the old copy.
+                for replacement in entry.get("package_replacements", []):
+                    old, new = replacement["before"], replacement["after"]
+                    packages = present.get("packages", []) if isinstance(present, dict) else []
+                    if new not in packages and old not in packages:
+                        conflicts.append("$.packages.replaced-registration")
+                        if isinstance(original, dict) and old in original.get("packages", []):
+                            original["packages"].remove(old)
+                value = merge_restore(original, installed, present, conflicts)
                 result = None if value is MISSING else encode_json(value)
             except ValueError:
                 conflicts.append("invalid-json")

@@ -2,14 +2,14 @@
 
 安装后不要先学习工具名称。你只需要把目标文件放到当前对话工作目录的根目录，在新对话里复制 [零基础一键开始](reverse-workflow-playbook.md#零基础一键开始) 的模板，由智能体在已授权范围内连续推进并汇报；它会自动处理 receipt、router、case 和 REA，只有真正需要你决定时才提问。
 
-这套环境由三个核心组件、Pi 项目续接插件和一个 Pi 伴随技能组成。核心组件与默认 Pi 组合中的 `project-continuity` 由本安装器管理；`grilling` 和 `domain-modeling` 保持官方原文，由官方 `npx skills` 安装；本仓库只生成自己的 Pi wrapper，不修改官方文件。
+这套环境由三个核心组件、默认关闭的可选 shell-guard，以及一个 Pi 伴随技能组成。`grilling` 和 `domain-modeling` 保持官方原文，由官方 `npx skills` 安装；本仓库只生成自己的 Pi wrapper，不修改官方文件。
 
 | 组件 | 负责内容 | 什么时候使用 |
 |---|---|---|
 | REA | MCP 分析工具、工具目录和证据相关能力 | PRIMARY 专业技能需要调用分析工具时 |
 | reverse-skill | 原生路由、范围门禁、专业技能和证据流程 | 逆向、二进制、协议、前端签名、复刻、追版等任务开始时 |
 | Spec Kit | 成果项目中的规格、计划、任务和模板 | 需要独立实现、复刻、验证或长期维护项目时 |
-| project-continuity | Pi 项目续接与跨会话上下文恢复 | 默认 Pi 组合安装；真实加载与恢复效果需在成果项目中单独验证 |
+| shell-guard（可选） | 检查部分 shell 命令形式，并提供 Everything 文件名查询 | 仅 Pi，显式 `--with-shell-guard`；安装与静态校验不证明真实拦截，不是沙箱 |
 | grilling | 方案决策树、隐含前提和结论审查 | 明确请求质询，或存在尚未解决的重要目标取舍时 |
 
 `grilling` 不替代 reverse 路由，也不替代 REA 取证。需要读文件、跑命令或比对字节的问题由 agent/subagent 查证；`grilling` 只把查证后的事实带入决策访谈。
@@ -24,11 +24,11 @@
 
 需要保留现有官方 Spec Kit 版本时，生成 plan 可用 `--spec-kit-version`，详见 [固定官方版本](version-pins.md)。上游更新不会让旧安装被冒充成新版通过。
 
-### Pi project-continuity 插件
+### Pi shell-guard 可选插件
 
-新安装和旧三组件安装的默认 Pi `all` 更新都会加入该插件。未安装过插件时可用 `--without-project-continuity` 跳过；其他组件子集不会自动加入。插件只注册自身目录，不加载整个 agent-plugins hub；它不替代原 case、证据或 Spec Kit 文档。来源 tag、本地 worktree 复用、冻结计划和恢复命令见 [插件安装说明](project-continuity-install.md)。
+默认 `all` 不会启用它。安装或更新时增加 `--with-shell-guard`；本地独立 0.2.2 包可加 `--shell-guard-root ../agent-plugins/plugins/pi/shell-guard`。Everything CLI 使用 `--everything-es <现存CLI绝对路径>`，GUI 使用 `--everything-gui <现存Everything.exe绝对路径>`，需要自动启动时增加 `--everything-autostart`。只有 CLI 明确报告 IPC/服务不可用时，插件才会启动该 GUI 并重试一次；不会自动查 PATH、安装 Everything 或启动任意程序。已有禁用开关、自定义规则和其他设置保留。已有开发注册需准确的 `--replace-shell-guard-root`，不能注册整个 hub。详见 [shell-guard 安装与迁移](shell-guard-install.md)。
 
-更新旧安装时保留活动 receipt 的 root、agent 和 project，并使用完整 `all` 范围。已装插件后不支持用 opt-out 静默卸载，应按事务 restore。verify 通过仅说明包和注册一致；accept 仍会将插件事件与跨会话恢复列为未验证，重载实际宿主后再验证。
+目标 tag `shell-guard-v0.2.2` 已发布并按 commit/tree 冻结；远程 plan 失败时不会改装旧版本。已选中的插件在后续 update 保留；旧 receipt 仍默认关闭。`verify` 只核身份和注册，`accept` 不运行拦截事件。更新插件后完整重启 Pi/Pi Web，再单独检查加载、命令拦截和 Everything 查询。`PI_SHELL_GUARD_ES` 可在宿主进程覆盖设置中的路径；安装器不更改或认证该进程环境。历史回放结果不能保证未来命令没有误判或绕过。
 
 ### Pi grilling 伴随技能
 

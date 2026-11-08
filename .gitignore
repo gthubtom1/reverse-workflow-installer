@@ -1,5 +1,6 @@
 .local/
 backups/continuity-review-*/
+backups/shell-guard-p4-*/
 __pycache__/
 *.py[cod]
 .installer/
