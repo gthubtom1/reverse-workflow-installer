@@ -35,6 +35,33 @@ class GuidedDocumentationContract(unittest.TestCase):
         self.assertIn("已验证 1/7", PLAYBOOK)
         self.assertIn("authorization-coverage", ADAPTER)
 
+    def test_multi_agent_roles_handoffs_and_completion_states_are_explicit(self):
+        for phrase in (
+            "唯一的 route、scope、case、timeline、workitem 与 Evidence authority",
+            "reverse-operator/cre",
+            "bounded executor",
+            "reverse-reviewer",
+            "planner/scout",
+            "backend/UI implementation workers",
+            "行为 Evidence handoff",
+            "case_id",
+            "目标 identity/hash",
+            "一个 Evidence question",
+            "allowed actions",
+            "write scope",
+            "budget",
+            "cleanup",
+            "acceptance",
+            "heavy provider 必须 serialized",
+            "timeout 或 provider failure",
+            "verified",
+            "partial",
+            "blocked",
+            "unknown",
+            "不是执行沙箱",
+        ):
+            self.assertIn(phrase, PROMPT)
+
     def test_installer_points_to_reverse_closure_instead_of_implementing_it(self):
         self.assertIn("skills/ops/authorization-coverage.md", ADAPTER)
         self.assertIn("回归失败重开", ADAPTER)
