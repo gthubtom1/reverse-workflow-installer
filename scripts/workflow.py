@@ -21,7 +21,7 @@ import shell_guard as sg
 
 REPO = Path(__file__).resolve().parents[1]
 ADAPTER_VERSION = "0.2.0"  # Transaction protocol; old receipts remain readable.
-INSTALLER_VERSION = "0.6.0"
+INSTALLER_VERSION = "0.6.1"
 
 
 def run(args, *, cwd, env=None):

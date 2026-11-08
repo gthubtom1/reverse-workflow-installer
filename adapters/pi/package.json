@@ -1,6 +1,6 @@
 {
   "name": "reverse-workflow-pi",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "license": "MIT",
   "keywords": ["pi-package"],
