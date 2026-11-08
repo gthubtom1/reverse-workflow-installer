@@ -1,6 +1,6 @@
 # Reverse Workflow Installer
 
-安装器与 Pi 入口包版本 **0.6.0**。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。目标来源为已发布的 `shell-guard-v0.2.3`，安装器冻结其 commit/tree，不回退 main 或旧版本。本仓实现与离线验证不代表每台机器的宿主加载或 Everything 索引已经可用。
+安装器与 Pi 入口包版本 **0.6.0**。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。shell-guard 0.3.0 已完成适配：常见只读 `for`/`if`/`test`/`echo`/`printf` 形式允许；单个字面项目内 `rm` 移入 TEMP；Everything 行为与硬保护保持不变，不弹确认窗口。目标来源为已发布的 `shell-guard-v0.3.0`，安装器冻结其 commit/tree，不回退 main 或旧版本。
 
 把官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill)、官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 和可选的官方 [grilling](https://github.com/mattpocock/skills) 访谈技能接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
 
@@ -54,7 +54,7 @@ python scripts/install.py verify --root ../workflow
 
 Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--client codex --agent-dir ../workflow/codex-home`。启动宿主时，Pi 使用 `PI_CODING_AGENT_DIR` 指向同一 agent 目录，Codex 使用 `CODEX_HOME` 指向同一目录，并从成果项目工作。环境变量仅对该进程设置；无需修改系统设置。Pi Web/SDK 必须核对实际启动配置，不能把 CLI 示例当作 Web 已加载的证据。
 
-`plan` 输出完整 JSON：范围、来源、精确版本、Node 要求、命令摘要、现有配置摘要、缺少依赖和未验证项。`--output` 将 UTF-8 无 BOM 计划保存到指定文件。**install/update/restore 不带 `--apply` 都只预览**；plan 可以查询网络和读取 Git，不运行包管理器。冻结计划应用前检测配置和 reverse 工作副本漂移，变化后重新 plan。shell-guard 还冻结独立包身份与内容、远程 commit/Git tree、显式 Everything CLI 的文件摘要，以及开发注册迁移源的旧 hash。`--shell-guard-root` 只读复用精确 0.2.3 包；`--everything-es` 接受现存 CLI 的绝对路径；`--everything-gui` 接受现存 Everything GUI 的绝对路径，`--everything-autostart` 仅在 CLI 报告 IPC/服务不可用时允许插件启动该 GUI 并重试一次；`--replace-shell-guard-root` 只迁移准确的单个开发包注册。重复注册、hub 碰撞或漂移会拒绝。
+`plan` 输出完整 JSON：范围、来源、精确版本、Node 要求、命令摘要、现有配置摘要、缺少依赖和未验证项。`--output` 将 UTF-8 无 BOM 计划保存到指定文件。**install/update/restore 不带 `--apply` 都只预览**；plan 可以查询网络和读取 Git，不运行包管理器。冻结计划应用前检测配置和 reverse 工作副本漂移，变化后重新 plan。shell-guard 还冻结独立包身份与内容、远程 commit/Git tree、显式 Everything CLI 的文件摘要，以及开发注册迁移源的旧 hash。`--shell-guard-root` 只读复用精确 0.3.0 包；`--everything-es` 接受现存 CLI 的绝对路径；`--everything-gui` 接受现存 Everything GUI 的绝对路径，`--everything-autostart` 仅在 CLI 报告 IPC/服务不可用时允许插件启动该 GUI 并重试一次；`--replace-shell-guard-root` 只迁移准确的单个开发包注册。重复注册、hub 碰撞或漂移会拒绝。
 
 `--client auto` 只使用宿主标记或明确配置 schema 证据。不确定时会明确要求 `--client pi|codex`；机器安装了几个 CLI、模型叫不叫 Codex 都不能决定身份。可用 `--client-config` 替代 `--agent-dir`：Pi 必须指向 `mcp.json`，Codex 必须指向 `config.toml`，Pi 的 `settings.json` 在同目录。
 
@@ -79,7 +79,7 @@ REA/Spec Kit 每次新 plan 解析官方最新稳定包；reverse 使用指定�
 
 REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。
 
-Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。显式选中 shell-guard 时，另注册其独立插件子目录；shell-guard 是部分命令形式的启发式检查，不是操作系统沙箱。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
+Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。显式选中 shell-guard 时，另注册其独立插件子目录；shell-guard 使用 AST 分类部分 Bash 命令并通过 `allow`、`trash`、`block` API 表达处理结果，不是操作系统沙箱。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
 
 Codex 使用官方 setup 与 Spec Kit Codex integration，并在成果项目生成薄 `.agents/skills/reverse-workflow/SKILL.md`，通过本机回执给现有 reverse Codex 插件提供显式本地路径。不假定某个插件注册命令存在；插件缺失时仍交原 RULES、原 router 和 PRIMARY。
 

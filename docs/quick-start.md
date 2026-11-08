@@ -9,7 +9,7 @@
 | REA | MCP 分析工具、工具目录和证据相关能力 | PRIMARY 专业技能需要调用分析工具时 |
 | reverse-skill | 原生路由、范围门禁、专业技能和证据流程 | 逆向、二进制、协议、前端签名、复刻、追版等任务开始时 |
 | Spec Kit | 成果项目中的规格、计划、任务和模板 | 需要独立实现、复刻、验证或长期维护项目时 |
-| shell-guard（可选） | 检查部分 shell 命令形式，并提供 Everything 文件名查询 | 仅 Pi，显式 `--with-shell-guard`；安装与静态校验不证明真实拦截，不是沙箱 |
+| shell-guard（可选） | AST 检查部分 Bash 命令；常见只读格式允许，单个字面项目内 `rm` 移到 TEMP；提供 Everything 文件名查询 | 仅 Pi，显式 `--with-shell-guard`；安装与静态校验不证明真实拦截，不是沙箱 |
 | grilling | 方案决策树、隐含前提和结论审查 | 明确请求质询，或存在尚未解决的重要目标取舍时 |
 
 `grilling` 不替代 reverse 路由，也不替代 REA 取证。需要读文件、跑命令或比对字节的问题由 agent/subagent 查证；`grilling` 只把查证后的事实带入决策访谈。
@@ -26,9 +26,9 @@
 
 ### Pi shell-guard 可选插件
 
-默认 `all` 不会启用它。安装或更新时增加 `--with-shell-guard`；本地独立 0.2.3 包可加 `--shell-guard-root ../agent-plugins/plugins/pi/shell-guard`。Everything CLI 使用 `--everything-es <现存CLI绝对路径>`，GUI 使用 `--everything-gui <现存Everything.exe绝对路径>`，需要自动启动时增加 `--everything-autostart`。只有 CLI 明确报告 IPC/服务不可用时，插件才会启动该 GUI 并重试一次；不会自动查 PATH、安装 Everything 或启动任意程序。已有禁用开关、自定义规则和其他设置保留。已有开发注册需准确的 `--replace-shell-guard-root`，不能注册整个 hub。详见 [shell-guard 安装与迁移](shell-guard-install.md)。
+默认 `all` 不会启用它。安装或更新时增加 `--with-shell-guard`；本地独立 0.3.0 包可加 `--shell-guard-root ../agent-plugins/plugins/pi/shell-guard`。目标 tag `shell-guard-v0.3.0` 已发布，安装器按 commit/tree 冻结。Everything CLI 使用 `--everything-es <现存CLI绝对路径>`，GUI 使用 `--everything-gui <现存Everything.exe绝对路径>`，需要自动启动时增加 `--everything-autostart`。只有 CLI 明确报告 IPC/服务不可用时，插件才会启动该 GUI 并重试一次；不会自动查 PATH、安装 Everything 或启动任意程序。已有禁用开关、自定义规则和其他设置保留。已有开发注册需准确的 `--replace-shell-guard-root`，不能注册整个 hub。详见 [shell-guard 安装与迁移](shell-guard-install.md)。
 
-目标 tag `shell-guard-v0.2.3` 已发布并按 commit/tree 冻结；远程 plan 失败时不会改装旧版本。已选中的插件在后续 update 保留；旧 receipt 仍默认关闭。`verify` 只核身份和注册，`accept` 不运行拦截事件。更新插件后完整重启 Pi/Pi Web，再单独检查加载、命令拦截和 Everything 查询。`PI_SHELL_GUARD_ES` 可在宿主进程覆盖设置中的路径；安装器不更改或认证该进程环境。历史回放结果不能保证未来命令没有误判或绕过。
+已选中的插件在后续 update 保留；旧 receipt 仍默认关闭。`verify` 只核身份和注册，`accept` 不运行拦截事件。更新插件后完整重启 Pi/Pi Web，再单独检查加载、命令拦截和 Everything 查询。`PI_SHELL_GUARD_ES` 可在宿主进程覆盖设置中的路径；安装器不更改或认证该进程环境。历史回放结果不能保证未来命令没有误判或绕过。
 
 ### Pi grilling 伴随技能
 

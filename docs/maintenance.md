@@ -9,7 +9,7 @@
 | reverse 行为规则 | `RULES.md`、`RULES_zh.md`、master skill、对应 ops 契约与实际 PRIMARY；不修改原始路由语义来迁就测试 |
 | 用户沟通方式 | Pi skill 与短 prompt、Claude/Codex 入口、quick-start、usage、playbook；阶段汇报不能被模板变成每步审批 |
 | 安装/更新/恢复 | 冻结 plan、上一事务的文件归属、receipt、verify、配置保留、组件子集与完整安装的离线反例测试 |
-| shell-guard 分发 | Pi 可选默认关闭；0.2.3 tag、独立包 name/version/index/runtime/src、commit/tree/hash、旧回执、准确迁移、CLI/GUI/自动启动配置保留、重复/hub 拒绝、漂移/回退反例和 shell-guard-install/README/quick-start/updates/compatibility/troubleshooting |
+| shell-guard 分发 | Pi 可选默认关闭；0.3.0 AST adapter 与精确文件清单、ISC vendor 来源、独立包 name/version/index/runtime/src、最终 commit/tree/hash、旧回执、准确迁移、CLI/GUI/自动启动配置保留、重复/hub 拒绝、漂移/回退反例和 shell-guard-install/README/quick-start/updates/compatibility/troubleshooting |
 | grilling wrapper | 独立输出目录、所有权/hash、链接与手改冲突 fixture；四个官方技能文件保持只读，旧门面漂移单独报告 |
 | 发布和换电脑部署 | GitHub 默认分支、必需 CI、reverse 正式 release；仅推 main 不会覆盖安装器优先选择的旧 release |
 
@@ -23,7 +23,7 @@
 4. **对话抽样**：至少观察“已授权的两步检查不中途请求继续”和“新运行/联网范围保留必要确认”。检查实际工具事件，不能只凭模型自述。抽样通过不等于所有模型和困难目标已验证。
 5. **发布**：PR 检查通过后按保护规则合并；reverse 若仍有更早 release，发布指向已验证提交的新正式版本。重新检查安装器解析的确切 tag/commit，再记录本机与远程身份。
 
-旧 project-continuity receipt 的退役兼容只在 installer 中处理：新计划不解析或加载该组件；更新时冻结唯一注册并通过事务移除，无法识别则停止。插件仓库和其他 agent-plugins 目录不在本仓任务范围内。shell-guard P4/P5 维护 installer 与 0.2.3 的 CLI/GUI 配置及一次性自动启动接线；发布前对审查通过的 commit 设置清单 pin，并重新核 tag 身份、完整文件与运行验收。
+旧 project-continuity receipt 的退役兼容只在 installer 中处理：新计划不解析或加载该组件；更新时冻结唯一注册并通过事务移除，无法识别则停止。插件仓库和其他 agent-plugins 目录不在本仓任务范围内。shell-guard 0.3.0 使用 pi-trash 风格 AST/Node-helper 适配及随包 ISC `unbash` 文件，不安装目标 npm 依赖；发布前主流程需核对最终文件清单并设置最终 commit pin，再核 tag 身份、完整文件与运行验收。Everything 接线及安装事务/配置规则保持不变。
 
 `verify` 通过表示静态安装一致，`accept` 表示本机工具基本运行通过。只有真实目标的证据和测试才能说明功能正确；尚无证据时保持 unknown。
 

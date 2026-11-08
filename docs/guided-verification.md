@@ -1,6 +1,6 @@
 # Installer guided verification
 
-本记录对应 installer 与 Pi 入口包 0.6.0，事务协议保持 0.2.0。当前活动组件是 REA、Spec Kit、reverse，以及默认关闭的可选 shell-guard 0.2.3。
+本记录对应 installer 与 Pi 入口包 0.6.0，事务协议保持 0.2.0。当前活动组件是 REA、Spec Kit、reverse，以及默认关闭的可选 shell-guard 0.3.0。
 
 ## 离线验证范围
 
@@ -8,7 +8,7 @@
 - 含 project-continuity 的旧 receipt 在更新时只进入退役兼容路径：receipt 能定位唯一、未过滤的 Pi `packages` 注册时，更新事务移除该注册；缺少 root/身份、重复注册、hub/父目录或其他同名注册时，plan 明确失败。
 - 退役更新写入的新 receipt 不包含 project-continuity 字段，旧包目录保留在历史版本目录中，不会被新 settings 加载。
 - REA、Spec Kit、reverse 的现有范围、入口、配置保留、项目模板和恢复逻辑继续按各自 receipt 组件执行。
-- shell-guard 继续按独立包的 commit/tree/hash、Pi 注册和 Everything CLI/GUI 配置规则执行；它不依赖已移除的组件模块。
+- shell-guard 继续按独立包的 commit/tree/hash、Pi 注册和 Everything CLI/GUI 配置规则执行；0.3.0 的 `src/readonly.mjs` AST adapter 与 vendored `unbash` 文件与许可证已列入必需文件清单，正式 tag/commit 已固定，不改变默认关闭和 Pi-only 范围。
 
 ## 运行边界
 
