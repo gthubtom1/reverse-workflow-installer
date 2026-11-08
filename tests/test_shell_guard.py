@@ -89,9 +89,9 @@ class ShellGuardTests(unittest.TestCase):
         self.assertEqual(set(plan["scope"]["components"]), set(w.ALL_COMPONENTS))
         receipt = w.install(plan, self.args)
         self.assertTrue(w.verify(self.root)["ok"])
-        self.assertEqual(receipt["installer_version"], "0.6.0")
+        self.assertEqual(receipt["installer_version"], "0.6.1")
         self.assertEqual(receipt["adapter_version"], "0.2.0")
-        self.assertEqual(load_json(Path(receipt["adapter"]["root"]) / "package.json")["version"], "0.6.0")
+        self.assertEqual(load_json(Path(receipt["adapter"]["root"]) / "package.json")["version"], "0.6.1")
 
     def test_pi_only_and_guard_options_require_selection(self):
         for client in ("none", "codex", "claude"):

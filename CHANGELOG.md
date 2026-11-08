@@ -1,7 +1,7 @@
-## Next
+## 0.6.1 — 2026-11-08
 
-- 更新可选 Pi shell-guard 到 0.3.0：借鉴 pi-trash 的 AST/Node-helper 机制，随包固定 ISC `unbash` 文件，无需目标机 npm 安装；放行常见只读循环，单个字面项目内 `rm` 移到 TEMP。移除旧文字授权、分级与确认分支，保留硬保护和 Everything。
-- 固定正式 tag `shell-guard-v0.3.0` 及 commit `ac5d92ec1a448ddb390049b40878bc1489c5dfb2`；必需文件包含只读 AST 模块、解析库与其许可证。
+- 将 shell-guard 0.3.0 精确 release commit/tree pin 带入正式 installer release，修复新安装仍从旧 0.6.0 tag 读取 shell-guard 0.2.2 的发布差异。
+- 更新 installer 与 Pi 入口包版本元数据；事务协议和安装/更新/恢复逻辑保持不变。
 
 ## 0.6.0 — 2026-11-08
 
