@@ -661,8 +661,8 @@ class CraftTests(unittest.TestCase):
             atomic(old / name, shown.stdout)
         frozen = self.base / "schema2-plan.json"
         atomic(frozen, encode_json(plan))
-        code = 'import json,sys; import workflow\nfrom versions import InstallError\ntry:\n workflow.validate_plan(json.load(open(sys.argv[1],encoding="utf-8")))\nexcept InstallError as e:\n print(str(e)); sys.exit(0 if "schema/adapter" in str(e) else 2)\nsys.exit(3)\n'
-        result = subprocess.run([sys.executable, "-B", "-c", code, str(frozen)], cwd=old, capture_output=True, text=True, timeout=30)
+        code = 'import json,sys; import workflow\nsys.stdout.reconfigure(encoding="utf-8")\nfrom versions import InstallError\ntry:\n workflow.validate_plan(json.load(open(sys.argv[1],encoding="utf-8")))\nexcept InstallError as e:\n print(str(e)); sys.exit(0 if "schema/adapter" in str(e) else 2)\nsys.exit(3)\n'
+        result = subprocess.run([sys.executable, "-B", "-c", code, str(frozen)], cwd=old, capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("schema/adapter", result.stdout)
         with self.assertRaisesRegex(InstallError, "schema"):
