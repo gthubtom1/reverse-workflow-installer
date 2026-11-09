@@ -23,6 +23,7 @@ Craft 的后续入口：
 
 - [Pi profile templates](resources/pi-agent-profiles/README.md)：复制到当前 Pi agent 目录的 `AGENTS.md` 和 `agents/*.md`。
 - [Portable Pi development skills](resources/pi-agent-skills/README.md)：复制到当前用户的全局 skills 目录，通常是 `%USERPROFILE%\\.agents\\skills\\`。
+- [Impeccable 官方 Pi 设计技能](docs/impeccable.md)：固定来源原件、本地复制与换机安装交接；只有一个主技能，不默认开启 CLI、hooks 或浏览器能力。
 - [Profile 安装说明](docs/pi-agent-profiles.md) 和 [Skill 安装说明](docs/pi-agent-skills.md) 记录实际路径、冲突处理、reload 和新会话验收。
 
 这些资源不修改 Python 安装器协议，也不包含模型账号、凭据、settings、sessions 或 memory。安装代理应先读取对应说明，按目标电脑实际的 `PI_CODING_AGENT_DIR`、用户目录和 skills 根目录复制文件；已有内容不同的文件先报告冲突，不要静默覆盖。

@@ -1,0 +1,2 @@
+# Preserve third-party original bytes on checkouts with core.autocrlf enabled.
+impeccable/** -text
