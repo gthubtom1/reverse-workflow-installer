@@ -2,16 +2,16 @@
 
 `acquire_craft.py` 是换机下载准备入口，不是 installer、通用 updater 或自动选择 latest 的注册中心。它将我方 Craft 原生 bundle 与有新 R46 合同的 reverse 源准备到显式全新目录，再生成已有 installer 的 `--craft-bundle` / `--reverse-root` 参数。Pi/Node 继续通过现有官方 acquire-pi 流程获取，不重写 npm 安装或复制个人 profile。
 
-本增量只完成离线元数据/文件/失败路径验证。**当前仓库仅提供不可下载的 `.example`，没有真实可用的 release pin；真实发布后必须由发布流程填精确记录并运行公开 acquisition 验收。** 单独 push main 不等于资产、reverse v1.9.0 或公共换机安装已可用。
+正式 [Windows x64 pin](../releases/windows-x64.json) 已固定真实 [Craft-Pi v0.1.0](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-pi-v0.1.0) 资产和 [reverse v1.9.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.9.0) 源码身份。它位于仓库根 `releases/`，不进入已冻结 adapter/runtime 资源。旧 `adapters/craft-pi/releases/windows-x64.json.example` 是历史结构模板，不是当前下载 pin；保留原字节以维持 native 资源来源证明。公共获取仅认证本次实际下载的包/源码身份，不替代 Pi/provider、安装或业务接受。
 
 ## 一条准备命令
 
 本 acquisition 入口仅支持 **Windows x64**。非 Windows/x64 的 CLI 与 worker 返回 `code: unsupported-platform`，在网络、stage 创建和任何进程启动前拒绝；没有运行时开关可以绕过。普通 Linux/macOS core installer 不受影响。
 
-在 Windows x64 的 fresh clone 根目录、Python 3.11+ 与 Git 已安装时，使用发布后实际填写的 pin：
+在 Windows x64 的正式 installer v0.7.0 checkout 根目录、Python 3.11+ 与 Git 已安装时，先创建 `.local` 父目录，再使用实际 pin（stage 须全新）：
 
 ```text
-python -B scripts/acquire_craft.py --pin-file adapters/craft-pi/releases/windows-x64.json --stage ../craft-download --deadline-seconds 600
+python -B scripts/acquire_craft.py --pin-file releases/windows-x64.json --stage .local/pub-craft-070 --deadline-seconds 600
 ```
 
 也可用 `--pin '<完整JSON对象>'` 明确传入同一 schema；与 `--pin-file` 互斥。stage 的父目录必须已存在，stage 本身必须不存在，禁止路径 symlink/junction。不覆盖用户目录、不复用未完成目录；失败残片留作诊断，下次选新的 stage。
@@ -37,7 +37,7 @@ python scripts/install.py install --root ../workflow --plan-file .local/plan.jso
 | reverse | repository 固定 `https://github.com/gthubtom1/reverse-skill`；tag 固定 `v1.9.0`；实际 commit、当场取得的该 commit codeload ZIP archive_sha256、最终 R46 descriptor_sha256 |
 | upstream | repository 固定 `https://github.com/storytold/craft-anything`，commit 固定 `0326b4de8051f85a0f3139cd82f88f76911e6a35`；这是 Craft 来源证明，不是我方修改版资产所在仓库 |
 
-包版本号不等于 installer 0.7.0。不把我方资产定位到 upstream Craft release，也不拿公共 reverse 1.8.2 顶替新合同。真实资产名/commit/id/hash 须发布现场取得；当前 final descriptor 为 `3ad158f3341fd502d974ebb331e10d659e04c9b86f65ef2a1a1ced7cc60cfecf`，发布源码若变化必须经原流程重审，不自动改 source 身份。
+包版本号不等于 installer 0.7.0。不把我方资产定位到 upstream Craft release，也不拿公共 reverse 1.8.2 顶替新合同。正式 pin 的 Craft 资产 ID 为 `726614154`，ZIP SHA256 为 `3f354290ffc8d9e14e2bb917254c8fe28ed3c610ced614a8ffa75194579ad841`，来源 commit `010e2e323f912806f3fc3f2b17b1f9f06c29c944`；reverse commit `7cc3109bf14a570c9c852dc76cce05fff424e88c`，实际 archive SHA256 `763757fef2a934481b63959e2e96eeef0f1e0dfa90ffedf2c55ac178c9ec7842`，descriptor `47ee133eb10c0f53e7ca3be91413baa115f01282057d30c0c3e969b4b2b223f2`。模板里的旧 descriptor 不代表此正式 pin；发布后身份变化必须重新审查，不能自动刷新来掩盖漂移。
 
 GitHub 生成的 source ZIP 不承诺永久字节不变。本 pin 记录发布现场取得的精确 ZIP 摘要；将来 GitHub 重生成导致摘要变化时应拒绝并由发布维护者重新核验记录，不能默默接受或宣称该 archive 本来就是永久 immutable asset。
 
@@ -58,4 +58,4 @@ GitHub 生成的 source ZIP 不承诺永久字节不变。本 pin 记录发布�
 
 离线 `tests/test_craft_acquisition.py` 使用结构化 GitHub 响应和真实 toy ZIP/文件、本地真实 Git repo/tag/attributes（tracked LF ps1、实际 checkout CRLF、二进制不变）、局部进程/慢HTTP流及 Windows 外层Job内实际Git shell/监听后代，验证正例、混错repo、移动tag、错commit/id/hash、篡改、ZIP逃逸、旧reverse、部分失败、fresh-root保护、正常存储跳转与清理。相关原 pinned_release 用例更新为我方资产仓库的新完整 pin 语义。它们不证明 v1.9.0 或 Craft release 已存在，也不等于真实公开下载/模型/业务任务已验收。
 
-发布后主流程仍须：填真实 pin → 在全新 stage 实际跑该命令 → 使用官方获取的完整 Pi 参数生成 installer schema2 plan → 独立安装/verify/entry及适用任务/更新恢复验收。发布凭据和私有配置不进入 pin、包或公共记录。
+从正式 tag 的干净 checkout 在全新 stage 运行实际公共获取，记录真实 HTTP 下载、包/hash、Git 三种身份与 Job cleanup；这不等于在实体第二台电脑上测试。后续安装还须使用完整官方 Pi 参数生成 schema2 plan，再独立验证安装/entry及适用任务、更新恢复。发布凭据和私有配置不进入 pin、包或公共记录。

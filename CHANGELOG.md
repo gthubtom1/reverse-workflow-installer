@@ -1,11 +1,13 @@
 ## 0.7.0 — 2026-11-09
 
-待发布的 release candidate；本地发布准备不表示远端 tag/release 已存在。公开发布与活动安装分别以实际 tag/receipt 核验。
+本条记录 0.7.0 的发行内容；正式版本身份以公开 tag/release 为准，活动安装与本批运行资格分别核对真实 receipt 和证据。
 
 - 新增默认关闭的 Pi Craft bundle 分发、按需 execution 资源、精确身份冻结、更新及原字节 journal 条件恢复；不扩大默认 all。
 - Craft 跨组件门要求 reverse R46 machine descriptor v1、VERSION >=1.9.0、精确能力清单及四项实际文件摘要，贯穿 plan/apply/verify/受管入口；不替代完整 reverse identity 或任务授权。
 - 含 Craft 的冻结 plan 使用 schema 2，使原 0.6.1 plan reader 提前拒绝；普通核心 plan/receipt 继续 schema 1，adapter 事务协议保持 0.2.0。旧 receipt verifier/restore 不因新字段而自动拒绝，不能认证 Craft 资格。
 - Windows Craft plan/apply 在外部命令及锁、Journal、安装目录写入前预检目标 UTF-16 路径预算；超限明确要求更短安装根，不改冻结 native bundle。
+- 新增根级 `releases/windows-x64.json` 正式获取 pin，固定已发布 Craft-Pi v0.1.0 的实际 asset ID/hash 和 reverse v1.9.0 的真实 commit/archive/descriptor；不改 native 冻结资源中的历史 example。
+- 公开 codeload 获取按 Git 原生 archive export 的属性规则验证原字节，分别保留 canonical Git blob、export 和 checkout 身份；修复 Windows 旧 reader 兼容回归的测试输出编码及公开历史引用。
 - 原生 bridge/executor/bundle 的 0.1.0 版本由各包维护；源码、公开资产、活动安装和运行资格分别核对实际身份与证据。
 
 ## 0.6.1 — 2026-11-08
