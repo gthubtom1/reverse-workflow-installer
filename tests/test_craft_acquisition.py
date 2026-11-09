@@ -431,15 +431,19 @@ with urllib.request.urlopen('http://127.0.0.1:%s/'%server.server_port,timeout=20
         self.assertFalse((short/'reverse-archive').exists())
         self.reverse_zip.write_bytes(archive.read_bytes())
         self.pin['reverse']['archive_sha256']=ac.file_sha(self.reverse_zip)
-        self.budget_patch.stop()
-        try:
-            with patch.object(ac,'safe_extract_zip',wraps=ac.safe_extract_zip) as extract, self.assertRaisesRegex(InstallError,'stage-path-too-long'):
-                self.acquire()
-            self.assertEqual(extract.call_count,1)  # Craft only; reverse never extracts.
-            self.assertFalse((self.stage/'reverse-archive').exists())
-            self.assertFalse((self.stage/'complete.json').exists())
-        finally:
-            self.budget_patch.start()
+        validated = []
+        def member_budget(stage, pin, *, archive=None, kind=None):
+            # Isolate actual ZIP-member validation from the runner's checkout
+            # length. The public root gate has its own no-side-effect test.
+            self.assertIsNotNone(archive)
+            validated.append(kind)
+            return REAL_STAGE_VALIDATOR(short, pin, archive=archive, kind=kind)
+        with patch.object(ac, 'validate_win32_stage', side_effect=member_budget), patch.object(ac,'safe_extract_zip',wraps=ac.safe_extract_zip) as extract, self.assertRaisesRegex(InstallError,'stage-path-too-long'):
+            self.acquire()
+        self.assertEqual(validated, ['craft', 'reverse'])
+        self.assertEqual(extract.call_count,1)  # Craft only; reverse never extracts.
+        self.assertFalse((self.stage/'reverse-archive').exists())
+        self.assertFalse((self.stage/'complete.json').exists())
 
     def test_short_public_cli_with_real_validator_completes_offline(self):
         short_parent = Path.cwd()/'.local'
