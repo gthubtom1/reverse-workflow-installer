@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import sys
 import urllib.request
+import zipfile
 from urllib.parse import urlparse, quote
 
 import craft
@@ -234,6 +235,34 @@ def canonical_files(root, commit):
     return result
 
 
+def git_archive_files(root, commit, canonical):
+    """Hash Git's actual export bytes; attributes may differ from canonical blobs."""
+    stage = root.parent
+    result, total = {}, 0
+    with tempfile.TemporaryFile(dir=stage) as archive:
+        git_command(['git', '-c', 'core.autocrlf=false', '-C', str(root),
+                     'archive', '--format=zip', commit], stage=stage, stdout=archive)
+        archive.seek(0)
+        with zipfile.ZipFile(archive) as exported:
+            for item in exported.infolist():
+                if item.is_dir():
+                    continue
+                name = craft.relative(item.filename)
+                if name not in canonical or name in result:
+                    raise InstallError('unexpected/duplicate reverse Git archive path')
+                total += item.file_size
+                if total > LIMIT:
+                    raise InstallError('reverse Git archive exceeds byte budget')
+                hashed = hashlib.sha256()
+                with exported.open(item) as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                        hashed.update(chunk)
+                result[name] = hashed.hexdigest()
+    if set(result) != set(canonical):
+        raise InstallError('reverse Git archive has missing source paths')
+    return result
+
+
 def checkout_files(root):
     result = {}
     for directory, dirs, files in os.walk(root, followlinks=False):
@@ -277,8 +306,9 @@ def acquire(pin, stage, *, fetch=None, download=transfer, checkout=git_checkout)
     reverse = stage / 'reverse'
     checkout(pin['reverse'], reverse, stage)
     canonical = canonical_files(reverse, pin['reverse']['commit'])
-    if canonical != craft.inventory(extracted):
-        raise InstallError('reverse canonical Git blobs differ from pinned source archive')
+    exported = git_archive_files(reverse, pin['reverse']['commit'], canonical)
+    if exported != craft.inventory(extracted):
+        raise InstallError('reverse Git archive differs from pinned source archive')
     contract = craft.reverse_contract(reverse)
     # Detect moved tags/asset replacement during acquisition before any completion.
     if resolve_pin(pin, fetch) != resolved:
@@ -292,7 +322,8 @@ def acquire(pin, stage, *, fetch=None, download=transfer, checkout=git_checkout)
         raise InstallError('acquired files changed before result')
     result = {'schema_version': 1, 'pin': pin, 'resolved': resolved, 'bundle_sha256': bundle['sha256'],
               'reverse_contract': contract, 'reverse_files': checkout_files(reverse), 'reverse_canonical_files': canonical,
-              'reverse_identity_algorithms': {'reverse_files': 'checkout-raw-file-sha256', 'reverse_canonical_files': 'git-commit-blob-sha256'}, 'installer_options': options,
+              'reverse_archive_files': exported,
+              'reverse_identity_algorithms': {'reverse_files': 'checkout-raw-file-sha256', 'reverse_canonical_files': 'git-commit-blob-sha256', 'reverse_archive_files': 'git-archive-export-file-sha256'}, 'installer_options': options,
               'qualification': 'artifact and source identity only; Pi/provider/task acceptance separate'}
     atomic(stage / 'acquisition-candidate.json', encode_json(result))
     return result

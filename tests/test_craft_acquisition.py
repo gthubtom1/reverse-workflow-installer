@@ -67,10 +67,9 @@ class AcquisitionTests(unittest.TestCase):
         self.git(['-c','user.name=Fixture','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','-qm','fixture'], self.source)
         self.git(['tag', 'v1.9.0'], self.source)
         self.pin['reverse']['commit'] = self.git(['rev-parse','HEAD'],self.source).decode().strip()
-        with zipfile.ZipFile(self.reverse_zip,'w',zipfile.ZIP_DEFLATED) as output:
-            for name in self.git(['ls-tree','-r','--name-only','HEAD'],self.source).decode().splitlines():
-                output.writestr('reverse-skill-'+self.pin['reverse']['commit']+'/'+name,
-                                self.git(['show','HEAD:'+name],self.source))
+        self.reverse_zip.write_bytes(self.git(['archive', '--format=zip',
+            '--prefix=reverse-skill-' + self.pin['reverse']['commit'] + '/',
+            self.pin['reverse']['commit']], self.source))
         self.pin['reverse']['archive_sha256'] = ac.file_sha(self.reverse_zip)
 
     def git(self, argv, root):
@@ -310,7 +309,7 @@ with urllib.request.urlopen('http://127.0.0.1:%s/'%server.server_port,timeout=20
             self.acquire()
         self.assertFalse((self.stage/'complete.json').exists())
 
-    def test_real_gitattributes_checkout_crlf_matches_canonical_archive(self):
+    def test_real_gitattributes_archive_export_and_canonical_blobs_remain_distinct(self):
         result = self.acquire()
         checkout = self.stage / 'reverse'
         raw = (checkout / 'route.ps1').read_bytes()
@@ -320,6 +319,11 @@ with urllib.request.urlopen('http://127.0.0.1:%s/'%server.server_port,timeout=20
         self.assertEqual(canonical.count(b'\n'), 2)
         self.assertEqual(result['reverse_canonical_files']['route.ps1'], digest(canonical))
         self.assertEqual(result['reverse_files']['route.ps1'], digest(raw))
+        with zipfile.ZipFile(self.reverse_zip) as archive:
+            exported = archive.read('reverse-skill-' + self.pin['reverse']['commit'] + '/route.ps1')
+        self.assertEqual(exported, raw)  # Native git archive honors eol=crlf too.
+        self.assertEqual(result['reverse_archive_files']['route.ps1'], digest(exported))
+        self.assertEqual(result['reverse_archive_files']['binary.dat'], digest(b'\x00\xff\r\n\n\x00'))
         self.assertNotEqual(result['reverse_files']['route.ps1'], result['reverse_canonical_files']['route.ps1'])
         self.assertEqual((checkout/'binary.dat').read_bytes(), b'\x00\xff\r\n\n\x00')
         atomic(checkout/'untracked.txt', b'extra')
@@ -335,7 +339,7 @@ with urllib.request.urlopen('http://127.0.0.1:%s/'%server.server_port,timeout=20
         atomic(self.source/'README.md',b'archive tampered but pin resealed')
         archive_tree(self.source,self.reverse_zip,'reverse-skill-'+self.pin['reverse']['commit']+'/')
         self.pin['reverse']['archive_sha256']=ac.file_sha(self.reverse_zip)
-        with self.assertRaisesRegex(InstallError,'canonical Git blobs differ'):
+        with self.assertRaisesRegex(InstallError,'Git archive differs'):
             ac.acquire(self.pin,self.stage,fetch=self.fetch,download=self.download,checkout=copied)
         self.assertFalse((self.stage/'complete.json').exists())
 
