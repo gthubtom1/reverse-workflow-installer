@@ -23,7 +23,7 @@
 |---|---|---|
 | 宿主与模型 | 准备用户选择的 Pi Web/Pi 或其他受支持 client，在目标机配置模型登录 | 满足所选宿主的公开 OS/Node 要求；不复制其他人的账号配置 |
 | 核心工作流 | reverse 原生路由 + REA MCP + Spec Kit，按[快速开始](quick-start.md)与[工作流手册](reverse-workflow-playbook.md)走 plan → apply → verify → accept | Python 安装器默认 `all` 仅包含这三件核心组件；成果项目另建，不在工具仓库 init |
-| Pi 主/子代理 | [主 AGENTS 与 8 个 Worker 模板](pi-agent-profiles.md)，从仓库 resources 复制到目标 agent 目录 | 配置可用模型、保留已有 frontmatter/用户修改；动态派发，不要求每次启动全员 |
+| Pi 主/子代理 | [主 AGENTS 与 3 个 Pi 模板：subagent、reverse-operator、reverse-reviewer](pi-agent-profiles.md)，从仓库 resources 复制到目标 agent 目录 | 配置可用模型、保留已有 frontmatter/用户修改；动态派发，不要求每次启动全员 |
 | 通用开发技能 | [五个第一方技能](pi-agent-skills.md)：范围控制、调试、验证、审查、轻量架构 | 放入目标宿主实际发现的 skills 根，检查同名冲突 |
 | 设计能力 | [Impeccable](impeccable.md)、下方 UI/UX Pro Max 与 unslop 官方来源 | 推荐用于含 UI 的开发环境；纯后端目标可省略；各技能按任务选择，不绑定全套必用 |
 | 访谈与领域建模 | 官方 grilling/domain-modeling，按需加 grill-me/grill-with-docs；Pi 使用[两个独立 wrappers](pi-grilling-wrappers.md) | 按[快速开始](quick-start.md#pi-grilling-伴随技能)安装官方输入再生成 wrappers，不修改官方正文，不作为每次任务审批门 |

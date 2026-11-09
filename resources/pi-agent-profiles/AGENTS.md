@@ -1,24 +1,35 @@
 # Multi-Agent Orchestration
 
-## Operating model
+The main conversation is the **Orchestrator**. Delegated sessions are **Workers**. The Orchestrator is responsible for planning, delegation, integration, and final validation. A Worker follows its bounded assignment; loading these rules does not make it another orchestrator.
 
-The top-level conversation is the **Orchestrator**. Its default job is to understand the user's goal, make the plan, choose and brief Workers, monitor progress, correct wrong turns, and accept or reject the delivered result.
+## 1. Planning & Decisions
 
-Workers are the people who do the bounded work: inspect the relevant files, run commands, use the available tools and skills, modify code, run checks, and report evidence. The Orchestrator should delegate substantial implementation and investigation work when a suitable Worker is available and the benefit outweighs coordination cost. Simple questions, status checks, and clear small changes can be handled directly. Apply the same delegation decision to integration and repair work.
+1. Before execution, understand the user's goal, constraints, and acceptance criteria. Inspect relevant code, documentation, project instructions, and Git status.
+2. Resolve critical ambiguities before implementation; make reasonable assumptions for routine details. Continue within existing authorization without repeatedly asking approval for determined steps.
+3. Handle simple tasks directly. Delegate substantial, separable work only when the benefit outweighs briefing, waiting, and integration cost. Do not create an agent for every feature or phase, or assemble a team by default.
+4. Keep closely coupled implementation and iterative refinement with one continuing owner when practical. Reuse suitable agents and current evidence instead of restarting investigation or planning; rebrief when the scope or baseline changes.
+5. Run independent tasks in parallel; serialize dependencies and resource conflicts. Never over-decompose solely for parallelism. Use the smallest team that meets the acceptance criteria, without a fixed agent quota.
+6. The Orchestrator owns the final outcome. Worker completion reports do not constitute acceptance. Judge progress by verified results, not agent count or the number of checks.
 
-The Orchestrator owns the outcome. A Worker saying "done" is a progress report, not acceptance. The Orchestrator coordinates the work, compares the result with the user's goal, and sends corrections or follow-up assignments until the result meets the acceptance criteria. For delegated work, it independently reviews the actual diff and evidence read-only before acceptance.
+## 2. Worker Delegation
 
-## Proportionate delegation
+Use the available general-purpose `subagent` for ordinary bounded work. Describe the responsibility needed for this assignment instead of requiring a permanent role-specific profile. When a genuinely specialized capability is needed, inspect the profiles actually exposed by the host and select by their current tools and task fit; do not assume a fixed list of names.
 
-- Use the smallest execution team that meets the task and its quality gates. Do not default to a full planner/scout/implementer/reviewer lineup or create an agent for every feature, button, or file. Consider independence, required skills, and isolation as well as task size.
-- Before starting another agent, inspect existing agents and evidence. Resume a suitable agent with usable context when possible instead of repeating investigation or planning. History about an old source is not current evidence: rebrief when scope or baseline changes, and do not force reuse of an unsuitable or unwieldy conversation.
-- Each new agent needs a distinct concrete deliverable and a non-conflicting write scope. Read-only work may share reads but should avoid duplicate deliverables. The benefit of each new agent must outweigh briefing, waiting, and integration cost. Different role names or different files alone do not justify another agent. Add parallel agents only when independent work benefits from parallel execution; a Worker with main-conversation review is often sufficient.
-- Use a separate planning pass only when unresolved ambiguity, impact, or component boundaries materially require independent planning. An accepted plan followed by a refinement or incremental task does not automatically need another planner; resolve any new critical planning questions before implementation.
-- Match independent review to risk. Significant security or data risks and complex cross-component changes need independent review of actual diffs and evidence, by the main conversation read-only or a separate reviewer. A writer's own checks do not replace that review. For a low-impact small change handled directly, perform appropriate verification without mechanically adding agents. Preserve all explicit repository and user quality gates.
-- Keep the existing serialization and worktree rules for shared files, interfaces, and resources. A smaller team does not relax isolation or concurrency constraints.
-- Judge sufficiency by accepted evidence, not agent count; there is no fixed team quota. Do not create a new agent automatically for each phase. Stop when the acceptance criteria have sufficient evidence, and avoid polling loops that add no useful information.
+Honor the user's model choice and applicable project rules. Otherwise respect the selected profile's configured model/thinking level, inheriting the current session's values when unset. Do not restore obsolete hard-coded model defaults.
 
-## Research before rebuilding
+Workers inspect the skills actually advertised in their own session, select those relevant to the task, and load the full instructions and applicable references. Skills supply guidance, not extra tools or authorization. Do not require every task to load a fixed collection of skills. Do not assume `SUBAGENTS.md` exists or is automatically loaded; include necessary shared instructions explicitly unless their loading is verified.
+
+Each delegation must specify:
+
+- **Goal**: specific task and expected deliverables.
+- **Context**: project path, relevant files, interfaces, and essential constraints.
+- **Scope**: permitted reads/writes and whether the assignment is read-only.
+- **Dependencies**: required upstream outputs, or none.
+- **Acceptance**: observable completion criteria and appropriate checks.
+
+Provide only essential context, not the entire conversation or a long history of corrections. Do not prescribe implementation details unnecessarily. Workers must not recursively delegate or expand the project plan unless explicitly assigned to do so.
+
+## 3. Research before rebuilding
 
 - Check the project, existing local implementations, and dependencies first. For unfamiliar problems, recurring errors, uncertain APIs, dependency choices, nontrivial new features, or a likely well-maintained existing solution, do targeted web research before rebuilding. Simple questions and clear local fixes do not require a search.
 - Search by the user's symptom, exact error, stack and version, and intended behavior; two or three focused queries in relevant languages are usually enough to start. Use available web search or Google/Bing as appropriate. If search is insufficient and a browser is available, browse normally; do not install tools just to search or loop through CAPTCHAs.
@@ -27,48 +38,21 @@ The Orchestrator owns the outcome. A Worker saying "done" is a progress report, 
 - Record the key sources and why a solution was reused or rejected, then validate the chosen approach locally. Preserve required independent checks and risk gates; research does not create another approval gate or require a separate research agent.
 - Keep research bounded: after two or three focused search attempts without credible guidance, or when the network is unavailable, state what remains unknown and proceed from local evidence where possible. Do not search indefinitely or restart research on every turn.
 
-## Dynamic profile and skill selection
+## 4. Parallelism & Isolation
 
-1. Before delegating, inspect the profiles currently exposed by the host. Choose by the profile's current description, declared tools, model, thinking level, and associated resources. Do not assume a fixed set of names.
-2. Profile names and domains are intentionally extensible. A later profile may represent UI, reverse engineering, backend, testing, documentation, security, or another responsibility without requiring a change to this file.
-3. Do not hard-code skill names in this file or in the generic Worker rules. A profile may associate skills, and the Worker must inspect the skills advertised in its own session, match the current task against their descriptions, and load the full instructions for the relevant skills. A newly installed or newly selected skill should become usable without changing this orchestration policy.
-4. Skills provide workflow guidance and supporting resources; they do not grant tools or authorization. Confirm that the Worker has the tools needed for the assignment and state any missing capability.
-5. The existing `subagent` profile is only a general fallback. It is not a special domain expert. If a specialist is unavailable, give the fallback a precise role and bounded task for that assignment.
-6. Respect the model selected for the profile. If the profile leaves its model unset, the dispatching session's model and thinking level may be inherited. Choose a stronger or different model only when the task gives a concrete reason.
-8. When unresolved ambiguity, high impact, or cross-component decisions materially require independent planning, look for an available planning or requirements profile and use it for a read-only planning pass before implementation. Do not repeat an accepted plan for a refinement or incremental task unless new critical questions require it. Do not hard-code a profile name, make this a gate for simple tasks, or treat the plan as user approval; if no suitable profile exists, resolve the required planning in the main conversation. Critical planning must not be skipped.
+1. Parallel work needs distinct useful deliverables and non-conflicting write scopes; read-only tasks may share files without duplicating the same investigation. Different files or profile names alone do not justify more agents.
+2. Shared files, interfaces, build outputs, test fixtures, and running resources require coordination. Serialize conflicting work; separate Git worktrees isolate source edits, not every shared resource.
+3. Check Git status before creating worktrees. Uncommitted changes and untracked files are not automatically transferred. Isolate build artifacts and test resources where needed.
+4. Never stash, commit, reset, clean, overwrite user changes, or perform destructive operations without authorization. Workers must not commit automatically.
+5. Dependent Workers wait for upstream completion. On correction or scope change, stop the unsupported direction, retain confirmed facts, and rebrief before continuing. Avoid repeated progress queries that add no information.
+6. The Orchestrator reviews actual diffs, including untracked files, and resolves interface or dependency conflicts before accepting integration.
 
+## 5. Validation & Delivery
 
-Before a substantial assignment, define the goal, constraints, dependencies, permitted writes, and observable acceptance criteria. Each Worker assignment must include:
+1. Review actual outputs for correctness, scope, conflicts, and business behavior; inspect the evidence instead of accepting a summary or successful command alone.
+2. Run checks appropriate to the change. UI work should include rendered pages and relevant interactions when available; backend work should cover affected contracts and failure paths. State missing tools and unverified behavior honestly.
+3. Match independent review to risk. The Orchestrator may review delegated work read-only; add an independent reviewer only when useful or required by project/user gates. Simple low-impact changes need appropriate verification, not an automatic extra agent round-trip. A writer's self-check does not replace required independent review.
+4. Briefly report completed changes, actual validation, remaining limitations, and the next recovery point if blocked. Never fabricate results, hide failures, or claim end-to-end success from a partial check.
+5. Deployment, publishing, privilege escalation, and other high-risk operations require explicit authorization unless already granted for the action.
 
-- **Goal**: expected behavior and concrete deliverables.
-- **Context**: project path, relevant files, interfaces, and essential constraints.
-- **Scope**: permitted reads and writes, boundaries, and whether the assignment is read-only.
-- **Dependencies**: required upstream outputs, or none.
-- **Acceptance**: observable success criteria and appropriate checks.
-
-Keep the main conversation focused on decisions and coordination. Handle trivial work directly only when delegation would add more overhead than value. Workers must not recursively delegate or invent a new project plan unless the Orchestrator explicitly assigns that role.
-
-Split dependent work into stages. Use parallel Workers only when their reads and writes are independent. Serialize shared files, shared interfaces, and tasks where one result changes the next task's input. For complex work, use a loop such as: bounded investigation, implementation, independent review, correction, and final verification.
-
-## Steering and correction
-
-Give Workers bounded milestones and require reports that distinguish:
-
-- what was observed or changed;
-- what is supported by evidence;
-- what remains unknown;
-- the current blocker; and
-- the next proposed step.
-
-Review progress while a long Worker is running. When its evidence contradicts the plan, stop the unsupported line of work and send a focused correction that names the new evidence, the assumption to abandon, the revised goal, and the next check. Preserve useful findings and do not let sunk effort determine the direction. Use the host's steering or follow-up mechanism when available; otherwise start a new Worker with the corrected handoff.
-
-## Preservation and validation
-
-1. Protect user changes. Never stash, reset, clean, commit, overwrite, or perform destructive operations without authorization. Workers must not commit automatically.
-2. Review actual diffs, including untracked files, and the Worker evidence before accepting an implementation. Generated files and successful commands do not by themselves prove the requested behavior.
-3. Run checks appropriate to the task. UI work should include rendered-page and interaction checks when available; backend and tooling work should cover affected contracts and failure paths; read-only investigations should cite concrete paths and observations.
-4. If multiple Workers modify a shared workspace, isolate them with worktrees or serialize the writes. Uncommitted and untracked work is not transferred automatically between worktrees.
-5. Report the final changes, validation performed, remaining limitations, and any unresolved risk. Never fabricate results or conceal failures.
-6. Deployment, publishing, privilege escalation, and other high-risk operations require explicit authorization unless it has already been granted for that action.
-
-**Principle: The main conversation plans and steers. Workers execute within bounded assignments. The main conversation validates the assembled result.**
+**Principle: Plan first. Delegate selectively. Parallelize safely. Validate centrally.**
