@@ -1,6 +1,6 @@
 # Pi profile templates 安装说明
 
-这组模板用于恢复主代理规则和 user-level subagent profiles。它不是 Pi Web 的程序本体，也不会安装模型账号、凭据、技能包或 MCP 服务。
+这组模板用于恢复主代理规则和 3 个 user-level Pi profiles：`subagent`、`reverse-operator`、`reverse-reviewer`。它不是 Pi Web 的程序本体，也不会安装模型账号、凭据、技能包或 MCP 服务。
 
 ## 目标目录
 
@@ -15,13 +15,13 @@
 1. 先读取本说明、当前仓库的 AGENTS.md，以及目标电脑的 Pi Web/Pi 配置。
 2. 解析目标 agent 目录：优先读取 PI_CODING_AGENT_DIR；否则使用当前用户的 %USERPROFILE%\.pi\agent\。
 3. 只创建目标目录及其 agents 子目录。
-4. 从仓库的 [resources/pi-agent-profiles/](../resources/pi-agent-profiles/README.md) 复制 `AGENTS.md` 和 `agents/*.md` 到目标目录；本说明位于 `docs/`，不是模板源目录。
+4. 从仓库的 [resources/pi-agent-profiles/](../resources/pi-agent-profiles/README.md) 复制 `AGENTS.md`，并仅复制 `agents/subagent.md`、`agents/reverse-operator.md`、`agents/reverse-reviewer.md` 到对应目标；本说明位于 `docs/`，不是模板源目录。
 5. 如果目标文件不存在，可以创建。
 6. 如果目标文件已经存在且字节相同，保持不变。
-7. 如果目标文件存在但内容不同，先停止并报告冲突；不要静默覆盖用户修改。可以把候选内容保存为同名的 .new 文件，等待用户决定。
+7. 如果目标文件存在但内容不同，先报告冲突，不静默覆盖用户修改；候选内容仅放在 profile 发现路径外。升级原 8 模板版本时，用可用回收站机制将 `ui-implementer.md`、`ui-reviewer.md`、`backend-worker.md`、`requirements-planner.md`、`scout.md` 这 5 个已退役文件精确移出发现路径，不留下 `.new` 或 disabled Markdown 副本。其他自定义 profiles 保留并报告，不按数量或通配符删除；若旧文件是链接，先核查目标。
 8. 不复制 auth.json、models.json、settings.json、session、memory、日志或任何凭据。
 9. 安装后 reload 或重启 Pi Web，并创建新会话。
-10. 在 Pi Web 的 Agents 列表中确认 requirements-planner、UI、后端、逆向和审查 profiles 已出现；再运行一个只读分派确认实际使用了正确 profile。
+10. 在 Pi Web 的 Agents 列表中确认本仓的 `subagent`、`reverse-operator`、`reverse-reviewer` 三项已出现，退役五项不再出现；其他用户自定义项单独报告。再运行一个只读分派确认实际使用了正确 profile。
 
 可选 Craft 执行后端使用独立的按需 reconstruction-execution skill、builder instructions 和 bundle entry，不新增控制 profile，不自动部署或接管本页的人工 profiles/AGENTS。其安装恢复仅管理新包资源和精确注册，见 [Craft 指南](craft-install.md)。
 
@@ -31,7 +31,9 @@
 
 load_skills: true 表示允许 profile 使用当前可发现的技能；它不是某个固定技能名称的绑定。技能是否实际使用由任务和技能描述决定。
 
-逆向 profile 会优先考虑当前可用的 reverse-workflow、原生 reverse-skill router 和 REA MCP，但适用性由任务决定，不会为了形式强制调用。
+`subagent` 按任务承担通用执行、调查、规划、UI 或后端工作，并动态选择适用技能；UI 设计能力由可用设计技能提供，无需额外 UI profile。`reverse-operator` 负责有边界的逆向执行，`reverse-reviewer` 负责独立逆向审查；普通独立审查由主代理只读检查或另一个明确只读的全新 `subagent` 承担。
+
+逆向 profile 会优先考虑当前可用的 reverse-workflow、原生 reverse-skill router 和 REA MCP，但适用性由任务决定，不会为了形式强制调用。原生 PRIMARY、planner/scout、implementation-worker 等是路由与工作职责，不要求注册同名 Pi profile；原有 Evidence、Spec implement/converge 和独立验收流程继续适用。
 
 ## 验收边界
 

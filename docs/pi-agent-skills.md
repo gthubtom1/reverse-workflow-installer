@@ -1,6 +1,6 @@
 # Portable Pi skills 安装说明
 
-这组技能是为当前主代理、requirements-planner、Worker 和 reviewer 设计的小型通用技能。它们不安装模型、不安装账号、不安装 MCP 服务，也不替代 reverse-workflow、ui-ux-pro-max 或 grilling。
+这组小型通用技能供主代理及 `subagent`、`reverse-operator`、`reverse-reviewer` 按任务使用。它们不安装模型、不安装账号、不安装 MCP 服务，也不替代 reverse-workflow、ui-ux-pro-max 或 grilling。
 
 部署完整工具环境时先读[公共整环境部署指南](environment-recovery.md)，按目标电脑和宿主选择通用技能、UI/UX、unslop、访谈技能与适用扩展。
 
@@ -28,7 +28,7 @@
 
 当前 profiles 使用 load_skills: true，让模型可以看到动态技能清单。技能不会绑定到固定的 UI、后端或逆向名称；模型根据任务描述选择相关技能。
 
-主代理和 requirements-planner 负责需求、边界和架构；Worker 使用调试、反过度设计和验证技能；reviewer 使用审查和验证技能。逆向仍优先使用 reverse-workflow，UI 仍优先使用现有 UI/UX 技能。
+主代理负责需求、边界和架构决策，可给 `subagent` 分派有边界的只读规划或执行任务；执行时按需使用调试、反过度设计和验证技能，独立只读审查按需使用审查和验证技能。逆向仍优先使用 reverse-workflow，UI 仍优先使用现有 UI/UX 技能。
 
 ## 验收边界
 
