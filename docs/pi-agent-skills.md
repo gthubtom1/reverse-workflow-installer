@@ -2,6 +2,8 @@
 
 这组技能是为当前主代理、requirements-planner、Worker 和 reviewer 设计的小型通用技能。它们不安装模型、不安装账号、不安装 MCP 服务，也不替代 reverse-workflow、ui-ux-pro-max 或 grilling。
 
+整机格式化或换机时先读[整环境恢复交接](environment-recovery.md)，其中汇总外部 UI/UX、unslop、访谈技能、宿主与扩展的来源。
+
 另有独立保留的 [Impeccable 官方 Pi 设计技能](impeccable.md)：按固定来源复制一个主技能，安装路径、冲突处理和用法见该交接说明。
 
 ## 目标目录
