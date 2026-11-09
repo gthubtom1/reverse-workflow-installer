@@ -23,6 +23,7 @@ from test_craft import toy_bundle, toy_reverse_contract
 
 LOCAL = REPO / '.local/tests'
 LOCAL.mkdir(parents=True, exist_ok=True)
+REAL_STAGE_VALIDATOR = ac.validate_win32_stage
 
 
 def archive_tree(root, destination, prefix=''):
@@ -54,11 +55,23 @@ class AcquisitionTests(unittest.TestCase):
                     'reverse': {'repository': ac.REVERSE, 'tag': 'v1.9.0', 'commit': 'b' * 40,
                                 'archive_sha256': ac.file_sha(self.reverse_zip), 'descriptor_sha256': ac.file_sha(self.source / craft.REVERSE_DESCRIPTOR)},
                     'upstream': {'repository': ac.UPSTREAM, 'commit': craft.BASE_COMMIT}}
-        self.stage = self.base / 'fresh acquisition 中文'
+        # The publication patch worktree itself is deep; real extraction fixtures
+        # use a short isolated cwd/.local stage, never an active/user root.
+        short_parent = Path.cwd()/'.local'
+        short_parent.mkdir(exist_ok=True)
+        self.stage_temp = tempfile.TemporaryDirectory(prefix='a',dir=short_parent)
+        self.addCleanup(self.stage_temp.cleanup)
+        self.stage_base = Path(self.stage_temp.name)
+        self.stage = self.stage_base / 's'
         self.downloads = []
         self.platform_patch = patch.object(ac, 'require_windows')
         self.platform_patch.start()
         self.addCleanup(self.platform_patch.stop)
+        # Existing isolated unit roots are intentionally deep; test the public
+        # budget separately rather than add a production bypass flag.
+        self.budget_patch = patch.object(ac, 'validate_win32_stage')
+        self.budget_patch.start()
+        self.addCleanup(self.budget_patch.stop)
         self.git(['init', '-q'], self.source)
         atomic(self.source / '.gitattributes', b'*.ps1 text eol=crlf\n*.md text eol=lf\nVERSION text eol=lf\n*.json text eol=lf\n')
         atomic(self.source / 'route.ps1', b'Write-Output one\nWrite-Output two\n')
@@ -189,14 +202,14 @@ class AcquisitionTests(unittest.TestCase):
             archive_tree(self.source,self.reverse_zip,'reverse-skill-'+self.pin['reverse']['commit']+'/')
             self.pin['reverse']['archive_sha256'] = ac.file_sha(self.reverse_zip)
             if version == '1.9.0': self.pin['reverse']['descriptor_sha256'] = 'e'*64
-            self.stage = self.base / version
+            self.stage = self.stage_base / version
             with self.assertRaises(InstallError): self.acquire()
             self.assertFalse((self.stage/'complete.json').exists())
 
     def test_manifest_hash_or_checkout_content_mismatch_rejected(self):
         self.pin['craft']['manifest_sha256']='e'*64
         with self.assertRaisesRegex(InstallError,'manifest SHA256'): self.acquire()
-        self.stage=self.base/'second'
+        self.stage=self.stage_base/'second'
         self.pin['craft']['manifest_sha256']=ac.file_sha(self.bundle/craft.MANIFEST)
         def drift(record,target,stage):
             self.checkout(record,target,stage)
@@ -264,6 +277,17 @@ class AcquisitionTests(unittest.TestCase):
         self.assertEqual(calls[0][0][-2],ac.REVERSE)
         self.assertEqual(calls[0][1]['env']['GIT_CONFIG_GLOBAL'],ac.os.devnull)
         self.assertNotIn('GH_TOKEN',calls[0][1]['env'])
+        clone, kwargs = calls[0]
+        self.assertEqual(clone.count('http.version=HTTP/1.1'),1)
+        self.assertEqual(clone[clone.index('http.version=HTTP/1.1')-1],'-c')
+        self.assertFalse(any('http.version=' in arg for cmd,_ in calls[1:] for arg in cmd))
+        self.assertNotIn('--global',clone)
+        self.assertNotIn('-k',clone)
+        self.assertFalse(any('sslverify' in arg.casefold() or 'extraheader' in arg.casefold() or 'authorization' in arg.casefold() for arg in clone))
+        for name in ('GITHUB_TOKEN','GIT_SSL_NO_VERIFY','GIT_CONFIG_COUNT'):
+            self.assertNotIn(name,kwargs['env'])
+        self.assertNotIn('start_new_session',kwargs)
+        self.assertNotIn('creationflags',kwargs)
         def wrong(command,**kwargs):
             value=inherited(command,**kwargs)
             if command[-2:]==['rev-parse','HEAD']: value.stdout=b'f'*40
@@ -374,6 +398,68 @@ with urllib.request.urlopen('http://127.0.0.1:%s/'%server.server_port,timeout=20
             probe.settimeout(.3)
             self.assertNotEqual(probe.connect_ex(('127.0.0.1',port)),0)
         self.assertFalse((self.stage/'complete.json').exists())
+
+    def test_public_long_stage_rejects_before_network_process_or_stage_write(self):
+        self.budget_patch.stop()
+        try:
+            long_stage = self.base / 'pub-craft-072'
+            with patch.object(ac,'run_owned',side_effect=AssertionError('no process')),patch.object(ac,'resolve_pin',side_effect=AssertionError('no network')),patch.object(ac,'atomic',side_effect=AssertionError('no write')),patch('sys.stderr',new_callable=io.StringIO) as errors:
+                self.assertEqual(ac.main(['--pin',json.dumps(self.pin),'--stage',str(long_stage)]),1)
+                error = json.loads(errors.getvalue())
+                self.assertEqual(error['code'],'stage-path-too-long')
+                self.assertIn('D:/cw/craft',error['error'])
+                self.assertNotIn(str(self.base),error['error'])
+            self.assertFalse(long_stage.exists())
+            self.assertFalse((long_stage/'complete.json').exists())
+        finally:
+            self.budget_patch.start()
+
+    def test_stage_budget_counts_emoji_as_two_utf16_units(self):
+        root = Path(self.base.anchor) / ('a' * (64-len(self.base.anchor)))
+        self.assertEqual(len(str(root).encode('utf-16-le'))//2,64)
+        REAL_STAGE_VALIDATOR(root,self.pin)
+        with self.assertRaisesRegex(InstallError,'UTF16=65/64'):
+            REAL_STAGE_VALIDATOR(Path(str(root)[:-1]+'😀'),self.pin)
+
+    def test_zip_actual_targets_are_checked_before_extraction(self):
+        short = Path(self.base.anchor) / 'cw/craft'
+        archive = self.base/'new-long-member.zip'
+        with zipfile.ZipFile(archive,'w') as output:
+            output.writestr('reverse-skill-'+'b'*40+'/'+'nested/'*25+'file.txt',b'x')
+        with self.assertRaisesRegex(InstallError,'stage-path-too-long'):
+            REAL_STAGE_VALIDATOR(short,self.pin,archive=archive,kind='reverse')
+        self.assertFalse((short/'reverse-archive').exists())
+        self.reverse_zip.write_bytes(archive.read_bytes())
+        self.pin['reverse']['archive_sha256']=ac.file_sha(self.reverse_zip)
+        self.budget_patch.stop()
+        try:
+            with patch.object(ac,'safe_extract_zip',wraps=ac.safe_extract_zip) as extract, self.assertRaisesRegex(InstallError,'stage-path-too-long'):
+                self.acquire()
+            self.assertEqual(extract.call_count,1)  # Craft only; reverse never extracts.
+            self.assertFalse((self.stage/'reverse-archive').exists())
+            self.assertFalse((self.stage/'complete.json').exists())
+        finally:
+            self.budget_patch.start()
+
+    def test_short_public_cli_with_real_validator_completes_offline(self):
+        short_parent = Path.cwd()/'.local'
+        short_parent.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='a',dir=short_parent) as parent:
+            stage=Path(parent)/'s'
+            if len(str(stage).encode('utf-16-le'))//2>64:
+                self.skipTest('short local test root unavailable in this checkout')
+            self.stage=stage
+            self.budget_patch.stop()
+            try:
+                def worker(command,**kwargs):
+                    value=self.acquire()
+                    return {'returncode':0,'timed_out':False,'cleanup':'verified','had_descendants':False,'scope':'fixture','stdout':json.dumps(value),'stderr':''}
+                with patch.object(ac,'run_owned',side_effect=worker),patch('sys.stdout',new_callable=io.StringIO):
+                    self.assertEqual(ac.main(['--pin',json.dumps(self.pin),'--stage',str(stage)]),0)
+                self.assertTrue((stage/'complete.json').is_file())
+                self.assertEqual(load_json(stage/'complete.json')['reverse_contract'],craft.reverse_contract(stage/'reverse'))
+            finally:
+                self.budget_patch.start()
 
     def test_supervisor_publishes_completion_only_after_verified_result(self):
         kwargs_seen={}

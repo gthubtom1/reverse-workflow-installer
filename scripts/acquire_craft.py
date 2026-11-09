@@ -25,6 +25,28 @@ OWN = 'https://github.com/gthubtom1/reverse-workflow-installer'
 REVERSE = 'https://github.com/gthubtom1/reverse-skill'
 UPSTREAM = 'https://github.com/storytold/craft-anything'
 LIMIT = 2 * 1024**3
+STAGE_ROOT_UNITS = 64  # Current pinned releases; actual ZIP members are checked too.
+
+
+def validate_win32_stage(stage, pin, *, archive=None, kind=None):
+    """Read-only portable Win32 budget, before public acquisition or extraction."""
+    stage = Path(stage).absolute()
+    units = lambda value: len(str(value).encode('utf-16-le')) // 2
+    count = units(stage)
+    if count > STAGE_ROOT_UNITS:
+        raise InstallError(f'stage-path-too-long: 选择短根如 D:/cw/craft; root UTF16={count}/64')
+    targets = [stage / 'reverse/.git/objects/pack' / ('pack-' + '0'*40 + '.idx.lock'),
+               stage / 'acquisition-candidate.json', stage / 'installer-options.json']
+    if archive is not None:
+        with zipfile.ZipFile(archive) as zipped:
+            targets += [stage / (kind + '-archive') / craft.relative(item.filename.rstrip('/')) /
+                        ('_' if item.is_dir() else '') for item in zipped.infolist()]
+    for target in targets:
+        parent = units(target.parent)
+        if units(target) > 259 or parent > 247 or parent + 25 > 259 or any(units(p) > 255 for p in target.parts):
+            raise InstallError(f'stage-path-too-long: 选择短根如 D:/cw/craft; target UTF16={units(target)}/259, '
+                               f'parent={parent}/247, atomic-temp={parent + 25}/259')
+
 
 
 def strict_json(raw):
@@ -175,7 +197,7 @@ def git_command(command, *, stage, input=None, stdout=subprocess.PIPE):
 
 
 def git_checkout(record, target, stage):
-    commands = [['git', '-c', 'core.autocrlf=false', '-c', 'http.followRedirects=false', '-c', 'core.hooksPath=' + str(stage / 'empty-hooks'), 'clone', '--no-recurse-submodules', '--single-branch', '--depth', '1', '--branch', record['tag'], record['repository'], str(target)],
+    commands = [['git', '-c', 'core.autocrlf=false', '-c', 'http.followRedirects=false', '-c', 'http.version=HTTP/1.1', '-c', 'core.hooksPath=' + str(stage / 'empty-hooks'), 'clone', '--no-recurse-submodules', '--single-branch', '--depth', '1', '--branch', record['tag'], record['repository'], str(target)],
                 ['git', '-C', str(target), 'rev-parse', 'HEAD'], ['git', '-C', str(target), 'status', '--porcelain', '--untracked-files=all']]
     for index, command in enumerate(commands):
         output = git_command(command, stage=stage).decode('utf-8').strip()
@@ -290,6 +312,7 @@ def acquire(pin, stage, *, fetch=None, download=transfer, checkout=git_checkout)
         download(resolved[key]['url'], destination=archive)
         if file_sha(archive) != expected:
             raise InstallError(key + ' downloaded archive SHA256 mismatch')
+        validate_win32_stage(stage, pin, archive=archive, kind=key)
         safe_extract_zip(archive, stage / (key + '-archive'))
     bundle_root = stage / 'craft-archive'
     bundle = craft.bundle(bundle_root)
@@ -342,6 +365,7 @@ def main(argv=None):
         require_windows()
         record = validate_pin(strict_json(Path(args.pin_file).read_text(encoding='utf-8') if args.pin_file else args.pin))
         stage = craft.no_links(Path(args.stage).absolute())
+        validate_win32_stage(stage, record)
         if not 1 <= args.deadline_seconds <= 600:
             raise InstallError('total wall deadline must be 1..600 seconds')
         if args._worker_token:
@@ -368,7 +392,8 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (InstallError, OSError, ValueError, TypeError, KeyError) as error:
-        print(json.dumps({'ok': False, 'code': 'unsupported-platform' if str(error).startswith('unsupported-platform:') else 'acquisition-failed', 'error': str(error), 'complete': False}), file=sys.stderr)
+        print(json.dumps({'ok': False, 'code': ('unsupported-platform' if str(error).startswith('unsupported-platform:') else
+                     'stage-path-too-long' if str(error).startswith('stage-path-too-long:') else 'acquisition-failed'), 'error': str(error), 'complete': False}), file=sys.stderr)
         return 1
 
 
