@@ -4,17 +4,29 @@
 
 正式 [Windows x64 pin](../releases/windows-x64.json) 已固定真实 [Craft-Pi v0.1.0](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-pi-v0.1.0) 资产和 [reverse v1.9.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.9.0) 源码身份。它位于仓库根 `releases/`，不进入已冻结 adapter/runtime 资源。旧 `adapters/craft-pi/releases/windows-x64.json.example` 是历史结构模板，不是当前下载 pin；保留原字节以维持 native 资源来源证明。公共获取仅认证本次实际下载的包/源码身份，不替代 Pi/provider、安装或业务接受。
 
+## 获取辅助工具维护版本
+
+本页对应获取辅助工具 **0.1.1**，其独立源码发行身份为 [`craft-acquisition-v0.1.1`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-acquisition-v0.1.1)，实际 tag→commit 以 GitHub 为准。使用该 tag 或包含此修复的 main 运行下载辅助脚本；安装器核心正式身份仍为 **v0.7.0 / `70cf9c779ec0198eb725b864af868ee88bcfbce9`**，native Craft-Pi 为 **0.1.0**，reverse 固定 **1.9.0**。此辅助维护发行不移动 installer tag、不改 release pin、受管资源或 native ZIP。
+
+原 v0.7.0 获取 CLI 的长 stage 与默认 Git 传输失败记录不能写成完整获取通过；修复辅助工具源码 A 的实际短 stage 全流程结果须另行记录，不能借用原源码 I 的成功身份。
+
+reverse 的网络 Git clone 使用单次命令局部 `git -c http.version=HTTP/1.1`，用于提高默认协商路径的网络兼容性；它不保证所有网络都能完成 clone，连接仍可能被当前链路 reset。仅限制该公开 Git HTTP 请求的协议版本：不写全局 Git 配置、不关闭 TLS/证书校验、不加 token 或鉴权头、不新增失败重试/API fallback。后续本地 HEAD/status/blob/archive 命令不加此网络选项，所有 Git 仍继承外层 Windows Job。
+
 ## 一条准备命令
 
 本 acquisition 入口仅支持 **Windows x64**。非 Windows/x64 的 CLI 与 worker 返回 `code: unsupported-platform`，在网络、stage 创建和任何进程启动前拒绝；没有运行时开关可以绕过。普通 Linux/macOS core installer 不受影响。
 
-在 Windows x64 的正式 installer v0.7.0 checkout 根目录、Python 3.11+ 与 Git 已安装时，先创建 `.local` 父目录，再使用实际 pin（stage 须全新）：
+在 Windows x64 的 installer checkout 根目录、Python 3.11+ 与 Git 已安装时，先创建短路径父目录 `D:/cw`，再使用实际 pin（stage 须全新）：
 
 ```text
-python -B scripts/acquire_craft.py --pin-file releases/windows-x64.json --stage .local/pub-craft-070 --deadline-seconds 600
+python -B scripts/acquire_craft.py --pin-file releases/windows-x64.json --stage D:/cw/craft-0.1 --deadline-seconds 600
 ```
 
-也可用 `--pin '<完整JSON对象>'` 明确传入同一 schema；与 `--pin-file` 互斥。stage 的父目录必须已存在，stage 本身必须不存在，禁止路径 symlink/junction。不覆盖用户目录、不复用未完成目录；失败残片留作诊断，下次选新的 stage。
+也可用 `--pin '<完整JSON对象>'` 明确传入同一 schema；与 `--pin-file` 互斥。公开 CLI 在任何网络、进程启动或 stage 写入前检查解析后的绝对路径：stage 根最多 **64 个 UTF-16 code units**（emoji 等非BMP字符占两个单位）。超限返回 `code: stage-path-too-long` 和短根建议，只输出计数/上限，不回显完整个人路径。即使当前系统支持长路径，也仅按首版 portable Win32 范围处理，不改注册表或添加扩展路径前缀。
+
+当前固定发行包已核：620项Craft ZIP的最长派生相对路径113 units，reverse ZIP的最长带commit前缀路径185 units；64-unit根下分别为178与250，低于259文件上限。这个固定根预算不是任何未来包都安全的承诺：下载并核SHA后、每次解压前仍逐项检查实际成员路径、目录/父目录（247上限）、单组件及24-unit atomic临时basename预算（完整路径259上限），保留 `.github`、许可证原名称与内容。Git pack元数据路径和结果写入也预检；新版本成员变长必须重新核预算，不能静默安装至中途才报IO错误。
+
+stage 的父目录必须已存在，stage 本身必须不存在，禁止路径 symlink/junction。不覆盖用户目录、不复用未完成目录；旧失败残片保持原状，下次选新的短 stage。此门是下载stage门；安装根的 Craft plan/apply 路径门另见 [安装说明](craft-install.md)，两者不互相替代。
 
 成功时 `complete.json` 仅由外层 supervisor 在 worker 已退出、外层 Windows Job 清理确认、结果与包/源码身份再次一致后生成。失败、超时或 cleanup unknown 不写 complete。`acquisition-candidate.json` 只是 worker 候选结果，不是完成标记。
 
