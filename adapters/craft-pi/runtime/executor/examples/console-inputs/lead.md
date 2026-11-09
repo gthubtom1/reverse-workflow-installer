@@ -1,0 +1,1 @@
+Controlled fixture lead: bind the selected source/target/check/model/budget and original references in lead-decision.json. This is a decision record, not a credential, user-signature demand or a substitute for the original case.

@@ -24,6 +24,10 @@
 
 需要保留现有官方 Spec Kit 版本时，生成 plan 可用 `--spec-kit-version`，详见 [固定官方版本](version-pins.md)。上游更新不会让旧安装被冒充成新版通过。
 
+### Pi Craft 可选执行后端
+
+Craft 默认关闭，`all` 不会选择。已有 R46/Spec implement runner 明确选择该后端时，才按 [本地 bundle 指南](craft-install.md) 提供真实的已核包、显式 Pi Node/CLI 入口和精确版本。安装器已有全量工件/资源/注册的离线机制验证；真实 bundle、RPC/policy、provider、取消和业务切片尚待集成，不代表已公开支持新电脑安装。它不新增控制 profile，不接管原路由或独立验收。
+
 ### Pi shell-guard 可选插件
 
 默认 `all` 不会启用它。安装或更新时增加 `--with-shell-guard`；本地独立 0.3.0 包可加 `--shell-guard-root ../agent-plugins/plugins/pi/shell-guard`。目标 tag `shell-guard-v0.3.0` 已发布，安装器按 commit/tree 冻结。Everything CLI 使用 `--everything-es <现存CLI绝对路径>`，GUI 使用 `--everything-gui <现存Everything.exe绝对路径>`，需要自动启动时增加 `--everything-autostart`。只有 CLI 明确报告 IPC/服务不可用时，插件才会启动该 GUI 并重试一次；不会自动查 PATH、安装 Everything 或启动任意程序。已有禁用开关、自定义规则和其他设置保留。已有开发注册需准确的 `--replace-shell-guard-root`，不能注册整个 hub。详见 [shell-guard 安装与迁移](shell-guard-install.md)。

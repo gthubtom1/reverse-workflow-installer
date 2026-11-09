@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "version": "v24.20.0",
+  "os": "windows",
+  "arch": "x86_64",
+  "url": "https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip",
+  "sha256": "6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba",
+  "archive_root": "node-v24.20.0-win-x64",
+  "node_sha256": "5c976096e04e5c2c1f091938926234cc9fbebfe9787ddd149351b3b0ecc707b5",
+  "checksum_source": "https://nodejs.org/dist/v24.20.0/SHASUMS256.txt",
+  "use": "On-computer upstream dependency acquisition only; not part of our redistributed Craft bundle"
+}

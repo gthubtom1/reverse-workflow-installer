@@ -8,6 +8,8 @@ Pi 的 `grilling` 伴随技能不属于 Python 安装器的核心事务。运行
 
 `--replace-shell-guard-root` 只用于首次认领准确开发包注册：plan 冻结其路径、内容 hash 和原注册对象，应用前再次比对；重复、过滤注册与 hub 碰撞均拒绝。成功后旧开发目录原字节保留。事务 restore 恢复原注册和我方写入的 `shellGuard.everything.esPath`，保留后来修改的用户字段；同字段后改列为 conflict。旧 receipt 中的 project-continuity 不会被新计划加载；更新只有在 receipt 能定位唯一注册时才移除该注册，否则明确失败。具体命令见 [shell-guard 安装与迁移](shell-guard-install.md)。
 
+可选 Craft 保留已记录的 opt-in、显式源 bundle 和独立 Pi Node/CLI/version。使用新 bundle 前先核完整文件/hash、base/有序 patch/contract/min_reader 和平台；更新记录 old/candidate，不自动追官方 latest。新工件、按需资源和完成标记用原字节 journal；失败不切成功 receipt。先由运行 owner 停接单/取消并确认写者退出，再按最新到最旧 restore 部署资源；用户后改冲突保留，receipt 最后。业务数据、Craft 格式副本和运行 cleanup 不由此自动回滚。详见 [Craft 指南](craft-install.md)。
+
 工具更新沿用相同 root、client、agent 和 project，重新 plan 并保存冻结文件。同一安装根允许保留或扩展所选组件；收缩或替换组件范围会明确拒绝，避免把仍存在的包与配置变成无人校验的残留。需要缩小范围时先审阅 restore，或使用独立的新 root。
 
 宿主入口更新按上一事务记录的摘要判断归属：我方旧版入口可以升级，用户修改会保留并报冲突；同一个 agent 不允许两个安装根争用同名入口。Pi 活动适配器目录按适配源码摘要切换，旧目录保留作恢复依据。选中 REA/Spec Kit 的重复安装复用已核摘要的原包；发生漂移时拒绝重新记成“通过”。

@@ -1,0 +1,44 @@
+[
+  {
+    "sha": "ea82eac3afd74c15510e427b91a9eff8292f178b",
+    "node_id": "C_kwDOBTL-utoAKGVhODJlYWMzYWZkNzRjMTU1MTBlNDI3YjkxYTllZmY4MjkyZjE3OGI",
+    "commit": {
+      "author": {
+        "name": "awstools",
+        "email": "awstools@amazon.com",
+        "date": "2026-11-06T19:46:20Z"
+      },
+      "committer": {
+        "name": "awstools",
+        "email": "awstools@amazon.com",
+        "date": "2026-11-06T19:46:20Z"
+      },
+      "message": "Publish v3.1164.0",
+      "tree": {
+        "sha": "5f77ff6870e5b755206dceffb4c81044381bd45e",
+        "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/trees/5f77ff6870e5b755206dceffb4c81044381bd45e"
+      },
+      "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/commits/ea82eac3afd74c15510e427b91a9eff8292f178b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/commits/ea82eac3afd74c15510e427b91a9eff8292f178b",
+    "html_url": "https://github.com/aws/aws-sdk-js-v3/commit/ea82eac3afd74c15510e427b91a9eff8292f178b",
+    "comments_url": "https://api.github.com/repos/aws/aws-sdk-js-v3/commits/ea82eac3afd74c15510e427b91a9eff8292f178b/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "616248b7da687d9f8c0bebba75c9d4f64883bb5b",
+        "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/commits/616248b7da687d9f8c0bebba75c9d4f64883bb5b",
+        "html_url": "https://github.com/aws/aws-sdk-js-v3/commit/616248b7da687d9f8c0bebba75c9d4f64883bb5b"
+      }
+    ]
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "craft": {
+    "repository": "https://github.com/gthubtom1/reverse-workflow-installer",
+    "tag": "craft-pi-v0.1.0",
+    "commit": null,
+    "asset": null,
+    "asset_id": null,
+    "sha256": null,
+    "manifest_sha256": null
+  },
+  "reverse": {
+    "repository": "https://github.com/gthubtom1/reverse-skill",
+    "tag": "v1.9.0",
+    "commit": null,
+    "archive_sha256": null,
+    "descriptor_sha256": "3ad158f3341fd502d974ebb331e10d659e04c9b86f65ef2a1a1ced7cc60cfecf"
+  },
+  "upstream": {
+    "repository": "https://github.com/storytold/craft-anything",
+    "commit": "0326b4de8051f85a0f3139cd82f88f76911e6a35"
+  }
+}

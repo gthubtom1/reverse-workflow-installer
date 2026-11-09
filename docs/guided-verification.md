@@ -1,5 +1,7 @@
 # Installer guided verification
 
+**历史验证记录。** 下文保留 installer 0.6.x 阶段的范围与结论，不代表当前候选或活动安装；其中“当前”均指原记录时点。新版 Craft 的维护/验收入口见[维护手册](craft-upstream-maintenance.md)，实际版本、发布和加载状态分别核 Git、工件与本机 receipt；不借历史通过认证新版本。
+
 本记录对应 installer 与 Pi 入口包 0.6.0，事务协议保持 0.2.0。当前活动组件是 REA、Spec Kit、reverse，以及默认关闭的可选 shell-guard 0.3.0。
 
 ## 离线验证范围

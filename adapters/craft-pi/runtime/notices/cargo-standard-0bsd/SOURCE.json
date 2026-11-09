@@ -1,0 +1,95 @@
+{
+  "classification": "standard-license-text, declared-in-upstream-metadata",
+  "original_upstream_license_file_claimed": false,
+  "author_copyright_notice_supplied": false,
+  "standard_placeholder_policy": "Official text retained byte-for-byte including YEAR / AUTHOR EMAIL; these are standard template placeholders and are not yaxpeax-arm attribution.",
+  "official_source": {
+    "repository": "https://github.com/spdx/license-list-data",
+    "release_tag": "v3.26.0",
+    "tag_object_sha1": "558c64b2e0a93fa86aab8a6dcbd84a565846a48e",
+    "commit": "8a04f0303d95c4f932210b118588c662665bd383",
+    "tag_signature_status": "API reports unsigned; no signature verification claimed",
+    "blobs": [
+      {
+        "artifact": "standard-0BSD.txt",
+        "path": "text/0BSD.txt",
+        "bytes": 643,
+        "sha256": "e3f18c71e10d673590eb9856c1d79dd3b4b0d65404efb5e8584dbede7edd608b",
+        "git_blob_sha1": "0b8ae762b2405a862d8592c5ff2799a1bd9c43e0",
+        "api_response": "standard-spdx-0BSD-text.github.json",
+        "source_url": "https://api.github.com/repos/spdx/license-list-data/contents/text/0BSD.txt?ref=8a04f0303d95c4f932210b118588c662665bd383",
+        "classification": "standard-license-text"
+      },
+      {
+        "artifact": "standard-0BSD.details.json",
+        "path": "json/details/0BSD.json",
+        "bytes": 3797,
+        "sha256": "7d341c82627acae3bd20275faf9855bafaa39940010c1a43851aaefb36ca2a8a",
+        "git_blob_sha1": "68f5432b7a7ec32edda603ede7ee995992fbcdfe",
+        "api_response": "standard-spdx-0BSD-details.github.json",
+        "source_url": "https://api.github.com/repos/spdx/license-list-data/contents/json/details/0BSD.json?ref=8a04f0303d95c4f932210b118588c662665bd383",
+        "classification": "standard-license-metadata"
+      }
+    ],
+    "webpage": "https://spdx.org/licenses/0BSD.html",
+    "webpage_ref_policy": "live official page captured with hash; immutable standard text selected from fixed release commit"
+  },
+  "exact_adoption_evidence": [
+    {
+      "artifact": "crate-Cargo.toml",
+      "sha256": "1c3cbb3aca3a447ec0c6e5317a40dc8bb65b8e70b47296b8c90c742f00e1214c",
+      "name": "yaxpeax-arm",
+      "version": "0.5.0",
+      "license_declaration": "0BSD",
+      "declaration_line": 31
+    },
+    {
+      "artifact": "crate-Cargo.toml.orig",
+      "sha256": "bbc81dc746020dc805449e80fc5b260be102db79afa5819442939769f352cae9",
+      "name": "yaxpeax-arm",
+      "version": "0.5.0",
+      "license_declaration": "0BSD",
+      "declaration_line": 6
+    },
+    {
+      "artifact": "exact-commit-Cargo.toml",
+      "sha256": "bbc81dc746020dc805449e80fc5b260be102db79afa5819442939769f352cae9",
+      "name": "yaxpeax-arm",
+      "version": "0.5.0",
+      "license_declaration": "0BSD",
+      "declaration_line": 6
+    }
+  ],
+  "text_obligations": {
+    "permission_quote": "Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.",
+    "permission_source": "standard-0BSD.txt paragraph 2 (line 3)",
+    "notice_or_copyright_retention_condition": "none in the full standard text, for source or binary distribution",
+    "disclaimer_source": "standard-0BSD.txt paragraph 3 (line 5)",
+    "disclaimer_note": "Warranty/liability disclaimer present; no attached copy-preservation condition.",
+    "standard_copyright_line": "Copyright (C) YEAR by AUTHOR EMAIL",
+    "copyright_line_note": "Template text, not a requirement to invent a copyright notice; no carry-forward condition appears in the license.",
+    "spdx_header_quote": "There is no standard license header for the license",
+    "header_source": "standard-spdx-0BSD.html #licenseHeader",
+    "interpretation_limit": "Text obligations and source association only; no legal assurance, ownership attestation, or blanket release certification."
+  },
+  "recommended_narrow_exception_lock": {
+    "name": "yaxpeax-arm",
+    "version": "0.5.0",
+    "registry_archive_sha256": "79f8d9808ad0b7e434882c66e50704138e7c0bdf3408a9f3159c50603dc3168c",
+    "registry_source": "registry+https://github.com/rust-lang/crates.io-index",
+    "source_commit": "a2723ae2043777472dd373feef4b9c40d52569bb",
+    "path_in_vcs": "",
+    "normalized_metadata_sha256": "1c3cbb3aca3a447ec0c6e5317a40dc8bb65b8e70b47296b8c90c742f00e1214c",
+    "original_metadata_sha256": "bbc81dc746020dc805449e80fc5b260be102db79afa5819442939769f352cae9",
+    "selected_license": "0BSD",
+    "standard_repository": "https://github.com/spdx/license-list-data",
+    "standard_release_tag": "v3.26.0",
+    "standard_commit": "8a04f0303d95c4f932210b118588c662665bd383",
+    "standard_path": "text/0BSD.txt",
+    "standard_text_sha256": "e3f18c71e10d673590eb9856c1d79dd3b4b0d65404efb5e8584dbede7edd608b",
+    "standard_text_git_blob_sha1": "0b8ae762b2405a862d8592c5ff2799a1bd9c43e0"
+  },
+  "exact_package_association_level": "locked-registry-crate -> byte-verified staged metadata -> crate VCS exact commit -> same 0.5.0 original manifest; explicit adoption of SPDX 0BSD in upstream package metadata",
+  "historical_conclusion_correction": "The prior no-original-LICENSE finding remains factual. It alone does not establish non-distributability under expressly selected 0BSD, whose standard text contains no notice/copyright retention condition. Prior REPORT/SOURCE/VERIFY retained unchanged.",
+  "accepted_scope": "Main accepted exact-pin 0BSD standard text association; no general SPDX metadata bypass, no ownership attestation or blanket release certification."
+}

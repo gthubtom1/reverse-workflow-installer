@@ -1,0 +1,24 @@
+{
+  "node_id": "TA_kwDOBTL-utoAKGY3MzRmOGQ2MWQwZjU3NzQwNmFiODhiOWQyNGI1OWZjYTg1MGJiM2E",
+  "sha": "f734f8d61d0f577406ab88b9d24b59fca850bb3a",
+  "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/tags/f734f8d61d0f577406ab88b9d24b59fca850bb3a",
+  "tagger": {
+    "name": "awstools",
+    "email": "awstools@amazon.com",
+    "date": "2026-02-25T19:31:59Z"
+  },
+  "object": {
+    "sha": "adb02cd5ccef10ff162faee76a159dba70626584",
+    "type": "commit",
+    "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/commits/adb02cd5ccef10ff162faee76a159dba70626584"
+  },
+  "tag": "v3.998.0",
+  "message": "v3.998.0\n",
+  "verification": {
+    "verified": false,
+    "reason": "unsigned",
+    "signature": null,
+    "payload": null,
+    "verified_at": null
+  }
+}

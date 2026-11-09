@@ -1,0 +1,1 @@
+Designed original identity for console-owned-01. Behavior comes from spec.md and the external observation, not this file’s executable behavior.

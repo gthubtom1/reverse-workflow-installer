@@ -1,0 +1,43 @@
+{
+  "format_version": 2,
+  "kind": "bridge",
+  "original_source_tree_sha256": "50a2494ae8b86dd59b1988566e2b347fc939f16c0dde6a9b6ba158875e4e33e4",
+  "original_manifest_sha256": "590561bc633f01f942203f6772d31cb075a86e6a912383846cf9de259edfc4fc",
+  "exact_copied_files": {
+    ".gitignore": "306fd52e74fca6746e12acc750f232de15e71da917756a1270d74c91f5eb7368",
+    "Cargo.lock": "cb0139be318350739be273ea945ee0abb867684829fac547cadbf84bf9644d1a",
+    "Cargo.toml": "fb7d3d040d19eb116a6ff04fea7147a8268da42d0c0bd9984f3d15bdb9a80a04",
+    "src/adapter.rs": "5b584b5a61be08ca8db17b36df1019ae95fafc972e2234e38a0dc22aed7ab714",
+    "src/bin/pi-rpc-driver.rs": "6de5d8a206622af60a3d9bf47370f329f94a3c38fd625bd4acfc59cecb94d2d3",
+    "src/config.rs": "61f5a12bebebe5f5d4a468446199004b98c74a747c4e926695cb40f96bc4508c",
+    "src/driver.rs": "12b3011961808894edd41bba6209b737e7c018ebff073e886b13583552aac8fb",
+    "src/framing.rs": "cba0063aec10df0f673047c66d289217f24297079f0deaa89b9e3ecf91de6e39",
+    "src/lib.rs": "75e09d6a94375fe35b1e2bc53ff5760f7632f3f9daff6785a3b1d176afc3fc5a",
+    "src/parser.rs": "09a1ea99a415eaa60117a7d39f1cc7fec49982fa534c025d20e2beb6417c890f",
+    "src/process.rs": "cd7fe9a11acbe62f289382fce86aa6ffe3f3eb458dc4bbf089e38cc4e4e54a07",
+    "src/redaction.rs": "1eae84ed8f325433ce44657c79610f85d1a1c3194a024f5d6cbba8b54a0bf139",
+    "src/session.rs": "32feed8d098cf7d2e3669a562e91a33171861e8500173dfea3cad303b1593131",
+    "tests/fixtures/fake_pi.rs": "709e0d438930b1bf52d47f44db397974e6a97a999a0cf4949ba2c868cd905007",
+    "tests/fixtures/fake_pi_node.cjs": "92a9a26aaa0b3a7b663b6eee00f0be9e3689efa953ae4d90bb1ad333a84287eb",
+    "tests/fixtures/official_stream_node.cjs": "98c3f4dcbce8d97cadc76c8cb9a1d794286db70b699d0ae64ec5c054006eec56"
+  },
+  "transformed_files": {
+    "README.md": {
+      "original_sha256": "3debec3cfe2e7f12efe71a75b183d67a179528a15afa9a618d3ab778bbbccf67",
+      "packaged_sha256": "15d0382deac453ea7e4986335c12777027a1912cd3e881b01b86d736eabd9c39",
+      "reason": "portable docs, explicit tool/test environment; production bytes unchanged"
+    },
+    "config.example.json": {
+      "original_sha256": "e385e8d93797bd8c2a80cf77922e916f9c7dd2efeb3e80be1ac2c35ef12ffd22",
+      "packaged_sha256": "ec44ee225ac03722e5d2e8fbe64ac146b031ee3798c36531c69a0a574f0e7d3b",
+      "reason": "portable docs, explicit tool/test environment; production bytes unchanged"
+    },
+    "tests/protocol.rs": {
+      "original_sha256": "a2cb1105deacd1a55a2106171f16e242e1ad190edcc975058c3b9e9dbbe1cd7a",
+      "packaged_sha256": "380d30dc339583f2b1eeb3c09cb82cc6e8a0f83658afa44f2bf7b72bcbc297e4",
+      "reason": "portable docs, explicit tool/test environment; production bytes unchanged"
+    }
+  },
+  "meaningful_tests_retained": true,
+  "development_helpers": "source retained; syntax only, not native/provider qualification"
+}

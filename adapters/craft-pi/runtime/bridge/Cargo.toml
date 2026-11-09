@@ -1,0 +1,29 @@
+[package]
+name = "craft-pi-bridge"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Owned one-turn Pi RPC driver and protocol parser; independent of Craft"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_Security"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[[bin]]
+name = "pi-rpc-driver"
+path = "src/bin/pi-rpc-driver.rs"
+
+[[bin]]
+name = "fake-pi"
+path = "tests/fixtures/fake_pi.rs"
+required-features = ["fixtures"]
+
+[features]
+fixtures = []

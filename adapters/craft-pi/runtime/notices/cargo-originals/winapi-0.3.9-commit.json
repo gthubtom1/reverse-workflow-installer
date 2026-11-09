@@ -1,0 +1,101 @@
+{
+  "sha": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+  "node_id": "MDY6Q29tbWl0MjM4NTM0ODI6Nzk2YThlNmMyOTcxZGMyZmYxYmNmZjE2NmU2NjcxMjg0ZjliNWI2Yg==",
+  "commit": {
+    "author": {
+      "name": "Peter Atashian",
+      "email": "retep998@gmail.com",
+      "date": "2020-06-26T11:32:33Z"
+    },
+    "committer": {
+      "name": "Peter Atashian",
+      "email": "retep998@gmail.com",
+      "date": "2020-06-26T11:32:33Z"
+    },
+    "message": "Publish winapi 0.3.9",
+    "tree": {
+      "sha": "7a78538ad7d54f11f098efc044c00827df065fc1",
+      "url": "https://api.github.com/repos/retep998/winapi-rs/git/trees/7a78538ad7d54f11f098efc044c00827df065fc1"
+    },
+    "url": "https://api.github.com/repos/retep998/winapi-rs/git/commits/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+    "comment_count": 0,
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\niQGzBAABCAAdFiEE2KSImGdAa+nbfhCFBNtL55KAx28FAl713NEACgkQBNtL55KA\nx29Zkwv/dJWMhF2Yxvv0Os0m3HU3QAEJKTP1mBdQ8noqI/EC5e50886Y58lFPU2z\n/SF088kKJF20aqHMmpOgDbM7KtMo7oVaG3kJYUBdQ2Y2ZPpyt22eVPCy+qntIgDH\nZ/WuBPp3ospNzyvnMo57kM3NGLqMuX9rvMmQ8FPtAauUIPzPGWPi/142kzEnif5K\n3SeSS217K0MqEwVkGI15YoDGqYrltNbnE1A22B1azPgaLTVhXUm/1rikkNUGI0wM\n8Csea4bWI69a/Dl/olp6yFkCoIT8TAxi+IhvFraKk0o4tcW0o5TEM2tdXgkZZdGF\nAc3x3K09zzmFHCNnETM36/rxoIhcKAuSuak/YGQJslatjxC8AiBDSofNTLCUZxNU\nuboejPdheCKat9kGbXYtmKLaj04NS9toNjQ9sLSjcTAr6hcnz67gX+0fcWNd5hCC\nRdsvYIhzUgNtmooAUBTPtkQcS2p4d/BfIc8ODNbTye24AeEbhON+EgvCe884M1o5\nJ1Hkwlr2\n=7S0Z\n-----END PGP SIGNATURE-----",
+      "payload": "tree 7a78538ad7d54f11f098efc044c00827df065fc1\nparent 01ddd7bb92223693adc7b40b6a50c6ec78000899\nauthor Peter Atashian <retep998@gmail.com> 1593171153 -0400\ncommitter Peter Atashian <retep998@gmail.com> 1593171153 -0400\n\nPublish winapi 0.3.9\n",
+      "verified_at": "2024-11-06T16:19:02Z"
+    }
+  },
+  "url": "https://api.github.com/repos/retep998/winapi-rs/commits/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+  "html_url": "https://github.com/retep998/winapi-rs/commit/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+  "comments_url": "https://api.github.com/repos/retep998/winapi-rs/commits/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/comments",
+  "author": {
+    "login": "retep998",
+    "id": 666308,
+    "node_id": "MDQ6VXNlcjY2NjMwOA==",
+    "avatar_url": "https://avatars.githubusercontent.com/u/666308?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/retep998",
+    "html_url": "https://github.com/retep998",
+    "followers_url": "https://api.github.com/users/retep998/followers",
+    "following_url": "https://api.github.com/users/retep998/following{/other_user}",
+    "gists_url": "https://api.github.com/users/retep998/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/retep998/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/retep998/subscriptions",
+    "organizations_url": "https://api.github.com/users/retep998/orgs",
+    "repos_url": "https://api.github.com/users/retep998/repos",
+    "events_url": "https://api.github.com/users/retep998/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/retep998/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "committer": {
+    "login": "retep998",
+    "id": 666308,
+    "node_id": "MDQ6VXNlcjY2NjMwOA==",
+    "avatar_url": "https://avatars.githubusercontent.com/u/666308?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/retep998",
+    "html_url": "https://github.com/retep998",
+    "followers_url": "https://api.github.com/users/retep998/followers",
+    "following_url": "https://api.github.com/users/retep998/following{/other_user}",
+    "gists_url": "https://api.github.com/users/retep998/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/retep998/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/retep998/subscriptions",
+    "organizations_url": "https://api.github.com/users/retep998/orgs",
+    "repos_url": "https://api.github.com/users/retep998/repos",
+    "events_url": "https://api.github.com/users/retep998/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/retep998/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "parents": [
+    {
+      "sha": "01ddd7bb92223693adc7b40b6a50c6ec78000899",
+      "url": "https://api.github.com/repos/retep998/winapi-rs/commits/01ddd7bb92223693adc7b40b6a50c6ec78000899",
+      "html_url": "https://github.com/retep998/winapi-rs/commit/01ddd7bb92223693adc7b40b6a50c6ec78000899"
+    }
+  ],
+  "stats": {
+    "total": 2,
+    "additions": 1,
+    "deletions": 1
+  },
+  "files": [
+    {
+      "sha": "524487083a0cc7bee486bb850813248e4eeee263",
+      "filename": "Cargo.toml",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/Cargo.toml",
+      "raw_url": "https://github.com/retep998/winapi-rs/raw/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/Cargo.toml",
+      "contents_url": "https://api.github.com/repos/retep998/winapi-rs/contents/Cargo.toml?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+      "patch": "@@ -1,6 +1,6 @@\n [package]\n name = \"winapi\"\n-version = \"0.3.8\"\n+version = \"0.3.9\"\n authors = [\"Peter Atashian <retep998@gmail.com>\"]\n license = \"MIT/Apache-2.0\"\n description = \"Raw FFI bindings for all of Windows API.\""
+    }
+  ]
+}

@@ -86,12 +86,13 @@ class ShellGuardTests(unittest.TestCase):
     def test_optional_flag_adds_shell_guard_to_all(self):
         self.args.with_shell_guard = True
         plan = self.plan()
-        self.assertEqual(set(plan["scope"]["components"]), set(w.ALL_COMPONENTS))
+        self.assertEqual(set(plan["scope"]["components"]), set(w.selected_components("all")) | {"shell_guard"})
+        self.assertNotIn("craft", plan["scope"]["components"])
         receipt = w.install(plan, self.args)
         self.assertTrue(w.verify(self.root)["ok"])
-        self.assertEqual(receipt["installer_version"], "0.6.1")
+        self.assertEqual(receipt["installer_version"], "0.7.0")
         self.assertEqual(receipt["adapter_version"], "0.2.0")
-        self.assertEqual(load_json(Path(receipt["adapter"]["root"]) / "package.json")["version"], "0.6.1")
+        self.assertEqual(load_json(Path(receipt["adapter"]["root"]) / "package.json")["version"], "0.7.0")
 
     def test_pi_only_and_guard_options_require_selection(self):
         for client in ("none", "codex", "claude"):

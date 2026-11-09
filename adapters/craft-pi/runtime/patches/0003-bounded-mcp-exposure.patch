@@ -1,0 +1,106 @@
+diff --git a/crates/mcp/src/lib.rs b/crates/mcp/src/lib.rs
+index 03434a377a8c4a43b631435e003268aeaa40bc69..a2aaaf4881f06c2d1436cbb3b6ddb3e26349e693 100644
+--- a/crates/mcp/src/lib.rs
++++ b/crates/mcp/src/lib.rs
+@@ -308,6 +308,9 @@ impl Server {
+     }
+ 
+     fn handle_request(&self, method: &str, params: &Value) -> Result<Value, (i64, String)> {
++        if self.engine.builder_policy().is_some() && !matches!(method, "initialize" | "ping" | "tools/list") {
++            return Err((-32601, "Only bounded Builder tools are exposed on this connection.".into()));
++        }
+         match method {
+             "initialize" => Ok(self.initialize(params)),
+             "ping" => Ok(json!({})),
+@@ -343,7 +346,7 @@ impl Server {
+                 "logging": {},
+             },
+             "serverInfo": {"name": SERVER_NAME, "title": "Craft Anything", "version": env!("CARGO_PKG_VERSION")},
+-            "instructions": INSTRUCTIONS,
++            "instructions": if self.engine.builder_policy().is_some() { "Implement the accepted tasks using the listed build tools. Missing original facts return needs-evidence to the owner. No research or tool discovery." } else { INSTRUCTIONS },
+         })
+     }
+ 
+@@ -384,6 +387,9 @@ impl Server {
+     /// one Clean room runs (the rest would only be refused). In restricted mode, tools that act on
+     /// the machine or reach the network without allowance are omitted.
+     fn listed(&self, s: &craft_anything_engine::ToolSpec, clean: bool) -> bool {
++        if self.engine.builder_policy().is_some() {
++            return craft_anything_engine::execution_policy::AcceptedResearch::allows_tool(s.id);
++        }
+         if self.restricted_refusal(s.id).is_some() {
+             return false;
+         }
+@@ -397,7 +403,7 @@ impl Server {
+         for s in registry.all().iter().filter(|s| self.listed(s, clean)) {
+             tools.push(registry.mcp_descriptor(s));
+         }
+-        if !self.opts.all_tools {
++        if !self.opts.all_tools && self.engine.builder_policy().is_none() {
+             tools.push(meta_list_toolsets());
+             tools.push(meta_enable_toolset(&self.engine.registry().toolsets()));
+         }
+@@ -438,12 +444,14 @@ impl Server {
+         let args = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+         let progress_token = params.get("_meta").and_then(|m| m.get("progressToken")).cloned();
+         let seq = Arc::new(AtomicU64::new(0));
+-        let result = match name {
++        let result = if self.engine.builder_policy().is_some() && !craft_anything_engine::execution_policy::AcceptedResearch::allows_tool(name) {
++            Err(craft_anything_engine::execution_policy::refusal("tool-denied", "No meta, alias or research tool is exposed on the bounded connection."))
++        } else { match name {
+             "list_toolsets" => Ok(ToolOutput::Value(self.toolsets_json())),
+             "enable_toolset" => self.call_enable(&args),
+             "" => Err(ToolError::invalid("tools/call needs a tool name")),
+             _ => self.call_engine(name, args, token, progress_token.as_ref(), seq.clone()),
+-        };
++        }};
+         if let Some(pt) = &progress_token {
+             let n = seq.fetch_add(1, Ordering::SeqCst).saturating_add(1);
+             send_to(
+@@ -831,5 +839,7 @@ fn meta_enable_toolset(sets: &[Toolset]) -> Value {
+     })
+ }
+ 
++#[cfg(test)]
++mod bounded_policy_tests;
+ #[cfg(test)]
+ mod tests;
+diff --git a/crates/mcp/src/bounded_policy_tests.rs b/crates/mcp/src/bounded_policy_tests.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..1a97468c5e28570ebdd12cf01093a45a4a5ed431
+--- /dev/null
++++ b/crates/mcp/src/bounded_policy_tests.rs
+@@ -0,0 +1,33 @@
++//! Dispatch/exposure tests deliberately use unreadable references: denied calls must fail
++//! before trying to read any accepted material or discovering another toolset.
++use super::*;
++use craft_anything_engine::execution_policy::*;
++fn bounded() -> Server {
++    let r = json!({"path":"unreadable-test-reference", "sha256":"0".repeat(64)});
++    let policy: AcceptedResearch = serde_json::from_value(json!({
++        "version":1,"mode":"buildcheck",
++        "identity":{"case_ref":r,"scope_ref":r,"workitem_ref":r,"feature_ref":r,"acceptance_ref":r,"task_ids":["T1"]},
++        "original":{"target":{"kind":"none"},"target_identity":"test","bundle":r,"traceability":r,"scenarios":r,"qualifications":r,"environment":r},
++        "baseline":{"version":1,"root":"test-baseline","bundle_sha256":"0".repeat(64),"artifacts":[]},
++        "check_plan_ref":r,"checks":[],"source_base_sha256":"0".repeat(64),"app_root":"test-app","writable_roots":[],"read_references":[],"commands":[],"protected_paths":[],
++        "kind_id":"app","stack":"Rust","model":{"allowed":false,"expected":{"provider":"test","model":"test","effort":"high"},"backend_id":"test","permission_contract":"pi-rpc-bounded-v1"},
++        "owner_id":"test-owner","max_wall_secs":1,"failed_feedback":null
++    })).unwrap();
++    let engine = Arc::new(Engine::bounded_builder(craft_anything_engine::testing::session(), Arc::new(policy)));
++    Server::new(engine, ServerOptions::default(), Box::new(Vec::<u8>::new()))
++}
++#[test]
++fn bounded_builder_lists_only_build_tools_and_refuses_meta_resources_and_research_calls() {
++    let server = bounded();
++    let list = server.tools_list();
++    let names: BTreeSet<&str> = list["tools"].as_array().unwrap().iter().map(|s| s["name"].as_str().unwrap()).collect();
++    assert_eq!(names, BUILDER_TOOLS.iter().copied().collect());
++    for method in ["resources/read", "resources/list", "prompts/get", "prompts/list", "completion/complete"] {
++        assert!(server.handle_request(method, &json!({})).is_err(), "{method}");
++    }
++    for name in ["list_toolsets", "enable_toolset", "rebuild_start", "core_target_open", "mcp__craft__core_target_open", "codemode"] {
++        let response = server.tools_call(&json!(1), &json!({"name":name,"arguments":{"toolset":"all"}}), &CancelToken::default());
++        assert_eq!(response.pointer("/result/isError"), Some(&json!(true)), "{name}: {response}");
++        assert!(response.to_string().contains("tool-denied"));
++    }
++}

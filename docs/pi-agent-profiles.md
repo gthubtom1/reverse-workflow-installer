@@ -23,6 +23,8 @@
 9. 安装后 reload 或重启 Pi Web，并创建新会话。
 10. 在 Pi Web 的 Agents 列表中确认 requirements-planner、UI、后端、逆向和审查 profiles 已出现；再运行一个只读分派确认实际使用了正确 profile。
 
+可选 Craft 执行后端使用独立的按需 reconstruction-execution skill、builder instructions 和 bundle entry，不新增控制 profile，不自动部署或接管本页的人工 profiles/AGENTS。其安装恢复仅管理新包资源和精确注册，见 [Craft 指南](craft-install.md)。
+
 ## 模型和技能
 
 模板不固定 provider、model 或 thinking level。目标电脑上的用户在 Pi Web 中选择实际可用模型。
