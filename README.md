@@ -1,6 +1,6 @@
 # Reverse Workflow Installer
 
-**电脑格式化或换机恢复整个环境：先读 [给安装 AI 的整环境恢复交接](docs/environment-recovery.md)。** 覆盖 Pi Web、工作流、agents、skills、extensions 与 MCP 的来源和顺序；账号、私有连接和项目历史需自行重新配置或从私人备份恢复。
+**把仓库链接交给安装 AI：先读 [公共整环境部署指南](docs/environment-recovery.md)。** 根据目标电脑的 OS、架构、已有工具、实际路径和目标宿主部署推荐的工作流、agents、skills 与适用扩展；可选能力按用途和支持范围选择。
 
 安装器与 Pi 入口包源码版本 **0.7.0**，事务协议保持 **0.2.0**。0.7 新增可选 Craft 执行后端分发与受控入口，实际发布/安装分别核对公开 tag 与本机 receipt。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。shell-guard 0.3.0 已完成适配：常见只读 `for`/`if`/`test`/`echo`/`printf` 形式允许；单个字面项目内 `rm` 移入 TEMP；Everything 行为与硬保护保持不变，不弹确认窗口。目标来源为已发布的 `shell-guard-v0.3.0`，安装器冻结其 commit/tree，不回退 main 或旧版本。
 
