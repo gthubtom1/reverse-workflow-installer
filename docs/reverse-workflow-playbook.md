@@ -83,7 +83,23 @@ B. SCOPE-STATIC-ONLY：继续只检查文件；只能通过运行确认的行为
 
 ## 独立实现与源码恢复
 
-行为证据足够后，reverse 才交接到 reconstruction；Spec Kit 在独立成果项目负责规格、计划、任务和测试。目标行为不明确时先补证据，不能用“合理猜测”填成原版规格。
+行为证据足够后，reverse 才交接到 reconstruction；Spec Kit 在独立成果项目负责规格、计划、任务和测试。目标行为不明确时先补证据，不能用“合理猜测”填成原版规格。需要实现时直接复制 [quick-start 的完整复刻提示词](quick-start.md#需要独立复刻项目时)，由智能体核原生指令与本机资格；用户只表达意图和任务输入，不需手选技术工具。
+
+```mermaid
+flowchart TD
+  P[原 case / PRIMARY 取证] --> G{交付目标}
+  G -->|纯分析| R[报告与 unknown]
+  G -->|独立实现且证据足够| S[原生 Spec 完整流程]
+  S --> W[默认 Worker / 原 runner 逐批选合格 Craft]
+  W -->|缺证| P
+  W -->|代码缺陷且预算内| W
+  W -->|规格或范围问题| F[原 runner / lead 接收修订]
+  F --> S
+  W --> T[原 tasks / 完整 converge / 独立验收]
+  T -->|实现缺项| S
+```
+
+图只作导航：返回仍遵原生合同，规格问题回原 runner、范围问题回 lead；原 runner 接收返回并确认旧写者清理后再调度，cleanup unknown 先停止新写者。Craft 补证或交接变更须由原 owner 接收新引用/decision/selection，冻结新批次与 fresh run root。单批 candidate、Ready、exit 0 和 installer accept 不代表完整任务或业务 accepted，具体闭环以同一复制模板及安装版原生合同为准。
 
 | 等级 | 当前能支持的声明 |
 |---|---|

@@ -26,7 +26,7 @@
 
 ### Pi Craft 可选执行后端
 
-Craft 默认关闭，`all` 不会选择。已有 R46/Spec implement runner 明确选择该后端时，才按 [本地 bundle 指南](craft-install.md) 提供真实的已核包、显式 Pi Node/CLI 入口和精确版本。安装器已有全量工件/资源/注册的离线机制验证；真实 bundle、RPC/policy、provider、取消和业务切片尚待集成，不代表已公开支持新电脑安装。它不新增控制 profile，不接管原路由或独立验收。
+Craft 默认关闭，`all` 不会选择。普通 implementation-worker 仍是默认；只有原 R46/Spec implement runner 为依赖已满足的明确批次选择 Craft 且本机资格满足时才使用。正式 core v0.7.0、native Craft-Pi v0.1.0、reverse v1.9.0 分开发布，下载 helper 独立为 0.1.1：先按 [精确 pin 获取指南](craft-acquisition.md) 获取真实 bundle/reverse，再按 [本地 bundle 指南](craft-install.md) 提供独立 Pi Node/CLI/分发根和精确版本。核心 installer 只消费本地已核 bundle，没有直接 fetch flag。资产和 pin 存在不证明本机 provider、宿主加载或业务接受；新电脑全自动 fresh 网络最后记录为匿名 API 403、无 complete，已核 GET/hash 不等于完整换机实测。它不新增控制 profile，不接管原路由或独立验收。
 
 ### Pi shell-guard 可选插件
 
@@ -104,7 +104,7 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 
 请先：
 1. 读取本机安装回执；
-2. 读取 reverse-skill 的 RULES.md 和 MASTER-ROUTING.md；
+2. 读取 reverse-skill 的 RULES.md 和 skills/MASTER-ROUTING.md；
 3. 使用原生 router 选择 PRIMARY；
 4. 报告已知内容、未知内容、范围和下一步；
 5. 通过原生工作流执行，不要绕过路由直接使用普通 Bash。
@@ -117,8 +117,9 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 
 这是一个只读检查任务。不要修改文件、不要安装、不要下载、不要提交。
 
-请检查当前环境中的：
-- 安装回执和三组件身份；
+请按 receipt 的实际选择范围检查当前环境；未选组件不要求存在：
+- 安装回执和已选择的核心组件身份（完整 core 为 REA、reverse、Spec Kit 三项）；
+- 若 receipt 选择 Craft，再核其 bundle、独立 Pi 分发和受管 resources 身份，不默认启用 Craft；
 - 宿主 skill 是否加载；
 - REA MCP 是否完成握手并暴露完整工具；
 - reverse 原生 router 是否可运行；
@@ -129,14 +130,29 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 
 ## 需要独立复刻项目时
 
+填写意图和实际输入即可；技术工具与后端由智能体按原生合同选择。模型实际 provider/model/effort 按会话与运行证据核实，不从 requested 推断，未知保持 unknown；具体资格见安装版执行合同。
+
 ```text
 /skill:reverse-workflow
 
 请把选定功能做成独立项目，并与原版进行行为对比。
+目标与功能：[目标文件/版本、选定行为和预期交付]
+成果目录：[工具源码外的独立项目；已有项目填实际目录]
+授权与输入：[原 case/证据或首次目标、允许读写/运行/网络范围、预算与已有材料]
 
-先读取原 case、目标身份、行为 Evidence 和 unknown；证据足够后再交接到独立成果项目的 Spec Kit 工作流。已有 feature、plan 和 tasks 沿用。不把文件存在、退出码为 0 或安装成功当成行为等价。
+先读取原 case、目标身份、scope、行为 Evidence 和 unknown；原 case/PRIMARY 保持权威。证据足够后再进入 reverse 包的 skills/reconstruction/SKILL.md 和 skills/reconstruction/references/spec-kit-workflow.md，恢复已有 feature、constitution、spec、plan、tasks；缺原版事实不猜成规格。纯分析/报告目标可在报告处结束，不强制进入 Spec 或实现。
 
-完成后分别报告：复用内容、新增内容、已验证行为、失败行为、未知项和下一步验证入口。
+在成果项目实际生成的官方 Spec Kit 资源中，完整执行适用的 constitution → specify → clarify → plan → tasks → 显式 analyze → implement → 显式 converge；具体 speckit.* 名称、宿主入口和指令全文以实际安装资源为准，只打印命令不算执行。显式检查 analyze/converge，不假定默认 workflow 自动包含。implement 保留 prerequisites、checklists、hooks、任务依赖、测试、同文件串行、阶段检查与最终完成职责。
+
+实现默认交普通 implementation-worker，按原 tasks、实际 tests/diff 与独立验收接收结果。仅原 R46/Spec runner 为依赖已满足的明确批次选择 Craft 且实际安装/owner 协议/本机资格满足时，读取安装版 reconstruction-execution 及其 execution reference；只替换该批编码后端，一个活 owner、一个编码写者，不同时派普通 Worker、不递归派生或另开研究路线。
+
+缺证回原 PRIMARY，在原 scope 内补证，只阻依赖任务；其余独立任务由原 runner 接收返回并确认旧写者清理后再调度。代码缺陷只在冻结计划与预算内 refine，规格/范围问题分别回原 runner/lead，不改预期凑绿。cleanup unknown 时先停新写者、保留 lease，确认自有写者/preview 全部退出再继续。Craft 批次按其有效 typed check report、return_summary、required checks、实际 diff 和 cleanup 接收，不凭标签猜路由；unsupported 交原 lead，输入/规格原因按有效 typed return_to 回原 Spec runner。
+
+对 Craft 批次，补证被原 owner 接收或 plan/scope/交接合同改变后，使用新的引用、decision、selection 冻结新批次与 fresh run root；不复用旧 approved hash，不覆盖历史或跨 run 续旧 session。
+
+所选批次返回后由原 runner 接收并更新原 tasks，失败/未验证不勾完成，继续其余任务、完整 implement/converge；收敛新增有来源的缺项仍回原 tasks 再实现。最后独立验收规格符合、声明范围原版行为及隔离构建/运行，覆盖边界、错误、状态、副作用和 required checks；candidate、Ready、Converged、exit 0、installer accept 均不等于业务 accepted。
+
+在已有授权内连续推进，技术工具由你选择，不让我手工选工具。分别报告复用/新增、证据与真实命令结果、失败/unknown、清理状态和下一恢复入口；未验证边界如实保留，不把安装成功当成行为等价。
 ```
 
 ## 继续旧项目或追踪上游更新时
@@ -161,7 +177,7 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 
 需要把分析结果做成独立项目、维护规格和任务、长期进行对比验证时，再使用 Spec Kit。Spec Kit 不会替代 reverse-skill 的专业路由。
 
-## 三种状态不要混淆
+## 安装、验证与加载状态
 
 - `installed: true`：安装事务已经写入选定包和配置。
 - `verify` 通过：静态身份、hash、回执和配置仍然一致。
@@ -177,7 +193,7 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 如果模型仍然直接调用普通工具，把任务开头改成：
 
 ```text
-先调用 /skill:reverse-workflow。没有完成 RULES → MASTER-ROUTING → PRIMARY 之前，不要开始任务执行。
+先调用 /skill:reverse-workflow。没有完成 RULES.md → skills/MASTER-ROUTING.md → PRIMARY 之前，不要开始任务执行。
 ```
 
 如果 `accept` 失败，读取安装根下 `.installer/transactions/<transaction>/` 的结果和失败记录；不要把 `installed: true` 当成完整任务通过。

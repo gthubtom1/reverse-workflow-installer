@@ -4,7 +4,7 @@
 
 ## 1. 先核身份与边界
 
-读取 [AGENTS](../AGENTS.md)、[安装合同](craft-install.md)、[打包接口](craft-packaging.md)及其当前源码。用 Git status/HEAD、实际文件 hash、当前安装根的 `.installer/receipt.json` 和事务记录分别确认开发源、工件、安装与部署状态；旧文档不能覆盖实物。公开 release 另查 GitHub 的 tag→commit、release、唯一 asset/hash；本指南没有证明任何候选已发布。runtime README/旧打包段落可能仍指旧 revision，遇矛盾应核 manifest/origin 和审查记录，禁止自动拼接不同快照。
+读取 [AGENTS](../AGENTS.md)、[安装合同](craft-install.md)、[打包接口](craft-packaging.md)及其当前源码。用 Git status/HEAD、实际文件 hash、当前安装根的 `.installer/receipt.json` 和事务记录分别确认开发源、工件、安装与部署状态；旧文档不能覆盖实物。当前正式发布身份见 [Windows x64 pin](../releases/windows-x64.json)，公开 release 仍须按 GitHub 的 tag→commit、release、唯一 asset/hash 核实；发布存在不证明本机运行资格。runtime 的历史 README 按其原观察时点理解，遇矛盾应核 manifest/origin 和审查记录，禁止自动拼接不同快照。
 
 **以下仅为本次基线，验收前重核，不是永久最新：** 每轮资格基线以实际 source manifest 为准；联合 `runtime/source-manifest.json` 尚未生成或与实物不符时，应报告未冻结，不能手填身份。下表只帮助定位已读证据。
 
@@ -13,7 +13,7 @@
 | Craft | 完整上游 `0326b4de8051f85a0f3139cd82f88f76911e6a35`，保留完整依赖；[series](../adapters/craft-pi/runtime/patches/series.json) 为 4 个有序 patch、23 个源码摘要，含只读 admission 与 typed check report v2 门。原 series SHA `0807fb2219751caec408aa1c89d2a5bc8a5cbee17062e7c0814fe125b929ab16`；portable SHA `61cf9b94c6cc3b28de8f5ea16e44ee9be7f92937bac91da880bda3bda4919a6c`。该源码门已独立接受，定向 31 tests 通过，不等于全上游 suite。 |
 | bridge/P1 | 原 source SHA `50a2494ae8b86dd59b1988566e2b347fc939f16c0dde6a9b6ba158875e4e33e4`；[原 manifest](../adapters/craft-pi/runtime/bridge/FROZEN-SOURCE-MANIFEST.json) 19 文件，历史 71 integration + 5 unit = 76 pass，另 1 private test ignored。 |
 | executor | 原 source SHA `daa40ce151b45d483ca189dcd9e00bffd50a3499e16d06d56f7dd9e05dc2fa50`；[原 manifest](../adapters/craft-pi/runtime/executor/FROZEN-SOURCE-MANIFEST.json) 46 文件、原字节 SHA `f4ac2bbe706b281a5741e0b47e0d5aefd38c48ac13af3560f50dee6984c6706c`，由 [origin](../adapters/craft-pi/runtime/executor/snapshot-origin.json) 绑定。含 prepare 三项 context binding/privacy 修复，已独立接受；最终 27 tests 通过（11 observer + 16 integration）。 |
-| installer/reverse | installer/Pi entry 0.7.0 候选，native crate/bundle 0.1.0；reverse 1.9.0 候选要求 `reverse.r46.execution-backend` descriptor schema/contract 1 和四项 exact capabilities/四文件摘要，详见安装合同。Craft plan schema 2，core plan/receipt schema 1，事务协议 0.2.0，Craft contract/min_reader 1。旧 0.6.1 verify/restore 不认证 Craft。 |
+| installer/reverse | installer/Pi entry 正式 v0.7.0（`70cf9c779ec0198eb725b864af868ee88bcfbce9`），native Craft-Pi v0.1.0（`010e2e323f912806f3fc3f2b17b1f9f06c29c944`），reverse v1.9.0（`7cc3109bf14a570c9c852dc76cce05fff424e88c`）分开发布；获取 helper 独立为 `craft-acquisition-v0.1.1`（本次源码基线 `d29b1fe5b207cb36faf3df9533dad4faf23e1e72`）。reverse 要求 `reverse.r46.execution-backend` descriptor schema/contract 1 和四项 exact capabilities/四文件摘要，详见安装合同。Craft plan schema 2，core plan/receipt schema 1，事务协议 0.2.0，Craft contract/min_reader 1。旧 0.6.1 verify/restore 不认证 Craft。 |
 
 历史 policy `0bdca190…`（22 文件）及 executor `e10b74d…`（28 文件）只用于追溯失败经验，不是本次身份；对应旧测试不认证新源码。本轮最终原生包已生成，P1/P2 source-layout 回归通过；安装后功能资格仍须按实际 receipt/protocol 和本批运行另验，不能写成全部通过。
 
@@ -44,7 +44,7 @@ git -C ../craft-upstream diff --name-status 0326b4de8051f85a0f3139cd82f88f76911e
 3. 独立 native UI + 业务 oracle 使用 fresh seed；headless 另验保存/关闭重开、错误输入/IO 与副作用。故意不持久化、错 stdout/退出码、假 receipt/错 source/重放 generation 必须在预期门失败；timeout/unknown 不算有效业务负例。实际 provider、精确 owned resume、取消/owner join/后代退出分别验证，缺 optional provider 如实 blocked，禁止换 model fallback。
 4. 独立 review 后冻结 recipe/resources/reader，再构建 native 工件，记录实际 hash、PE imports/非系统 DLL 闭包、编译依赖原始 license/attribution。当前仅 Windows x86_64 GNU、Rust/Cargo 1.99 路径准入。recipe freeze 后 imported module 改变必须拒绝；旧 Cargo cache 只可经前 manifest/hash 校验复用并诚实记录 leaf relink 来源，不能关漂移门或假称旧 binary 等于新构建。
 5. clean staging 验 install/update、pending/失败恢复、用户后改 conflict、receipt 最后恢复。迁移使用完整项目数据副本，逐格式验证新读旧、旧读新及拒写；旧 v3/候选 v4 边界不能靠改 version 强写。完整旧包/source/history/rollback receipt 均保留。
-6. 前述 required checks 与 owner cleanup 都成立才讨论晋级。GitHub 发布须获授权并固定 immutable tag→commit、唯一 asset SHA 与 manifest，记录兼容 tuple：Craft tree/patch/lock/toolchain/OS/arch、bridge/executor、reader/contract/schema/min_reader、Pi/Node/RPC、模型假设、check plan/转换器/数据格式。当前 installer CLI 只接本地 bundle，pin helper 不代表已有下载能力。
+6. 前述 required checks 与 owner cleanup 都成立才讨论晋级。GitHub 发布须获授权并固定 immutable tag→commit、唯一 asset SHA 与 manifest，记录兼容 tuple：Craft tree/patch/lock/toolchain/OS/arch、bridge/executor、reader/contract/schema/min_reader、Pi/Node/RPC、模型假设、check plan/转换器/数据格式。当前 installer CLI 只接本地 bundle；独立 `acquire_craft.py` helper 已提供按正式 pin 下载、校验与解包的获取能力，见 [获取指南](craft-acquisition.md)，不等于核心 installer 新增直接 fetch flag。
 7. 活动 profile/installer 部署单列；静态 verify、工具 accept、实际宿主重载/新会话加载、真实任务分别留证，不以打包或配置存在冒充加载。回退先停接单、取消并证实全部写者/preview 退出，再协调代码/包、部署注册、项目数据三层；Git 回退不能撤销业务或远端副作用，条件 restore 不覆盖用户后改。
 
 ## 4. 命令入口与新机器
@@ -82,7 +82,7 @@ owner 必须实际声明这些命令，且满足本批资格才执行。handoff 
 
 新 Workspace v1 `read_references` 必须为空；若 Builder 需文件读取规格/基线，原 owner 先准备正式 existing Workspace 和 staged readonly references，再交接，app 根不变且 spec/任务不入写根。不得清空必需引用凑通过；审过的 prompt/可读路径和真实 gate 应一致。加壳目标保留原 identity/hash，dump/伪码/动态观察保留派生来源和 limitations；原 PRIMARY/REA 在原 scope 取证后由 Spec 冻结实现，Craft 不必亲自脱壳，不能承诺全软件 1:1。
 
-新机器获准联网后可运行现有 `python -B scripts/build_craft_bundle.py acquire-pi --stage .local/pi-upstream`：官方 Node 24.20.0/Pi 1.5.0，全 npm lock/checksum、完整依赖，本次 Windows 实测 123 包；读取新生成的 `acquisition-result.json` 的四项 `installer_pi_options`，不复制旧机器路径。一个 Pi 依赖的授权正文仍 unknown，`release-pi` 阻断，不重分发 Pi ZIP、不裁剪包。native 编译依赖许可缺口也须独立关闭；candidate 缺许可模式不获发布资格。REA 6.8.0、Spec Kit 1.3.1 保留官方固定来源，不改官方源；凭据只用本机 env reference，经官方 resolver 解析，不 clone 个人配置。
+新机器先按 [公开获取指南](craft-acquisition.md) 使用 helper 0.1.1 获取正式 native bundle/reverse；下载 stage 的64 UTF-16 units根预算与安装根预算分别核。全自动 fresh 网络最后一次匿名 API 403、无 complete，已核 GET/hash 不能当作完整换机实测。再获准联网运行现有 `python -B scripts/build_craft_bundle.py acquire-pi --stage .local/pi-upstream`：官方 Node 24.20.0/Pi 1.5.0，全 npm lock/checksum、完整依赖，本次 Windows 实测 123 包；读取新生成的 `acquisition-result.json` 的四项 `installer_pi_options`，不复制旧机器路径。一个 Pi 依赖的授权正文仍 unknown，`release-pi` 阻断，不重分发 Pi ZIP、不裁剪包。native 编译依赖许可缺口也须独立关闭；candidate 缺许可模式不获发布资格。REA 6.8.0、Spec Kit 1.3.1 保留官方固定来源，不改官方源；凭据只用本机 env reference，经官方 resolver 解析，不 clone 个人配置。
 
 输入至少包括接收后的任务/研究引用、原目标身份、允许成果根、源码起点、冻结检查计划、种子/基线和显式模型许可；缺项在创建 Workspace、租约或启动模型前拒绝。执行配置还需 driver/instructions/provider manifest 的实际路径与摘要，凭据字段只列环境变量名称。输出应能追到本轮输入、源码前后差异、真实产物、逐项检查与进程清理；公开摘要不含原始消息体、凭据值或私人端点。
 

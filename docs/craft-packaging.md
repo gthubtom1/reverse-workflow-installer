@@ -7,6 +7,17 @@ The offline packaging tests can run on other hosts; that does not qualify native
 
 ## Present evidence and blockers
 
+Core installer v0.7.0, native Craft-Pi v0.1.0 and reverse v1.9.0 are separately
+published. The [Windows x64 pin](../releases/windows-x64.json) is the authority for
+Craft/reverse release identities. Use the independent acquisition helper
+`craft-acquisition-v0.1.1` (or main containing that fix) via the
+[acquisition guide](craft-acquisition.md) to download and verify those inputs;
+the core installer continues to consume a local bundle. The last fully fresh
+network acquisition attempt stopped at an anonymous GitHub API 403 without
+complete. Verified GET/hash checks are not a complete new-computer test, nor a
+claim that every network will fail. Release assets do not qualify the local
+host, provider or business behavior.
+
 An actual official standalone Pi 1.5.0 npm distribution has been acquired under
 `.local/packaging/`, with installation scripts disabled, a v3 integrity lock and
 all-file SHA256 inventory. Its CLI version and a no-model RPC `get_state` probe
@@ -27,8 +38,8 @@ Executor prepare/validate/typed-return source is imported only from its final
 reviewed complete manifest. No old source hash is a default pin. The combined
 freeze binds exact original production/Cargo bytes, separately hashed portable
 transformations and all meaningful tests/fixtures/helpers. A complete checkout
-requires the authorized maintainer to commit those sources; packaging does not
-stage, commit or publish.
+must retain those committed sources; packaging itself does not stage, commit or
+publish. Historical candidate freezes are not the current release identity.
 
 Historical candidate ZIPs remain immutable. Their passed isolated install/update/
 conditional restore/source-drift drill qualifies the installer mechanism for that
@@ -44,8 +55,8 @@ acceptance. Public test tools must be explicit environment/CLI inputs.
 
 ## Source freeze and native build
 
-Do this only after the bridge, executor and policy owners finish their fixes and
-the lead freezes the reviewed inputs. Supply the complete ordered policy patches,
+For a new build, do this only after the bridge, executor and policy owners finish
+their fixes and the lead freezes the reviewed inputs. Supply the complete ordered policy patches,
 a reviewed notices directory (including GNU DLL license texts), and the executor's
 real entry protocol. Do not substitute the bridge README or an assumed CLI shape
 for the executor's full input/output/error/lifecycle contract.
@@ -57,7 +68,7 @@ private qualification tree:
 python -B scripts/build_craft_bundle.py snapshot-bridge --source <approved-driver-source> --manifest <approved-driver-SOURCE-MANIFEST.json> --source-tree-sha256 <current-lead-approved-tree-sha256>
 ```
 
-After the remaining owners freeze, supply the canonical bridge path to `freeze`:
+For a newly reviewed source freeze, supply the canonical bridge path to `freeze`:
 
 ```text
 python -B scripts/build_craft_bundle.py freeze --bridge adapters/craft-pi/runtime/bridge --executor <frozen-executor> --series adapters/craft-pi/runtime/patches/series.json --series-sha256 <approved-portable-series-sha256> --patch <runtime/patches/first.patch> --patch <runtime/patches/next.patch> --notices <reviewed-notices> --protocol <reviewed-entry-protocol.md>
@@ -213,9 +224,11 @@ installer_pi_options: all four explicit runtime options generated on this comput
 No personal Pi/Web settings, auth, models, MCP or sessions are copied.
 
 The command's public entry supervises its entire worker in the existing owned
-Windows Job (or Unix process group) with a **600-second total wall deadline**.
-`--deadline-seconds` can shorten it to 1..600 seconds. Socket timeouts are not used
-as a substitute for this total limit. Timeout or unknown cleanup blocks completion
+Windows Job (or Unix process group) with an **execution timeout of at most 600
+seconds, followed by up to 5 seconds for cleanup**.
+`--deadline-seconds` can shorten the execution timeout to 1..600 seconds. This is
+different from `acquire_craft.py`, whose total budget reserves time for cleanup.
+Socket timeouts are not used as a substitute for the owned-process deadline. Timeout or unknown cleanup blocks completion
 and removes a premature acquisition-result receipt in the new stage. Already
 existing output directories are refused before any command is launched.
 The network boundary is nodejs.org plus exact registry.npmjs.org URLs/integrities
@@ -246,8 +259,9 @@ root, pointing `--craft-bundle` at the real output and the four Pi options at th
 separate standalone distribution. Node/entry/distribution are explicit; no path
 to the original build machine is required. Move the complete distribution and
 bundle, then create a new plan with their destination paths. Existing frozen
-plans intentionally reject source root movement. Once a real reviewed native
-bundle exists, the generated acquisition receipt supplies the Pi options directly:
+plans intentionally reject source root movement. With a real reviewed native
+bundle (including the pinned release obtained through the acquisition helper),
+the generated Pi acquisition receipt supplies the runtime options directly:
 
 ```python
 import json
@@ -266,7 +280,9 @@ subprocess.run([
 ], check=True)
 ```
 
-This does not claim the still-pending native bundle/fresh install was tested.
+This example shows parameter handoff, not proof of a complete fresh-machine
+installation. The current release exists; qualification on each destination
+machine still requires separate evidence.
 Apply/verify use the existing installer transaction commands in craft-install.md.
 The acquisition root must be retained as the receipt's explicit external runtime.
 
@@ -284,11 +300,14 @@ asset. No raw Pi/Node closure is embedded in our native Craft bundle.
 A successful native release preparation writes a ZIP with stable
 member ordering/timestamps, a real SHA256 sidecar, upload-plan JSON and release
 body Markdown. It performs no upload, tag creation, release or push. The upload
-plan deliberately has `published: false` and `release_url: null`. A real future
-asset must be published by the approved owner, then its real repository/tag/
-commit/unique asset URL and digest resolved and reviewed before adding an
-installer pin. No remote download is added to the installer CLI in this phase;
-its current local contract and explicit compatibility pin remain unchanged.
+plan deliberately has `published: false` and `release_url: null`: these describe
+the command's output, not the current public release status. Craft-Pi v0.1.0 is
+already published and pinned. Any subsequent asset must be published by the
+approved owner, then its real repository/tag/commit/unique asset URL and digest
+resolved and reviewed before a new pin is accepted. Existing immutable tags and
+historical archives retain their identities. The independent acquisition helper
+provides actual public download; no direct fetch flag is added to the core
+installer CLI, whose local bundle contract remains unchanged.
 The ZIP reader validates all members before extraction and rejects path escapes,
 case collisions, links, encrypted members, credential/profile paths and empty
 archives. Extraction alone never certifies a Craft bundle; run its full gate.
