@@ -1,0 +1,11 @@
+{
+  "name": "pi-remote-access",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone Pi Web remote access menu with vault-only password storage",
+  "license": "MIT",
+  "engines": { "node": ">=22.19.0" },
+  "pi": { "extensions": ["./extensions/remote.ts"] },
+  "scripts": { "test": "node --experimental-strip-types --test test/*.test.mjs" }
+}
