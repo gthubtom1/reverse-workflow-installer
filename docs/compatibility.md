@@ -1,6 +1,6 @@
 # 兼容与验证状态
 
-本次安装器与 Pi 入口包为 0.6.1；安装事务协议保持 0.2.0，以兼容已有回执。Python 3.11+ 标准库。最新稳定版本在每次 plan 按所选组件解析，不把研究基线永久固定成安装目标。shell-guard 当前冻结目标为已发布的 0.3.0。
+本次安装器与 Pi 入口包为 0.7.0；安装事务协议保持 0.2.0，以兼容已有回执。Python 3.11+ 标准库。最新稳定版本在每次 plan 按所选组件解析，不把研究基线永久固定成安装目标。shell-guard 当前冻结目标为已发布的 0.3.0。
 
 | 项目 | 已核官方文档/源码 | 本仓离线验证 | 宿主真实加载/任务 |
 |---|---|---|---|
@@ -9,7 +9,7 @@
 | 增强 reverse release/main | 固定用户仓库；RULES → 原 master-route → PRIMARY；已有薄 Codex 插件 | 本地工作副本只读身份检查、回执定位 | 专业路由/端到端任务由主流程验证 |
 | 旧 project-continuity receipt | 新计划不再解析、加载或写入该组件；更新在 receipt 能唯一识别 Pi 包注册时移除注册，否则明确失败。旧包目录保留为历史缓存，不作为活动配置 | 新增离线回归覆盖唯一注册、过滤注册和重复注册 | 不代表插件仍受支持；需单独验证更新后的宿主加载 |
 | Pi shell-guard 0.3.0 | 独立 `@toti/pi-shell-guard`、唯一 `./index.ts`；使用 `src/readonly.mjs` AST/Node-helper 与随包固定的 ISC `unbash` 文件，不在目标机安装 npm 依赖。目标 `shell-guard-v0.3.0` 已发布并固定 commit/tree | 安装器离线回归覆盖默认关闭、Pi 限定、本地/远程身份冻结、旧回执更新、配置保留、准确迁移、重复/hub 拒绝、漂移和事务回退；插件107项测试、258项惰性Bash的实际SDK事件检查及Ubuntu/Windows CI通过 | 本次没有部署或修改真实 profile；宿主加载、拦截事件与 Everything 可用性未验证。常见只读 `for`/`if`/`test`/`echo`/`printf` 允许、单个字面项目内 `rm` 移到 TEMP；硬保护和 Everything 不变，且不弹确认窗口。不是沙箱；详见 [安装说明](shell-guard-install.md) |
-| Pi 可选 Craft 本地 bundle | 固定 Craft base 0326；独立 contract/min_reader/capabilities、全量工件/hash、显式 Pi Node/CLI/version、相对 bundle 入口；默认关闭且要求显式 reverse/Spec Kit | 离线真实文件行为覆盖精确复制、漂移、缺文件、重复注册、旧 receipt、并列更新、失败/重试、pending、用户编辑与 receipt 最后恢复；使用 toy 工件，未构建产品包 | RPC/policy/owner 联调、真实 Pi/provider、宿主加载、取消及业务切片未验证；远程兼容资产未发布，公共换机分发 unsupported；见 [指南](craft-install.md) |
+| Pi 可选 Craft 本地 bundle | 正式 core v0.7.0、native Craft-Pi v0.1.0、reverse v1.9.0 分开发布，[Windows x64 pin](../releases/windows-x64.json) 绑定实际身份；独立 acquisition helper v0.1.1 提供获取。默认关闭且要求显式 reverse/Spec Kit、完整 bundle 与独立 Pi Node/CLI/version | 离线真实文件行为覆盖复制、漂移、缺文件、重复注册、旧 receipt、并列更新、失败/重试、pending、用户编辑与 receipt 最后恢复；早期 toy 夹具只证明机制，产品工件与源码回归记录单列 | 资产存在不证明本机 owner/Pi/provider、宿主加载、取消及业务接受。新电脑全自动 fresh 网络获取最后记录为匿名 API 403、无 complete；已核 GET/hash 不是完整换机实测。当前 native 限 Windows x64；见 [获取](craft-acquisition.md)及[安装指南](craft-install.md) |
 | Pi grilling 伴随技能 | 官方 `grilling`、`domain-modeling`、`grill-me`、`grill-with-docs` 保持原文；installer 只生成 `pi-grill-me`、`pi-grill-with-docs` wrapper | Node 离线夹具验证缺依赖时零写入、幂等、官方文件不变、wrapper 路径和引用一致 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
 | Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并、全局/项目入口、子集扩展与升级反例 | 本机部署 verify 通过；Codex 新会话实际触发仍单独验收 |

@@ -15,7 +15,7 @@
 1. 先读取本说明、当前仓库的 AGENTS.md，以及目标电脑的 Pi Web/Pi 配置。
 2. 解析目标 agent 目录：优先读取 PI_CODING_AGENT_DIR；否则使用当前用户的 %USERPROFILE%\.pi\agent\。
 3. 只创建目标目录及其 agents 子目录。
-4. 将本目录的 AGENTS.md 和 agents/*.md 复制到目标目录。
+4. 从仓库的 [resources/pi-agent-profiles/](../resources/pi-agent-profiles/README.md) 复制 `AGENTS.md` 和 `agents/*.md` 到目标目录；本说明位于 `docs/`，不是模板源目录。
 5. 如果目标文件不存在，可以创建。
 6. 如果目标文件已经存在且字节相同，保持不变。
 7. 如果目标文件存在但内容不同，先停止并报告冲突；不要静默覆盖用户修改。可以把候选内容保存为同名的 .new 文件，等待用户决定。

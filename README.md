@@ -27,7 +27,7 @@ Craft 的后续入口：
 
 这些资源不修改 Python 安装器协议，也不包含模型账号、凭据、settings、sessions 或 memory。安装代理应先读取对应说明，按目标电脑实际的 `PI_CODING_AGENT_DIR`、用户目录和 skills 根目录复制文件；已有内容不同的文件先报告冲突，不要静默覆盖。
 
-第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)。它说明三个核心组件和 Pi `grilling` 伴随技能的分工、官方技能安装与 Pi 适配、`verify` 与 `accept` 的区别、宿主重载方式，以及可以直接复制到新对话的工作流开场白。
+第一次安装完成后，请先阅读 [安装后快速开始](docs/quick-start.md)，其中的 [独立复刻完整复制模板](docs/quick-start.md#需要独立复刻项目时) 串起原生 Spec、默认 Worker/可选 Craft、失败返回和独立验收；[工作流手册](docs/reverse-workflow-playbook.md) 说明分析分支与续做。最新操作指导看 main 的 docs；实际安装器和资产仍依正式 pin 固定，旧 tag 源码附带的 docs 保留历史，不能据其旧状态覆盖当前指导；执行参数依对应正式本地 help/合同核实。
 
 如果你需要知道一个目标从哪里开始、如何判断加壳、什么时候进入 REA、如何从 Triage 推进到 Static/Dynamic/Synthesis，请阅读 [Reverse 工作流使用手册](docs/reverse-workflow-playbook.md)。零基础用户直接从其中的 [零基础一键开始](docs/reverse-workflow-playbook.md#零基础一键开始) 复制模板即可。
 

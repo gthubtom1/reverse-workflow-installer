@@ -12,9 +12,9 @@
 
 ## 给 AI 安装代理的操作
 
-1. 读取本目录和目标主机的 Pi 配置。
+1. 读取本说明、仓库的 [resources/pi-agent-skills/README.md](../resources/pi-agent-skills/README.md) 和目标主机的 Pi 配置。
 2. 找到当前用户实际使用的全局 skills 目录；默认使用当前用户的 %USERPROFILE%\.agents\skills\。
-3. 复制本目录下每个技能目录及其 SKILL.md。
+3. 从仓库 `resources/pi-agent-skills/` 复制每个技能目录及其 `SKILL.md`；本说明的 `docs/` 不是技能源目录。
 4. 目标技能不存在时创建；内容相同则保持不变。
 5. 目标技能已经存在但内容不同，先报告冲突，不要静默覆盖。
 6. 不复制 auth.json、models.json、settings.json、session、memory 或凭据。

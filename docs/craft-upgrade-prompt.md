@@ -20,7 +20,7 @@ DOWNSTREAM_STATE：<未部署/已装版本与实际 host/config 根、用户后�
   迁移前完整副本、活动 writer/lease、旧包与 rollback receipt 的当前位置>
 EVIDENCE_OUTPUT：<本轮公开摘要/私有日志根；不得公开秘密或用户数据>
 
-先读 AGENTS、docs/craft-upstream-maintenance.md、craft-install.md、craft-packaging.md，
+先读 AGENTS.md、docs/craft-upstream-maintenance.md、docs/craft-install.md、docs/craft-packaging.md，
 以及 runtime 的 series、FROZEN/packaged manifests、snapshot-origin、正式 entry protocol。
 核 Git status/HEAD、实物 hash 和当前 receipt；公开发布状态另按 GitHub tag/commit/asset
 读取，未查证保持 unknown。每轮基线以实际 source manifest 为准；本次 fixed0326、

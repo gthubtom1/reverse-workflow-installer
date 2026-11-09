@@ -28,7 +28,7 @@ python -B scripts/acquire_craft.py --pin-file releases/windows-x64.json --stage 
 
 stage 的父目录必须已存在，stage 本身必须不存在，禁止路径 symlink/junction。不覆盖用户目录、不复用未完成目录；旧失败残片保持原状，下次选新的短 stage。此门是下载stage门；安装根的 Craft plan/apply 路径门另见 [安装说明](craft-install.md)，两者不互相替代。
 
-成功时 `complete.json` 仅由外层 supervisor 在 worker 已退出、外层 Windows Job 清理确认、结果与包/源码身份再次一致后生成。失败、超时或 cleanup unknown 不写 complete。`acquisition-candidate.json` 只是 worker 候选结果，不是完成标记。
+成功时 `complete.json` 仅由外层 supervisor 在 worker 已退出、外层 Windows Job 清理确认、候选 JSON/pin/argv 一致性检查通过后生成；全量文件 hash 在 worker 内核验，supervisor 不独立重算所有文件摘要。失败、超时或 cleanup unknown 不写 complete。`acquisition-candidate.json` 只是 worker 候选结果，不是完成标记。
 
 `installer-options.json` 是两个准确参数的 JSON argv 数组；`installer-options.txt` 是供复制的当前平台命令行转义形式。将它与现有 acquire-pi 产生的精确 Pi 参数拼到 installer plan 中，另外明确提供自己的 root、agent、project 及 core 组件。示意：
 
@@ -60,7 +60,7 @@ GitHub 生成的 source ZIP 不承诺永久字节不变。本 pin 记录发布�
 3. 复用既有 safe_extract_zip，先检查整包再提取，拒绝绝对/逃逸路径、链接、重复/大小写碰撞、加密、凭据路径及解压大小/文件数量超限。`.github` 等合法源码文档不被笼统排除。Craft ZIP 直接包含包根文件；reverse ZIP 必须只含 `reverse-skill-<exactcommit>/` 一个项目根。
 4. 复用 `craft.bundle` 和 `craft.reverse_contract` 检查实际 manifest、平台、运行工件、patch/base、VERSION/R46四文件身份与 pin manifest/descriptor 摘要。
 5. 在新 stage clone reverse 的精确 tag（禁交互/全局配置/项目hooks/子模块递归），核实际 HEAD 为 pin commit、工作树干净。通过 `git ls-tree -r -z <commit>` 与 `git cat-file --batch` 逐项保留 canonical blob SHA256；再以原生 `git -c core.autocrlf=false archive --format=zip <commit>` 计算导出文件摘要，与固定 codeload archive 的全部路径/原字节 hash 精确比较。GitHub codeload 与 Git archive 都会应用仓内 `.gitattributes`：例如 `*.ps1 eol=crlf` 的导出和 checkout 合法具有 CRLF，canonical blob 可为 LF；不能把两种身份混同。不手工改换行、不取消比较、不修改来源 attributes。拒绝缺失/额外（含 ignored）文件、untracked、脏树、submodule/link。结果分别记录 `reverse_canonical_files`（git-commit-blob-sha256）、`reverse_archive_files`（git-archive-export-file-sha256）与 `reverse_files`（checkout-raw-file-sha256）；实际 VERSION/descriptor/四 Markdown 文件仍执行原 reverse_contract。Git checkout 保留 installer 所需完整 Git identity，不向解压目录伪造 .git，也不需新增 reverse-pin 参数。
-6. 再解析一次 release 元数据，确认本次获取过程中身份未变化；写候选、参数。外层核 cleanup 和文件身份后写 complete，其中保留发布 pin、API解析身份、实际 bundle/源码摘要及 qualification。
+6. 再解析一次 release 元数据，确认本次获取过程中身份未变化；worker 内核验全量文件 hash 后写候选、参数。外层核生命周期/cleanup 及候选 JSON、pin、argv 一致性后写 complete，不独立重算所有文件摘要；其中保留发布 pin、API解析身份、实际 bundle/源码摘要及 qualification。
 
 单下载体最多2GiB，API JSON最多4MiB，解压沿用既有2GiB/100000项限制。网络 socket timeout20秒只是一次I/O上限；整个下载/解压/Git流程被 `packaging_process.run_owned` 的外层 Windows Job 总wall deadline覆盖（默认600秒，允许1..600，内含有限cleanup）。内部 Git/cat-file 通过 `subprocess.run` 直接继承该 Job，不再调用嵌套 run_owned、不创建新session/group/Job。单条Git timeout失败不认证清理；外层必须观测整个Job退出才可完成。持续慢流、Git shell与其监听后代也受外层Job控制。本入口明确不提供 Unix acquisition，避免把自身创建新session导致的后代遗漏称为外部逃逸。
 
