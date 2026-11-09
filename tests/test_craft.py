@@ -655,7 +655,9 @@ class CraftTests(unittest.TestCase):
         old = self.base / "original-reader"
         old.mkdir()
         for name in ("workflow.py", "configuration.py", "versions.py", "shell_guard.py", "package_utils.py"):
-            shown = subprocess.run(["git", "-C", str(REPO), "show", "ee926fa:scripts/" + name], capture_output=True, check=True)
+            # Use the immutable public v0.6.1 commit, not the local integration
+            # history (whose tree is equal but whose commit is absent in CI).
+            shown = subprocess.run(["git", "-C", str(REPO), "show", "02341811920dc419eb4af27eb836f8e683eddc96:scripts/" + name], capture_output=True, check=True)
             atomic(old / name, shown.stdout)
         frozen = self.base / "schema2-plan.json"
         atomic(frozen, encode_json(plan))
