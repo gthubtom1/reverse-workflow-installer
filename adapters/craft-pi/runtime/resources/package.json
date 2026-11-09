@@ -1,0 +1,17 @@
+{
+  "name": "reverse-workflow-craft-pi",
+  "version": "0.7.0",
+  "private": true,
+  "license": "MIT",
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "skills": [
+      "./skills/reconstruction-execution"
+    ],
+    "extensions": [],
+    "prompts": [],
+    "themes": []
+  }
+}

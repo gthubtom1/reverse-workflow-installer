@@ -1,0 +1,1 @@
+Use the approved Rust application copy. Build with the frozen exact command. The owner executes an external direct-exec-v1 fresh-copy-v1 scenario; the Builder cannot change the oracle, task authority or expected hash.

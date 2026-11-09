@@ -1,0 +1,18 @@
+{
+  "name": "Cargo.toml",
+  "path": "x86_64/Cargo.toml",
+  "sha": "a5723cf5d9e8f9c59b469d748bf9753307f605ec",
+  "size": 467,
+  "url": "https://api.github.com/repos/retep998/winapi-rs/contents/x86_64/Cargo.toml?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+  "html_url": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/x86_64/Cargo.toml",
+  "git_url": "https://api.github.com/repos/retep998/winapi-rs/git/blobs/a5723cf5d9e8f9c59b469d748bf9753307f605ec",
+  "download_url": "https://raw.githubusercontent.com/retep998/winapi-rs/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/x86_64/Cargo.toml",
+  "type": "file",
+  "content": "W3BhY2thZ2VdCm5hbWUgPSAid2luYXBpLXg4Nl82NC1wYy13aW5kb3dzLWdu\ndSIKdmVyc2lvbiA9ICIwLjQuMCIKYXV0aG9ycyA9IFsiUGV0ZXIgQXRhc2hp\nYW4gPHJldGVwOTk4QGdtYWlsLmNvbT4iXQpsaWNlbnNlID0gIk1JVC9BcGFj\naGUtMi4wIgpkZXNjcmlwdGlvbiA9ICJJbXBvcnQgbGlicmFyaWVzIGZvciB0\naGUgeDg2XzY0LXBjLXdpbmRvd3MtZ251IHRhcmdldC4gUGxlYXNlIGRvbid0\nIHVzZSB0aGlzIGNyYXRlIGRpcmVjdGx5LCBkZXBlbmQgb24gd2luYXBpIGlu\nc3RlYWQuIgpyZXBvc2l0b3J5ID0gImh0dHBzOi8vZ2l0aHViLmNvbS9yZXRl\ncDk5OC93aW5hcGktcnMiCmtleXdvcmRzID0gWyJ3aW5kb3dzIl0KaW5jbHVk\nZSA9IFsiL3NyYy8qIiwgIi9saWIvKiIsICIvQ2FyZ28udG9tbCIsICIvTElD\nRU5TRS1NSVQiLCAiL0xJQ0VOU0UtQVBBQ0hFIiwgIi9idWlsZC5ycyJdCmJ1\naWxkID0gImJ1aWxkLnJzIgo=\n",
+  "encoding": "base64",
+  "_links": {
+    "self": "https://api.github.com/repos/retep998/winapi-rs/contents/x86_64/Cargo.toml?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+    "git": "https://api.github.com/repos/retep998/winapi-rs/git/blobs/a5723cf5d9e8f9c59b469d748bf9753307f605ec",
+    "html": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/x86_64/Cargo.toml"
+  }
+}

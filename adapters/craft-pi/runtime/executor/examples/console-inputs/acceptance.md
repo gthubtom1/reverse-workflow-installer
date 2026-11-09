@@ -1,0 +1,1 @@
+The lead accepts the referenced designed inputs for bounded implementation only. Actual task completion and independent acceptance remain with the original Spec runner and lead. Native REA claims remain unknown.

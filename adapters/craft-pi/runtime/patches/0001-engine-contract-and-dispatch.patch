@@ -1,0 +1,826 @@
+diff --git a/crates/engine/src/lib.rs b/crates/engine/src/lib.rs
+index 0137fecd729e2068357cf05c4ea03464f439aca1..e5c5c78b4ba8477d8bf9a54a1876389c54fa64bd 100644
+--- a/crates/engine/src/lib.rs
++++ b/crates/engine/src/lib.rs
+@@ -6,6 +6,7 @@
+ #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
+ 
+ pub mod clean_room;
++pub mod execution_policy;
+ 
+ /// Tools an agent app may be told to approve on its own side (Codex's `approval_mode`): each one
+ /// asks the person itself (`Effects::needs_consent`), so approving it there skips nothing.
+@@ -47,6 +48,7 @@ use craft_anything_evidence::{ErrorCode, ToolError};
+ use craft_anything_platform::sync::{Mutex, MutexGuard};
+ use serde_json::Value;
+ use std::sync::PoisonError;
++use std::path::PathBuf;
+ 
+ /// Whether the caller has the user's consent for a tool that runs code or changes a device.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+@@ -112,6 +114,7 @@ impl Availability {
+ pub struct Engine {
+     registry: Registry,
+     session: Mutex<Session>,
++    builder_policy: Option<std::sync::Arc<execution_policy::AcceptedResearch>>,
+ }
+ 
+ /// A handle to the engine a tool runs in, for tools that start work which calls back into it (a
+@@ -120,7 +123,7 @@ pub struct EngineRef(pub std::sync::Weak<Engine>);
+ 
+ impl Engine {
+     pub fn new(session: Session) -> Self {
+-        Engine { registry: Registry::with_all_tools(), session: Mutex::new(session) }
++        Engine { registry: Registry::with_all_tools(), session: Mutex::new(session), builder_policy: None }
+     }
+ 
+     /// The engine as most apps use it: shared, with tools from higher layers (`extra`, e.g. the
+@@ -139,10 +142,20 @@ impl Engine {
+         std::sync::Arc::new_cyclic(|me| {
+             let mut session = session;
+             session.ext.insert(std::sync::Arc::new(EngineRef(me.clone())));
+-            Engine { registry: Registry::new(tools).with_runtime(runtime), session: Mutex::new(session) }
++            Engine { registry: Registry::new(tools).with_runtime(runtime), session: Mutex::new(session), builder_policy: None }
+         })
+     }
+ 
++    /// A dedicated Builder engine. Never attach this policy to the owner's checking engine.
++    /// The caller must use a separate session whose inbox points at the admitted workspace.
++    pub fn bounded_builder(session: Session, policy: std::sync::Arc<execution_policy::AcceptedResearch>) -> Self {
++        Engine { registry: Registry::with_all_tools(), session: Mutex::new(session), builder_policy: Some(policy) }
++    }
++
++    pub fn builder_policy(&self) -> Option<&execution_policy::AcceptedResearch> {
++        self.builder_policy.as_deref()
++    }
++
+     pub fn registry(&self) -> &Registry {
+         &self.registry
+     }
+@@ -241,6 +254,9 @@ impl Engine {
+         let spec = *self.registry.get(id).ok_or_else(|| {
+             ToolError::invalid(format!("No tool named {id}")).with_remediation("List tools with `craft-anything-cli commands` or the command palette.")
+         })?;
++        if let Some(policy) = &self.builder_policy {
++            policy.authorize(spec.id, &params, spec.effects)?;
++        }
+         // Stop works while waiting for the session, and a holder that looks stuck is an error here,
+         // not a wait forever. Tools are long jobs: the label says so (they have their own deadlines).
+         let cancel = opts.cancel.clone();
+@@ -254,6 +270,13 @@ impl Engine {
+             }
+         };
+         session.label(spec.id);
++        if let Some(policy) = &self.builder_policy {
++            let root = session.ext.get::<inbox::InboxDir>().and_then(|d| d.0.parent().map(PathBuf::from));
++            let expected = execution_policy::real(&policy.app_root)?.parent().map(PathBuf::from);
++            if root.as_deref().and_then(|r| execution_policy::real(r).ok()) != expected {
++                return Err(execution_policy::refusal("identity-mismatch", "Builder inbox does not belong to the accepted workspace."));
++            }
++        }
+         if session.clean_room() && !clean_room::allows(spec.id) {
+             return Err(clean_room::refusal(spec.id));
+         }
+@@ -273,7 +296,7 @@ impl Engine {
+             }
+             return Err(err);
+         }
+-        if spec.effects.needs_consent() && opts.consent != Consent::Granted {
++        if spec.effects.needs_consent() && opts.consent != Consent::Granted && self.builder_policy.is_none() {
+             let allowed = !session.settings.ask_before_running || session.project.as_ref().is_some_and(|p| p.is_allowed(spec.id));
+             if !allowed {
+                 return Err(ToolError::new(ErrorCode::ConsentRequired, format!("{} runs code or changes a device, so it needs your OK first.", spec.title))
+@@ -281,6 +304,9 @@ impl Engine {
+                     .with_details(serde_json::json!({"tool": spec.id})));
+             }
+         }
++        if let Some(policy) = &self.builder_policy {
++            session.ext.insert(std::sync::Arc::new(execution_policy::BuilderCallPolicy(policy.clone())));
++        }
+         let run = spec.run;
+         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+             let mut ctx = Ctx { tool: spec.id, session: &mut session, cancel: opts.cancel.clone(), progress: opts.progress, caller: opts.caller };
+diff --git a/crates/engine/src/tools/interaction_tools.rs b/crates/engine/src/tools/interaction_tools.rs
+index 0c39967238f89d7e4eec85c76d1a0d46ef170541..926f051408ba1a8dde4be76aa71ada651b89b654 100644
+--- a/crates/engine/src/tools/interaction_tools.rs
++++ b/crates/engine/src/tools/interaction_tools.rs
+@@ -407,6 +407,10 @@ pub fn decide(ws: Option<&Workspace>, tool: &str, input: &Value) -> Decision {
+ /// shape: `Write {file_path}`, `Bash {command}`…): allowed by the policy or Auto mode, refused, or
+ /// asked of the person through the session's inbox. `Ok(Err(why))` means don't do it.
+ pub(crate) fn approve(ctx: &mut Ctx<'_>, tool: &str, input: &Value) -> Result<Result<(), String>, ToolError> {
++    if ctx.session.ext.get::<crate::execution_policy::BuilderCallPolicy>().is_some() {
++        // The immutable Engine policy already checked this exact tool and its arguments.
++        return Ok(Ok(()));
++    }
+     let inbox = inbox(ctx);
+     let (auto_mode, clean_room) = (ctx.session.settings.auto_mode, ctx.session.clean_room());
+     let cancel = ctx.cancel.clone();
+diff --git a/crates/engine/src/execution_policy.rs b/crates/engine/src/execution_policy.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..066056e51fd0dc31916954d50cbfc30438f67638
+--- /dev/null
++++ b/crates/engine/src/execution_policy.rs
+@@ -0,0 +1,562 @@
++//! Accepted external research for a bounded implementation run. This is an adapter contract,
++//! never a native evidence import and never an operating-system sandbox.
++use crate::{Effects, workspace::{CheckResult, TargetRef, Workspace}};
++use craft_anything_evidence::{ErrorCode, ToolError};
++use serde::{Deserialize, Serialize};
++use serde_json::{Value, json};
++use sha2::{Digest, Sha256};
++use std::{collections::BTreeSet, fs, io::Read, path::{Component, Path, PathBuf}};
++
++pub const CONTRACT_VERSION: u32 = 1;
++/// Public name used by run options; only the accepted-research modes are admitted.
++pub type ExecutionPolicy = AcceptedResearch;
++/// Present only during dispatch in a dedicated bounded Builder engine.
++pub struct BuilderCallPolicy(pub std::sync::Arc<AcceptedResearch>);
++pub const BUILDER_TOOLS: &[&str] = &["build_files_list", "build_file_read", "build_file_write", "build_file_edit", "build_command_run", "build_checklist"];
++const MAX_FILE: u64 = 64 * 1024 * 1024;
++
++pub fn refusal(reason: &str, message: impl Into<String>) -> ToolError {
++    ToolError::new(ErrorCode::BadInput, message).with_details(json!({"reason": reason}))
++}
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum ExecutionMode { Buildcheck, RefineOnly }
++
++#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct HashedRef { pub path: PathBuf, pub sha256: String }
++impl HashedRef {
++    pub fn read_verified(&self) -> Result<Vec<u8>, ToolError> {
++        let bytes = read_capped(&real(&self.path)?)?;
++        if format!("{:x}", Sha256::digest(&bytes)) != self.sha256 {
++            return Err(refusal("identity-mismatch", "Reference changed while reading its bytes."));
++        }
++        Ok(bytes)
++    }
++    pub fn verify(&self) -> Result<PathBuf, ToolError> {
++        if self.sha256.len() != 64 || !self.sha256.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()) {
++            return Err(refusal("identity-mismatch", "A reference requires a lowercase SHA-256."));
++        }
++        let path = real(&self.path)?;
++        if hash_file(&path)? != self.sha256 { return Err(refusal("identity-mismatch", format!("Reference changed: {}", self.path.display()))); }
++        Ok(path)
++    }
++}
++
++#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct ModelIdentity { pub provider: String, pub model: String, pub effort: String }
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct ModelPermission {
++    pub allowed: bool,
++    pub expected: ModelIdentity,
++    /// Frozen identity of the selected deterministic RPC transport and permission implementation.
++    pub backend_id: String,
++    pub permission_contract: String,
++}
++
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct Identity {
++    pub case_ref: HashedRef, pub scope_ref: HashedRef, pub workitem_ref: HashedRef,
++    pub feature_ref: HashedRef, pub acceptance_ref: HashedRef, pub task_ids: Vec<String>,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct Original {
++    pub target: TargetRef,
++    pub target_identity: String,
++    pub bundle: HashedRef,
++    pub traceability: HashedRef, pub scenarios: HashedRef,
++    pub qualifications: HashedRef, pub environment: HashedRef,
++}
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum BaselineKind { NativeScreenshot, Console, Scenario }
++/// Origin namespaces are explicit; raw observations never acquire native evidence authority.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++pub enum ExternalOrigin {
++    #[serde(rename = "external/rea")]
++    Rea,
++    #[serde(rename = "external/observation")]
++    Observation,
++}
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum ExternalQualification { PreservedExternalRea, RawObservationReaClaimsUnknown }
++
++/// External provenance stays in its original namespace. No Craft evidence ids are manufactured.
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct ExternalArtifact {
++    pub key: String, pub kind: BaselineKind,
++    pub origin_kind: ExternalOrigin, pub evidence_id: String, pub operation: String,
++    pub provider: String, pub environment: String, pub authority: String,
++    pub limitations: Vec<String>, pub source: HashedRef, pub output: HashedRef,
++    pub converter_version: String, pub parameters: Value, pub field_mapping: Value,
++    pub losses: Vec<String>,
++}
++impl ExternalArtifact {
++    /// This qualification never mutates original claims or converts observations into REA proof.
++    pub fn qualification(&self) -> ExternalQualification {
++        match self.origin_kind {
++            ExternalOrigin::Rea => ExternalQualification::PreservedExternalRea,
++            ExternalOrigin::Observation => ExternalQualification::RawObservationReaClaimsUnknown,
++        }
++    }
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct ExternalBaseline {
++    pub version: u32, pub root: PathBuf, pub bundle_sha256: String, pub artifacts: Vec<ExternalArtifact>,
++}
++impl ExternalBaseline {
++    pub fn resolve(&self, key: &str, kind: BaselineKind) -> Result<PathBuf, ToolError> {
++        let a = self.artifacts.iter().find(|a| a.key == key && a.kind == kind)
++            .ok_or_else(|| refusal("needs-evidence", format!("Missing external baseline {key}")))?;
++        let path = a.output.verify()?;
++        if !path.starts_with(real(&self.root)?) { return Err(refusal("path-denied", "Baseline output escapes its root.")); }
++        Ok(path)
++    }
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct PlannedCheck {
++    pub id: String, pub implementation: String, pub required: bool,
++    pub baseline: Option<String>, pub kind: Option<BaselineKind>,
++    pub depends_on: Vec<String>,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct FrozenCommand { pub command: String, pub cwd: PathBuf, pub timeout_secs: u64 }
++
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct BuildInvocation {
++    /// Index in the already frozen command list; cwd and deadline are not inferred.
++    pub command_index: usize,
++    /// Exact expected outputs, relative to app/. Existing outputs are preserved before the run.
++    pub artifacts: Vec<PathBuf>,
++}
++
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct FailedRequiredCheck { pub id: String, pub task_ids: Vec<String>, pub result: CheckResult }
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct RefineFeedback {
++    pub version: u32, pub source_base_sha256: String, pub check_plan_sha256: String,
++    pub task_ids: Vec<String>, pub good_enough: f64, pub failed_checks: Vec<FailedRequiredCheck>,
++}
++
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct AcceptedResearch {
++    pub version: u32, pub mode: ExecutionMode, pub identity: Identity, pub original: Original,
++    pub baseline: ExternalBaseline,
++    pub check_plan_ref: HashedRef, pub checks: Vec<PlannedCheck>,
++    /// Digest produced by source_digest on the independent app root at admission.
++    pub source_base_sha256: String,
++    pub app_root: PathBuf, pub writable_roots: Vec<PathBuf>,
++    pub read_references: Vec<HashedRef>, pub commands: Vec<FrozenCommand>,
++    pub build: Option<BuildInvocation>,
++    /// Exact files/directories protected even when they are below a writable root.
++    pub protected_paths: Vec<PathBuf>,
++    pub kind_id: String, pub stack: String,
++    pub model: ModelPermission,
++    pub owner_id: String, pub max_wall_secs: u64,
++    /// Required only for refine-only. Its bytes identify the selected failed-check feedback.
++    pub failed_feedback: Option<HashedRef>,
++}
++
++impl AcceptedResearch {
++    pub fn references(&self) -> Vec<&HashedRef> {
++        let i = &self.identity; let o = &self.original;
++        let mut refs = vec![&i.case_ref, &i.scope_ref, &i.workitem_ref, &i.feature_ref, &i.acceptance_ref,
++            &o.bundle, &o.traceability, &o.scenarios, &o.qualifications, &o.environment, &self.check_plan_ref];
++        refs.extend(self.read_references.iter());
++        refs.extend(self.failed_feedback.iter());
++        refs
++    }
++    /// Admission is read-only, before sessions, transcript cleanup, extractor or worker creation.
++    /// Call again when a queued run is actually started.
++    pub fn preflight(&self, ws: &Workspace) -> Result<(), ToolError> {
++        if self.original.target != ws.manifest.target || ws.manifest.stack != self.stack {
++            return Err(refusal("identity-mismatch", "Workspace target/stack differs from accepted inputs."));
++        }
++        if ws.manifest.app_in_root || real(&ws.app_dir())? != real(&self.app_root)? {
++            return Err(refusal("path-denied", "The first slice requires the accepted independent existing app/ root."));
++        }
++        self.preflight_inputs()
++    }
++    /// Read-only admission using the policy's planned app root; no Workspace or output is
++    /// constructed. Existing roots/seed source are hashed; a missing app accepts only the
++    /// explicit empty-source digest. The caller must match this root/target/stack to its planned
++    /// Workspace, then start performs full admission again against the created Workspace.
++    pub fn preflight_inputs(&self) -> Result<(), ToolError> {
++        if self.version != CONTRACT_VERSION || self.baseline.version != CONTRACT_VERSION { return Err(refusal("unsupported", "Unknown accepted-research contract version.")); }
++        if matches!(self.original.target, TargetRef::None)
++            || self.original.target_identity.trim().is_empty() {
++            return Err(refusal("identity-mismatch", "Keep the original target and its capture/version identity; None is refused."));
++        }
++        if self.identity.task_ids.is_empty() || self.identity.task_ids.iter().any(|t| t.trim().is_empty())
++            || unique(&self.identity.task_ids).len() != self.identity.task_ids.len() {
++            return Err(refusal("missing-input", "Select unique feature task ids."));
++        }
++        if self.owner_id.trim().is_empty() || self.max_wall_secs == 0 || self.max_wall_secs > 86400
++            || self.kind_id.is_empty() || self.stack.is_empty() {
++            return Err(refusal("missing-input", "Freeze owner, bounded deadline, kind and stack."));
++        }
++        self.validate_model()?;
++        self.revalidate_inputs()?;
++        let app = real_parent(&self.app_root)?;
++        if self.writable_roots.is_empty() {
++            return Err(refusal("path-denied", "The first slice requires an independent existing app/ root."));
++        }
++        for root in &self.writable_roots {
++            if !real_parent(root)?.starts_with(&app) { return Err(refusal("path-denied", "Writable roots must stay in app/.")); }
++        }
++        let baseline = real(&self.baseline.root)?;
++        if baseline.starts_with(&app) || app.starts_with(&baseline) { return Err(refusal("path-denied", "External baseline must be separate from app/.")); }
++        if let TargetRef::Local { path } = &self.original.target {
++            let target = real(path)?;
++            let digest = if target.is_file() { hash_file(&target)? } else { source_digest(&target)? };
++            if digest != self.original.target_identity { return Err(refusal("identity-mismatch", "Original target hash differs from the accepted identity.")); }
++            if target.starts_with(&app) || app.starts_with(&target) { return Err(refusal("path-denied", "Original target overlaps the app.")); }
++        }
++        for r in self.references() {
++            if r.verify()?.starts_with(&app) { return Err(refusal("path-denied", "Authoritative references must be outside app/.")); }
++        }
++        if !self.read_references.is_empty() {
++            let workspace = app.parent().ok_or_else(|| refusal("path-denied", "Planned app has no workspace parent."))?;
++            let staged = real(&workspace.join("reference"))?;
++            if !staged.starts_with(real_parent(workspace)?) { return Err(refusal("path-denied", "Reference staging escapes the workspace.")); }
++            for r in &self.read_references {
++                if !r.verify()?.starts_with(&staged) { return Err(refusal("path-denied", "Read references must be staged in this workspace's reference/ directory.")); }
++            }
++        }
++        for c in &self.commands {
++            if real_parent(&c.cwd)? != app || c.command.trim().is_empty() || c.timeout_secs == 0 || c.timeout_secs > self.max_wall_secs {
++                return Err(refusal("command-denied", "Freeze each command, app cwd and timeout."));
++            }
++        }
++        self.validate_checks()?;
++        if self.checks.iter().any(|check| check.id == "build") {
++            let build = self.build.as_ref().ok_or_else(|| refusal("unsupported", "Policy build requires an explicit frozen command and expected artifacts; no inferred/no-op build passes."))?;
++            if self.commands.get(build.command_index).is_none() || build.artifacts.is_empty() {
++                return Err(refusal("unsupported", "Build command/artifact contract is incomplete."));
++            }
++            let mut seen = BTreeSet::new();
++            for artifact in &build.artifacts {
++                if !seen.insert(self.authorize_build_artifact(artifact)?) {
++                    return Err(refusal("path-denied", "Build artifacts must resolve to unique authorized output files."));
++                }
++            }
++        }
++        if self.mode == ExecutionMode::RefineOnly {
++            self.refine_feedback()?;
++            if self.source_base_sha256 == format!("{:x}", Sha256::digest([])) {
++                return Err(refusal("missing-input", "refine-only requires an existing nonempty source implementation."));
++            }
++        }
++        let source = if app.exists() { source_digest(&app)? } else { format!("{:x}", Sha256::digest([])) };
++        if source != self.source_base_sha256 { return Err(refusal("source-drift", "Source differs from the accepted starting manifest.")); }
++        Ok(())
++    }
++    pub fn validate_model(&self) -> Result<(), ToolError> {
++        let m = &self.model;
++        if !m.allowed || m.backend_id.trim().is_empty() || m.permission_contract != "pi-rpc-bounded-v1"
++            || [&m.expected.provider, &m.expected.model, &m.expected.effort].iter().any(|s| s.trim().is_empty() || s.as_str() == "auto") {
++            return Err(refusal("model-policy", "Explicit model permission, provider/model/effort and Pi RPC permission support are required."));
++        }
++        Ok(())
++    }
++    pub fn verify_actual_model(&self, actual: &ModelIdentity) -> Result<(), ToolError> {
++        self.validate_model()?;
++        if actual != &self.model.expected { return Err(refusal("model-mismatch", "Actual provider/model/effort differs from the accepted contract.")); }
++        Ok(())
++    }
++    /// Immutable inputs are rehashed before each turn/check; source is expected to change then.
++    pub fn revalidate_inputs(&self) -> Result<(), ToolError> {
++        self.revalidate_contract()?;
++        for a in &self.baseline.artifacts {
++            a.source.verify()?; self.baseline.resolve(&a.key, a.kind)?;
++        }
++        Ok(())
++    }
++    /// Immutable contract/provenance checks shared by all tasks. Per-check artifact availability
++    /// is checked separately so an optional missing baseline cannot block unrelated tasks.
++    pub fn revalidate_contract(&self) -> Result<(), ToolError> {
++        for r in self.references() {
++            let path = r.verify()?;
++            if read_capped(&path)?.iter().all(u8::is_ascii_whitespace) {
++                return Err(refusal("missing-input", "Accepted identity/qualification/bundle/check references must be nonempty."));
++            }
++        }
++        let bytes = read_capped(&self.check_plan_ref.path)?;
++        let checks: Vec<PlannedCheck> = serde_json::from_slice(&bytes).map_err(|e| refusal("missing-input", format!("Invalid check plan: {e}")))?;
++        if serde_json::to_value(&checks).ok() != serde_json::to_value(&self.checks).ok() { return Err(refusal("identity-mismatch", "Check plan differs from its hashed reference.")); }
++        if self.baseline.bundle_sha256 != self.original.bundle.sha256 || self.baseline.artifacts.is_empty() { return Err(refusal("needs-evidence", "External baseline must reference the exact original bundle.")); }
++        let app = real_parent(&self.app_root)?;
++        let baseline = real(&self.baseline.root)?;
++        if baseline.starts_with(&app) || app.starts_with(&baseline) { return Err(refusal("path-denied", "Baseline root overlaps app/.")); }
++        let mut keys = BTreeSet::new();
++        for a in &self.baseline.artifacts {
++            // Optional absence/hash drift is check-local; path escape and permissions are not.
++            let output = real_parent(&a.output.path)?;
++            let source = real_parent(&a.source.path)?;
++            if !output.starts_with(&baseline) || source.starts_with(&app) {
++                return Err(refusal("path-denied", "External artifact path escaped its accepted root."));
++            }
++            for path in [&a.source.path, &a.output.path] {
++                match fs::File::open(path) {
++                    Ok(_) => {},
++                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
++                    Err(e) => return Err(ToolError::io(path.display(), e)),
++                }
++            }
++            if !keys.insert(&a.key)
++                || (a.origin_kind == ExternalOrigin::Observation && (a.authority != "raw-observation" || craft_anything_evidence::is_evidence_id(&a.evidence_id)))
++                || [&a.key, &a.evidence_id, &a.operation, &a.provider, &a.environment, &a.authority, &a.converter_version].iter().any(|s| s.trim().is_empty())
++                || !a.parameters.is_object() || !a.field_mapping.is_object() {
++                return Err(refusal("needs-evidence", "External artifacts need unique keys and explicit original provenance/mapping."));
++            }
++        }
++        Ok(())
++    }
++    /// Before a Builder turn/tool call, keep global contract and path safety strict while
++    /// checking artifact availability only for required checks and their dependency closure.
++    pub fn revalidate_builder_inputs(&self) -> Result<(), ToolError> {
++        self.revalidate_contract()?;
++        self.validate_model()?;
++        let app = real(&self.app_root)?;
++        for root in &self.writable_roots {
++            if !real_parent(root)?.starts_with(&app) { return Err(refusal("path-denied", "Writable root escaped app/.")); }
++        }
++        for root in &self.protected_paths { real_parent(root)?; }
++        for command in &self.commands {
++            if real(&command.cwd)? != app { return Err(refusal("path-denied", "Command cwd changed.")); }
++        }
++        if let TargetRef::Local { path } = &self.original.target {
++            let target = real(path)?;
++            let digest = if target.is_file() { hash_file(&target)? } else { source_digest(&target)? };
++            if digest != self.original.target_identity { return Err(refusal("identity-mismatch", "Original target changed.")); }
++        }
++        let mut selected: BTreeSet<&str> = self.checks.iter().filter(|c| c.required).map(|c| c.id.as_str()).collect();
++        for _ in 0..self.checks.len() {
++            for check in &self.checks {
++                if selected.contains(check.id.as_str()) { selected.extend(check.depends_on.iter().map(String::as_str)); }
++            }
++        }
++        for id in selected { self.revalidate_check_inputs(id)?; }
++        Ok(())
++    }
++    pub fn revalidate_check_inputs(&self, id: &str) -> Result<(), ToolError> {
++        let check = self.checks.iter().find(|c| c.id == id).ok_or_else(|| refusal("check-plan", "Check absent from the frozen plan."))?;
++        if let Some(key) = &check.baseline {
++            let artifact = self.baseline.artifacts.iter().find(|a| &a.key == key).ok_or_else(|| refusal("needs-evidence", "Selected baseline is missing."))?;
++            artifact.source.verify().and_then(|_| artifact.output.verify())
++                .map_err(|_| refusal("needs-evidence", "Selected external baseline is missing or changed."))?;
++            self.baseline.resolve(key, artifact.kind).map_err(|_| refusal("needs-evidence", "Selected external baseline cannot resolve."))?;
++        }
++        Ok(())
++    }
++    pub fn validate_checks(&self) -> Result<(), ToolError> {
++        let mut seen = BTreeSet::new();
++        if !self.checks.iter().any(|c| c.required && c.id != "build") { return Err(refusal("check-plan", "At least one required behavioral check beyond build is needed.")); }
++        for c in &self.checks {
++            let implementation = match c.id.as_str() { "build" => "bounded-command-build-v1", "app-screenshot" => "craft-native-screenshot-v1", "external-console" => "external-console-v2", "external-scenario" => "external-scenario-v2", _ => return Err(refusal("unsupported", format!("Unsupported check {}", c.id))) };
++            if c.implementation != implementation || !seen.insert(c.id.clone()) || c.depends_on.iter().any(|d| !seen.contains(d) || d == &c.id) {
++                return Err(refusal("check-plan", "Duplicate, unreviewed or out-of-order check dependency."));
++            }
++            if c.id != "build" {
++                let kind = match c.id.as_str() { "app-screenshot" => BaselineKind::NativeScreenshot, "external-console" => BaselineKind::Console, _ => BaselineKind::Scenario };
++                if c.kind != Some(kind) { return Err(refusal("needs-evidence", "Check baseline kind mismatch.")); }
++                self.baseline.resolve(c.baseline.as_deref().ok_or_else(|| refusal("needs-evidence", "Check requires baseline key."))?, kind)?;
++            }
++        }
++        Ok(())
++    }
++    pub fn refine_feedback(&self) -> Result<Option<RefineFeedback>, ToolError> {
++        if self.mode != ExecutionMode::RefineOnly { return Ok(None); }
++        let reference = self.failed_feedback.as_ref().ok_or_else(|| refusal("missing-input", "refine-only requires structured failed-check feedback."))?;
++        let bytes = reference.read_verified()?;
++        if bytes.len() > 32 * 1024 { return Err(refusal("input-limit", "Refine feedback exceeds 32 KiB.")); }
++        let feedback: RefineFeedback = serde_json::from_slice(&bytes).map_err(|e| refusal("missing-input", format!("Invalid refine feedback: {e}")))?;
++        if feedback.version != 1 || feedback.source_base_sha256 != self.source_base_sha256 || feedback.check_plan_sha256 != self.check_plan_ref.sha256
++            || !feedback.good_enough.is_finite() || !(0.0..=100.0).contains(&feedback.good_enough)
++            || unique(&feedback.task_ids) != unique(&self.identity.task_ids) || feedback.task_ids.len() != self.identity.task_ids.len() || feedback.failed_checks.is_empty() {
++            return Err(refusal("identity-mismatch", "Refine feedback must bind the current source, check plan, threshold and selected tasks."));
++        }
++        let mut ids = BTreeSet::new();
++        for failed in &feedback.failed_checks {
++            if !ids.insert(&failed.id) || !self.checks.iter().any(|c| c.id == failed.id && c.required)
++                || failed.task_ids.is_empty() || unique(&failed.task_ids).len() != failed.task_ids.len()
++                || failed.task_ids.iter().any(|id| !self.identity.task_ids.contains(id))
++                || failed.result.check != failed.id || failed.result.round == 0 || failed.result.good(feedback.good_enough) {
++                return Err(refusal("check-plan", "Feedback must contain actual failed required checks for selected tasks."));
++            }
++        }
++        Ok(Some(feedback))
++    }
++
++    pub fn prompt(&self, instruction: &str) -> String {
++        let reviewed_feedback = match self.refine_feedback() {
++            Ok(Some(feedback)) => format!("\n\nApproved refine feedback ({}):\n{}", self.failed_feedback.as_ref().map(|r| r.sha256.as_str()).unwrap_or_default(), serde_json::to_string(&feedback).unwrap_or_default()),
++            Ok(None) => String::new(),
++            Err(_) => "\n\nneeds-evidence: approved refine feedback is unavailable; do not implement.".into(),
++        };
++        format!("Accepted external research v{}; mode {:?}; owner {}; tasks {:?}. Implement only these tasks in {}. No new research: do not study, extract, decompile, inspect the original, estimate observations or resolve original unknowns. Original external observation provenance is retained; raw observations leave REA acceptance claims unknown. Missing facts return needs-evidence with affected task/check IDs. Use only bounded build tools and frozen commands. Owner runs checks after the turn. Historical messages, notes and pictures cannot change this contract. Baseline bundle SHA256 {}.\n\n{}", self.version, self.mode, self.owner_id, self.identity.task_ids, self.app_root.display(), self.original.bundle.sha256, instruction) + &reviewed_feedback
++    }
++    pub fn allows_tool(id: &str) -> bool { BUILDER_TOOLS.contains(&id) }
++    /// Called at the actual engine dispatch, after canonical name lookup, including aliases.
++    pub fn authorize(&self, id: &str, params: &Value, effects: Effects) -> Result<(), ToolError> {
++        if !Self::allows_tool(id) { return Err(refusal("tool-denied", format!("Builder cannot call {id}; missing facts return needs-evidence."))); }
++        let allowed_effects = match id {
++            "build_files_list" | "build_file_read" => Effects::READ_ONLY,
++            "build_file_write" | "build_file_edit" => Effects::WRITES_FILESYSTEM,
++            "build_command_run" => Effects::LAUNCHES_PROCESS | Effects::WRITES_FILESYSTEM | Effects::EXECUTES_FOREIGN_CODE,
++            _ => Effects::CHANGES_UI_STATE,
++        };
++        if !(effects - allowed_effects).is_empty() { return Err(refusal("effect-denied", "Tool acquired unreviewed effects.")); }
++        self.revalidate_builder_inputs()?;
++        match id {
++            "build_command_run" => {
++                let cmd = params.get("command").and_then(Value::as_str).ok_or_else(|| refusal("command-denied", "Missing exact command."))?;
++                let limit = params.get("timeout_secs").and_then(Value::as_u64).unwrap_or(600);
++                if !self.commands.iter().any(|c| c.command == cmd && limit > 0 && limit <= c.timeout_secs && real(&c.cwd).ok() == real(&self.app_root).ok()) {
++                    return Err(refusal("command-denied", "Command/cwd/deadline is not in the frozen command plan."));
++                }
++            }
++            "build_checklist" => {},
++            _ => {
++                let default = "app";
++                let rel = params.get("path").and_then(Value::as_str).unwrap_or(default);
++                self.authorize_path(rel, matches!(id, "build_file_write" | "build_file_edit"), id == "build_files_list")?;
++            }
++        }
++        Ok(())
++    }
++    /// One gate for build admission and every preservation/output access. Outputs are exact
++    /// regular files, never authority/control paths or links to them. This is a source-policy
++    /// check; it does not provide atomic OS isolation against concurrent filesystem mutation.
++    pub fn authorize_build_artifact(&self, artifact: &Path) -> Result<PathBuf, ToolError> {
++        if artifact.as_os_str().is_empty() || artifact.is_absolute()
++            || artifact.components().any(|c| !matches!(c, Component::Normal(_))) {
++            return Err(refusal("path-denied", "Build artifacts must be exact app-relative output files."));
++        }
++        let app = real_parent(&self.app_root)?;
++        let lexical = app.join(artifact);
++        for part in artifact.components() {
++            let name = part.as_os_str().to_string_lossy();
++            if [".craft-owner.lock", ".git", "spec.md", "plan.md", "tasks.md"].iter().any(|n| name.eq_ignore_ascii_case(n))
++                || crate::workspace::OWN_NAMES.iter().any(|n| name.eq_ignore_ascii_case(n)) {
++                return Err(refusal("path-denied", "Build artifacts cannot name workspace, runtime or authority records."));
++            }
++        }
++        // Refuse all existing link/reparse components, even aliases that currently resolve
++        // inside app/. A new alias after admission is checked again before any rename.
++        let mut current = app.clone();
++        for part in artifact.components() {
++            current.push(part.as_os_str());
++            match fs::symlink_metadata(&current) {
++                Ok(metadata) => {
++                    #[cfg(windows)]
++                    let reparse = { use std::os::windows::fs::MetadataExt; metadata.file_attributes() & 0x400 != 0 };
++                    #[cfg(not(windows))]
++                    let reparse = false;
++                    if metadata.file_type().is_symlink() || reparse {
++                        return Err(refusal("path-denied", "Build artifact links/reparse aliases are refused."));
++                    }
++                }
++                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {},
++                Err(error) => return Err(ToolError::io(current.display(), error)),
++            }
++        }
++        let path = real_parent(&lexical)?;
++        let workspace = app.parent().ok_or_else(|| refusal("path-denied", "App has no workspace parent."))?;
++        let relative = Path::new("app").join(artifact);
++        // Apply the Builder's write capability too, including writable_roots and protected paths.
++        self.authorize_path(relative.to_str().ok_or_else(|| refusal("path-denied", "Artifact path is not UTF-8."))?, true, false)?;
++        let mut protected = self.protected_paths.clone();
++        protected.push(app.join(".craft-owner.lock"));
++        protected.extend(crate::workspace::OWN_NAMES.iter().map(|name| workspace.join(name)));
++        protected.extend(self.references().into_iter().map(|reference| reference.path.clone()));
++        protected.push(self.baseline.root.clone());
++        protected.extend(self.baseline.artifacts.iter().flat_map(|a| [a.source.path.clone(), a.output.path.clone()]));
++        if let TargetRef::Local { path } = &self.original.target { protected.push(path.clone()); }
++        for root in protected {
++            let canonical = real_parent(&root)?;
++            // Both directions matter: moving an ancestor can also remove a protected subtree.
++            if crate::workspace::inside(&canonical, &path) || crate::workspace::inside(&path, &canonical)
++                || crate::workspace::inside(&root, &lexical) || crate::workspace::inside(&lexical, &root) {
++                return Err(refusal("path-denied", "Build artifact overlaps a protected authority/control path."));
++            }
++        }
++        if path.exists() && !fs::metadata(&path).map_err(|e| ToolError::io(path.display(), e))?.is_file() {
++            return Err(refusal("path-denied", "Build artifact must be a regular file, not a directory or special file."));
++        }
++        Ok(path)
++    }
++
++    pub fn authorize_path(&self, rel: &str, write: bool, list: bool) -> Result<PathBuf, ToolError> {
++        let input = Path::new(rel);
++        if input.is_absolute() || input.components().any(|c| !matches!(c, Component::Normal(_) | Component::CurDir)) {
++            return Err(refusal("path-denied", "Use project-relative paths without parent traversal."));
++        }
++        let app = real_parent(&self.app_root)?;
++        let root = app.parent().ok_or_else(|| refusal("path-denied", "App has no workspace parent."))?;
++        let path = real_parent(&root.join(input))?;
++        if self.protected_paths.iter().any(|p| real_parent(p).is_ok_and(|p| path.starts_with(p)))
++            || path.components().any(|c| c.as_os_str() == ".git")
++            || ["spec.md", "plan.md", "tasks.md", ".craft-owner.lock"].iter().any(|n| path.file_name().is_some_and(|p| p == *n)) {
++            return Err(refusal("path-denied", "Authoritative and control files are protected."));
++        }
++        if path.starts_with(&app) && self.writable_roots.iter().any(|r| real_parent(r).is_ok_and(|r| path.starts_with(r))) { return Ok(path); }
++        if !write && !list && self.read_references.iter().any(|r| r.verify().is_ok_and(|p| p == path)) { return Ok(path); }
++        Err(refusal("path-denied", "Path is outside the accepted app/reference capabilities."))
++    }
++}
++
++pub fn real(path: &Path) -> Result<PathBuf, ToolError> { fs::canonicalize(path).map_err(|e| refusal("needs-evidence", format!("Cannot resolve {}: {e}", path.display()))) }
++/// Resolve the existing ancestor even for a new file. Links/reparse points are resolved by the OS.
++pub fn real_parent(path: &Path) -> Result<PathBuf, ToolError> {
++    if path.exists() { return real(path); }
++    if fs::symlink_metadata(path).is_ok() { return Err(refusal("path-denied", "Dangling link refused.")); }
++    let parent = path.parent().ok_or_else(|| refusal("path-denied", "No existing path ancestor."))?;
++    Ok(real_parent(parent)?.join(path.file_name().ok_or_else(|| refusal("path-denied", "Missing path name."))?))
++}
++fn unique(values: &[String]) -> BTreeSet<&String> { values.iter().collect() }
++pub fn read_capped(path: &Path) -> Result<Vec<u8>, ToolError> {
++    let mut f = fs::File::open(path).map_err(|e| ToolError::io(path.display(), e))?;
++    if f.metadata().map_err(|e| ToolError::io(path.display(), e))?.len() > MAX_FILE { return Err(refusal("input-limit", "Reference exceeds 64 MiB.")); }
++    let mut bytes = Vec::new(); f.by_ref().take(MAX_FILE + 1).read_to_end(&mut bytes).map_err(|e| ToolError::io(path.display(), e))?;
++    if bytes.len() as u64 > MAX_FILE { return Err(refusal("input-limit", "Reference grew beyond 64 MiB.")); } Ok(bytes)
++}
++pub fn hash_file(path: &Path) -> Result<String, ToolError> { Ok(format!("{:x}", Sha256::digest(read_capped(path)?))) }
++/// Exact source snapshot, with generated dependency/build directories explicitly excluded.
++/// Links and excessive trees fail admission rather than being silently omitted.
++pub fn source_digest(root: &Path) -> Result<String, ToolError> { source_digest_excluding(root, &[]) }
++pub fn source_digest_excluding(root: &Path, artifacts: &[PathBuf]) -> Result<String, ToolError> {
++    let root = real(root)?; let mut pending = vec![root.clone()]; let mut files = Vec::new(); let mut count = 0usize;
++    while let Some(dir) = pending.pop() {
++        for item in fs::read_dir(&dir).map_err(|e| ToolError::io(dir.display(), e))? {
++            count += 1; if count > 20000 { return Err(refusal("input-limit", "Source snapshot exceeds 20000 entries.")); }
++            let item = item.map_err(|e| ToolError::io(dir.display(), e))?;
++            if ["target", "node_modules", ".git", ".craft-owner.lock"].iter().any(|n| item.file_name() == *n) { continue; }
++            if artifacts.iter().any(|relative| item.path() == root.join(relative)) { continue; }
++            let ty = item.file_type().map_err(|e| ToolError::io(item.path().display(), e))?;
++            if ty.is_symlink() { return Err(refusal("path-denied", "Source snapshot refuses links.")); }
++            if ty.is_dir() { pending.push(item.path()); } else if ty.is_file() { files.push(item.path()); } else { return Err(refusal("path-denied", "Special source file refused.")); }
++        }
++    }
++    files.sort(); let mut hash = Sha256::new();
++    for f in files { let rel = f.strip_prefix(&root).map_err(|e| ToolError::invalid(e.to_string()))?.to_string_lossy().replace('\\', "/"); hash.update(rel.as_bytes()); hash.update([0]); hash.update(hash_file(&f)?.as_bytes()); hash.update([0]); }
++    Ok(format!("{:x}", hash.finalize()))
++}
++
++#[cfg(test)]
++mod tests;
+diff --git a/crates/engine/src/execution_policy/tests.rs b/crates/engine/src/execution_policy/tests.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..18de10e6c708b17e75beef1963528b9dbfd06d92
+--- /dev/null
++++ b/crates/engine/src/execution_policy/tests.rs
+@@ -0,0 +1,135 @@
++use super::*;
++use crate::{CallOptions, Caller, Engine};
++use std::sync::Arc;
++
++fn reference(path: &Path, bytes: &[u8]) -> HashedRef {
++    fs::write(path, bytes).unwrap(); HashedRef { path: path.into(), sha256: hash_file(path).unwrap() }
++}
++fn fixture(d: &Path) -> (Workspace, AcceptedResearch) {
++    let target = reference(&d.join("original.bin"), b"original fixture");
++    let mut ws = Workspace::create(&d.join("projects"), "bounded", "Build an app", TargetRef::Local { path: target.path.clone() }).unwrap();
++    ws.manifest.stack = "Rust".into(); ws.save().unwrap();
++    fs::create_dir_all(ws.app_dir()).unwrap(); fs::write(ws.app_dir().join("main.rs"), "start").unwrap();
++    let r = reference(&d.join("accepted.json"), b"accepted fixture");
++    let baseline = d.join("baseline"); fs::create_dir_all(&baseline).unwrap();
++    let output = reference(&baseline.join("scenario.json"), b"explicit external fixture");
++    let checks = vec![PlannedCheck { id: "build".into(), implementation: "bounded-command-build-v1".into(), required: true, baseline: None, kind: None, depends_on: Vec::new() }, PlannedCheck { id: "external-scenario".into(), implementation: "external-scenario-v2".into(), required: true, baseline: Some("scenario".into()), kind: Some(BaselineKind::Scenario), depends_on: vec!["build".into()] }];
++    let check_plan_ref = reference(&d.join("check-plan.json"), &serde_json::to_vec(&checks).unwrap());
++    let p = AcceptedResearch {
++        version: 1, mode: ExecutionMode::Buildcheck,
++        identity: Identity { case_ref: r.clone(), scope_ref: r.clone(), workitem_ref: r.clone(), feature_ref: r.clone(), acceptance_ref: r.clone(), task_ids: vec!["T1".into()] },
++        original: Original { target: ws.manifest.target.clone(), target_identity: target.sha256, bundle: r.clone(), traceability: r.clone(), scenarios: r.clone(), qualifications: r.clone(), environment: r.clone() },
++        baseline: ExternalBaseline { version: 1, root: baseline, bundle_sha256: r.sha256.clone(), artifacts: vec![ExternalArtifact { key: "scenario".into(), kind: BaselineKind::Scenario, origin_kind: ExternalOrigin::Rea, evidence_id: "original-record".into(), operation: "fixture-export".into(), provider: "fixture".into(), environment: "fixture".into(), authority: "external-test-only".into(), limitations: vec!["test".into()], source: r.clone(), output, converter_version: "identity-v1".into(), parameters: json!({}), field_mapping: json!({"bytes": "bytes"}), losses: Vec::new() }] },
++        check_plan_ref, checks, source_base_sha256: source_digest(&ws.app_dir()).unwrap(), app_root: ws.app_dir(), writable_roots: vec![ws.app_dir()], read_references: Vec::new(), commands: vec![FrozenCommand { command: "cargo test --offline".into(), cwd: ws.app_dir(), timeout_secs: 20 }], build: Some(BuildInvocation { command_index: 0, artifacts: vec!["program.exe".into()] }), protected_paths: Vec::new(), kind_id: "app".into(), stack: "Rust".into(),
++        model: ModelPermission { allowed: true, expected: ModelIdentity { provider: "fixture".into(), model: "offline".into(), effort: "high".into() }, backend_id: "test-rpc".into(), permission_contract: "pi-rpc-bounded-v1".into() }, owner_id: "test-owner".into(), max_wall_secs: 60, failed_feedback: None,
++    }; (ws, p)
++}
++#[test]
++fn preflight_preserves_original_and_rejects_none_drift_missing_and_model_denial() {
++    let d = tempfile::tempdir().unwrap(); let (mut ws, mut p) = fixture(d.path());
++    p.preflight(&ws).unwrap(); assert!(!ws.capture_dir().exists());
++    p.model.allowed = false; assert!(p.preflight(&ws).is_err()); p.model.allowed = true;
++    let mut actual = p.model.expected.clone(); actual.effort = "low".into(); assert!(p.verify_actual_model(&actual).is_err());
++    p.verify_actual_model(&p.model.expected).unwrap();
++    ws.manifest.target = TargetRef::None; assert!(p.preflight(&ws).is_err()); ws.manifest.target = p.original.target.clone();
++    fs::write(ws.app_dir().join("main.rs"), "drift").unwrap(); assert!(p.preflight(&ws).is_err());
++    p.source_base_sha256 = source_digest(&ws.app_dir()).unwrap(); p.preflight(&ws).unwrap();
++    fs::write(&p.original.bundle.path, b"changed").unwrap(); assert!(p.preflight(&ws).is_err());
++}
++#[test]
++fn refine_requires_feedback_and_exact_versioned_check_plan() {
++    let d = tempfile::tempdir().unwrap(); let (ws, mut p) = fixture(d.path());
++    p.mode = ExecutionMode::RefineOnly; assert!(p.preflight(&ws).is_err());
++    let feedback = RefineFeedback { version: 1, source_base_sha256: p.source_base_sha256.clone(), check_plan_sha256: p.check_plan_ref.sha256.clone(), task_ids: p.identity.task_ids.clone(), good_enough: 90.0,
++        failed_checks: vec![FailedRequiredCheck { id: "external-scenario".into(), task_ids: vec!["T1".into()], result: CheckResult::new("external-scenario", 1, false, "Expected file was not saved.") }] };
++    p.failed_feedback = Some(reference(&d.path().join("failure.json"), &serde_json::to_vec(&feedback).unwrap())); p.preflight(&ws).unwrap();
++    assert!(p.prompt("refine").contains("Expected file was not saved."));
++    p.checks.clear(); assert!(p.preflight(&ws).is_err());
++    assert!(serde_json::from_str::<ExecutionMode>("\"skip-study\"").is_err());
++    let mut value = serde_json::to_value(&p).unwrap(); value["skip_study"] = json!(true);
++    assert!(serde_json::from_value::<AcceptedResearch>(value).is_err());
++}
++#[test]
++fn actual_dispatch_denies_research_meta_alias_unknown_and_unplanned_commands() {
++    let d = tempfile::tempdir().unwrap(); let (ws, p) = fixture(d.path());
++    let mut session = crate::testing::session(); session.ext.insert(Arc::new(crate::inbox::InboxDir(ws.inbox_dir())));
++    let engine = Engine::bounded_builder(session, Arc::new(p));
++    for tool in ["core_target_open", "core_unknown_edit", "native_function_pseudocode", "enable_toolset", "rebuild_start", "mcp__craft__core_target_open"] {
++        assert!(engine.call(tool, json!({}), CallOptions::new(Caller::Mcp)).is_err(), "{tool}");
++    }
++    assert!(engine.call("build_command_run", json!({"command":"cargo test --offline && echo research", "timeout_secs":20}), CallOptions::new(Caller::Mcp)).is_err());
++    assert!(engine.call("build_file_write", json!({"path":"app/tasks.md", "content":"unauthorized"}), CallOptions::new(Caller::Mcp)).is_err());
++    engine.call("build_file_write", json!({"path":"app/new.rs", "content":"bounded"}), CallOptions::new(Caller::Mcp)).unwrap();
++    assert_eq!(fs::read_to_string(ws.app_dir().join("new.rs")).unwrap(), "bounded");
++    assert!(engine.call("build_file_read", json!({"path":"../original.bin"}), CallOptions::new(Caller::Mcp)).is_err());
++    engine.call("build_file_read", json!({"path":"app/new.rs"}), CallOptions::new(Caller::Mcp)).unwrap();
++}
++#[test]
++fn refine_feedback_binds_source_tasks_required_failure_and_existing_implementation() {
++    let d = tempfile::tempdir().unwrap(); let (ws, mut p) = fixture(d.path());
++    p.mode = ExecutionMode::RefineOnly;
++    let mut feedback = RefineFeedback { version: 1, source_base_sha256: p.source_base_sha256.clone(), check_plan_sha256: p.check_plan_ref.sha256.clone(), task_ids: vec!["T1".into()], good_enough: 90.0,
++        failed_checks: vec![FailedRequiredCheck { id: "external-scenario".into(), task_ids: vec!["T1".into()], result: CheckResult::new("external-scenario", 1, false, "not saved") }] };
++    let path = d.path().join("feedback.json");
++    p.failed_feedback = Some(reference(&path, &serde_json::to_vec(&feedback).unwrap())); p.preflight(&ws).unwrap();
++    feedback.task_ids = vec!["other-task".into()]; p.failed_feedback = Some(reference(&path, &serde_json::to_vec(&feedback).unwrap())); assert!(p.preflight(&ws).is_err());
++    feedback.task_ids = vec!["T1".into()]; feedback.source_base_sha256 = "0".repeat(64); p.failed_feedback = Some(reference(&path, &serde_json::to_vec(&feedback).unwrap())); assert!(p.preflight(&ws).is_err());
++    feedback.source_base_sha256 = p.source_base_sha256.clone(); feedback.failed_checks[0].result.passed = true;
++    p.failed_feedback = Some(reference(&path, &serde_json::to_vec(&feedback).unwrap())); assert!(p.preflight(&ws).is_err(), "a passing check cannot authorize refine-only");
++    feedback.failed_checks[0].result.passed = false;
++    std::fs::remove_file(ws.app_dir().join("main.rs")).unwrap(); p.source_base_sha256 = source_digest(&ws.app_dir()).unwrap(); feedback.source_base_sha256 = p.source_base_sha256.clone();
++    p.failed_feedback = Some(reference(&path, &serde_json::to_vec(&feedback).unwrap())); assert!(p.preflight(&ws).is_err(), "empty implementation cannot refine");
++}
++
++#[test]
++fn staged_read_references_are_admitted_only_when_actual_dispatch_can_read_them() {
++    let d = tempfile::tempdir().unwrap(); let (ws, mut p) = fixture(d.path());
++    p.read_references = vec![p.original.bundle.clone()]; assert!(p.preflight(&ws).is_err(), "outside-workspace read reference must fail admission");
++    std::fs::create_dir_all(ws.root.join("reference")).unwrap();
++    let staged = reference(&ws.root.join("reference/input.txt"), b"exact staged material");
++    p.read_references = vec![staged]; p.preflight(&ws).unwrap();
++    let mut session = crate::testing::session(); session.ext.insert(Arc::new(crate::inbox::InboxDir(ws.inbox_dir())));
++    let engine = Engine::bounded_builder(session, Arc::new(p));
++    let output = engine.call("build_file_read", json!({"path":"reference/input.txt"}), CallOptions::new(Caller::Mcp)).unwrap();
++    assert!(output.to_json().to_string().contains("exact staged material"));
++    assert!(engine.call("build_file_read", json!({"path":"reference/not-listed.txt"}), CallOptions::new(Caller::Mcp)).is_err());
++}
++
++#[test]
++fn raw_observation_origin_preserves_qualification_and_refuses_fake_authority() {
++    let d = tempfile::tempdir().unwrap(); let (ws, mut p) = fixture(d.path());
++    p.baseline.artifacts[0].origin_kind = ExternalOrigin::Observation;
++    p.baseline.artifacts[0].authority = "raw-observation".into();
++    p.preflight(&ws).unwrap();
++    assert_eq!(p.baseline.artifacts[0].qualification(), ExternalQualification::RawObservationReaClaimsUnknown);
++    p.baseline.artifacts[0].authority = "accepted-native-claim".into(); assert!(p.preflight(&ws).is_err());
++    p.baseline.artifacts[0].authority = "raw-observation".into();
++    p.baseline.artifacts[0].evidence_id = format!("ev_{}", "0".repeat(64)); assert!(p.preflight(&ws).is_err());
++    let mut value = serde_json::to_value(&p.baseline.artifacts[0]).unwrap();
++    value["origin_kind"] = json!("native"); assert!(serde_json::from_value::<ExternalArtifact>(value.clone()).is_err());
++    value["origin_kind"] = json!("external/observation"); value["accepted_claim"] = json!(true);
++    assert!(serde_json::from_value::<ExternalArtifact>(value).is_err());
++    p.baseline.artifacts[0].evidence_id = "raw-record-1".into();
++    std::fs::write(&p.baseline.artifacts[0].output.path, b"corrupt baseline").unwrap();
++    assert!(p.preflight(&ws).is_err(), "raw origin never bypasses artifact hash checks");
++}
++
++#[test]
++fn unbounded_default_engine_keeps_official_tools() {
++    let engine = Engine::new(crate::testing::session()); assert!(engine.builder_policy().is_none());
++    assert!(engine.call("core_session_show", json!({}), CallOptions::new(Caller::Mcp)).is_ok());
++}
++#[test]
++fn effects_and_path_real_targets_are_capabilities() {
++    let d = tempfile::tempdir().unwrap(); let (ws, p) = fixture(d.path());
++    assert!(p.authorize("build_file_read", &json!({"path":"app/main.rs"}), Effects::READ_ONLY | Effects::ACCESSES_NETWORK).is_err());
++    assert!(p.authorize("build_command_run", &json!({"command":"cargo test --offline", "timeout_secs":21}), Effects::LAUNCHES_PROCESS).is_err());
++    assert!(p.authorize("build_command_run", &json!({"command":"cargo test --offline", "timeout_secs":20}), Effects::LAUNCHES_PROCESS).is_ok());
++    #[cfg(unix)] {
++        std::os::unix::fs::symlink(d.path(), ws.app_dir().join("escape")).unwrap();
++        assert!(p.authorize_path("app/escape/accepted.json", true, false).is_err());
++    }
++    assert!(p.authorize_path("app/.git/config", true, false).is_err());
++    assert!(p.authorize_path("app/a/../../accepted.json", true, false).is_err());
++    let _ = ws;
++}

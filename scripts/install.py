@@ -17,7 +17,7 @@ def parser():
     result = argparse.ArgumentParser(description="官方 REA + Spec Kit + reverse-skill 安装与恢复；默认只预览")
     result.add_argument("command", choices=("plan", "install", "verify", "accept", "update", "restore"))
     result.add_argument("--root", required=True, help="组件及本机 receipt 根；必须在安装器源码仓库之外")
-    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit,shell-guard；shell-guard 默认关闭，范围冻结在 plan")
+    result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit,shell-guard,craft；shell-guard 默认关闭，范围冻结在 plan")
     result.add_argument("--client", choices=("pi", "codex", "claude", "auto", "none"), default="auto")
     result.add_argument("--agent-dir", help="显式 Pi agent 目录或 Codex HOME；不默写用户 profile")
     result.add_argument("--client-config", help="显式 Pi mcp.json 或 Codex config.toml；与 --agent-dir 必须一致")
@@ -29,6 +29,12 @@ def parser():
     result.add_argument("--everything-es", help="Everything CLI 的现存绝对文件路径；仅写 shellGuard.everything.esPath")
     result.add_argument("--everything-gui", help="Everything GUI 的现存绝对文件路径；仅写 shellGuard.everything.guiPath")
     result.add_argument("--everything-autostart", action="store_true", help="明确允许 Everything IPC 失败时启动已配置 GUI 并重试一次")
+    result.add_argument("--with-craft", action="store_true", help="Pi optional Craft execution backend; requires explicit reverse/spec-kit")
+    result.add_argument("--craft-bundle", help="Explicit unpacked verified local Craft bundle (not a source checkout)")
+    result.add_argument("--craft-pi-node", help="Explicit Node executable for standalone Pi; no PATH fallback")
+    result.add_argument("--craft-pi-entry", help="Explicit official Pi CLI JavaScript entry")
+    result.add_argument("--craft-pi-distribution", help="Explicit self-contained official Pi distribution with reviewed complete dependency-tree manifest")
+    result.add_argument("--craft-pi-version", help="Exact Pi version expected by this verified bundle")
     result.add_argument("--node", help="旁置 Node 可执行文件；npm 必须来自同一分发包")
     result.add_argument("--rea-prefix", help="显式只读复用已有 npm prefix，须恰为冻结版本")
     result.add_argument("--spec-kit-version", help="显式选择 PyPI 已发布且未撤回的稳定版本（例如 1.3.1）；省略时选择最新稳定版，选择冻结在 plan")
@@ -56,6 +62,8 @@ def main(argv=None):
             raise InstallError("--spec-kit-version 只适用于 plan/install/update")
         if (arguments.with_shell_guard or arguments.shell_guard_root or arguments.replace_shell_guard_root or arguments.everything_es or arguments.everything_gui or arguments.everything_autostart) and arguments.command not in ("plan", "install", "update"):
             raise InstallError("shell-guard 选择参数只适用于 plan/install/update")
+        if (arguments.with_craft or arguments.craft_bundle or arguments.craft_pi_node or arguments.craft_pi_entry or arguments.craft_pi_distribution or arguments.craft_pi_version) and arguments.command not in ("plan", "install", "update"):
+            raise InstallError("Craft selection options only apply to plan/install/update")
         if arguments.command == "verify":
             result = workflow.verify(workflow.abs_path(arguments.root))
             code = 0 if result["ok"] else 1
@@ -71,7 +79,7 @@ def main(argv=None):
                 if result["scope"]["root"] != str(workflow.abs_path(arguments.root)):
                     raise InstallError("--root 与冻结 plan 不一致")
                 # Configuration/client scope comes entirely from the frozen file.
-                for flag in ("agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+                for flag in ("agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution"):
                     supplied = getattr(arguments, flag)
                     if supplied and flag == "everything_es":
                         workflow.sg.executable_identity(supplied)
@@ -86,6 +94,12 @@ def main(argv=None):
                 supplied_components = workflow.selected_components(arguments.components)
                 if arguments.with_shell_guard and "shell_guard" not in supplied_components:
                     supplied_components.append("shell_guard")
+                if arguments.with_craft and "craft" not in supplied_components:
+                    supplied_components.append("craft")
+                if arguments.with_craft and "craft" not in result["scope"]["components"]:
+                    raise InstallError("--with-craft differs from frozen plan")
+                if arguments.craft_pi_version and arguments.craft_pi_version != result["scope"].get("craft_pi_version"):
+                    raise InstallError("--craft-pi-version differs from frozen plan")
                 if arguments.components != "all" and supplied_components != result["scope"]["components"]:
                     raise InstallError("--components 与冻结 plan 不一致")
                 if arguments.with_shell_guard and "shell_guard" not in result["scope"]["components"]:

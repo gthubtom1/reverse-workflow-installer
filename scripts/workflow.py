@@ -18,10 +18,11 @@ from configuration import Journal, atomic, codex_merge, digest, encode_json, loa
 from versions import COMPONENTS, InstallError, resolve, stable
 import package_utils as pu
 import shell_guard as sg
+import craft as cr
 
 REPO = Path(__file__).resolve().parents[1]
 ADAPTER_VERSION = "0.2.0"  # Transaction protocol; old receipts remain readable.
-INSTALLER_VERSION = "0.6.1"
+INSTALLER_VERSION = "0.7.0"  # Candidate; no release/tag publication implied.
 
 
 def run(args, *, cwd, env=None):
@@ -57,12 +58,12 @@ def abs_path(value):
 def selected_components(value):
     if value is None or str(value).strip().lower() in ("", "all"):
         return ["rea", "spec_kit", "reverse"]
-    aliases = {"rea": "rea", "spec-kit": "spec_kit", "spec_kit": "spec_kit", "reverse": "reverse", "shell-guard": "shell_guard", "shell_guard": "shell_guard"}
+    aliases = {"rea": "rea", "spec-kit": "spec_kit", "spec_kit": "spec_kit", "reverse": "reverse", "shell-guard": "shell_guard", "shell_guard": "shell_guard", "craft": "craft"}
     result = []
     for raw in str(value).split(","):
         key = aliases.get(raw.strip().lower())
         if key is None or key in result:
-            raise InstallError("--components 只能包含不重复的 rea, spec-kit, reverse, shell-guard，或 all")
+            raise InstallError("--components 只能包含不重复的 rea, spec-kit, reverse, shell-guard, craft，或 all")
         result.append(key)
     if not result:
         raise InstallError("--components 不能为空")
@@ -70,7 +71,7 @@ def selected_components(value):
 
 
 def needs_host(components):
-    return any(key in components for key in ("rea", "spec_kit", "shell_guard"))
+    return any(key in components for key in ("rea", "spec_kit", "shell_guard", "craft"))
 
 
 def needs_project(components):
@@ -78,7 +79,7 @@ def needs_project(components):
 
 
 def needs_agent(components, client):
-    return "rea" in components or ("reverse" in components and client in ("pi", "codex", "claude")) or ("shell_guard" in components and client == "pi")
+    return "rea" in components or ("reverse" in components and client in ("pi", "codex", "claude")) or ("shell_guard" in components and client == "pi") or "craft" in components
 
 
 def detect_client(client, config=None, env=None):
@@ -118,8 +119,25 @@ def scope(args):
     components = selected_components(args.components)
     if getattr(args, "with_shell_guard", False) and "shell_guard" not in components:
         components.append("shell_guard")
+    if getattr(args, "with_craft", False) and "craft" not in components:
+        components.append("craft")
     root = abs_path(args.root)
     previous = load_json(root / ".installer/receipt.json", {})
+    if previous.get("craft") or "craft" in (previous.get("scope") or {}).get("components", []):
+        cr.gate(previous.get("craft_contract"))
+        if "craft" not in components:
+            components.append("craft")
+    craft_options = {}
+    for key in ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution"):
+        raw_path = getattr(args, key, None) or (previous.get("craft_source") or {}).get(key)
+        if raw_path:
+            cr.no_links(Path(raw_path).expanduser().absolute())
+        craft_options[key] = str(abs_path(raw_path)) if raw_path else None
+    craft_options["craft_pi_version"] = getattr(args, "craft_pi_version", None) or (previous.get("craft_source") or {}).get("craft_pi_version")
+    if any(craft_options.values()) and "craft" not in components:
+        raise InstallError("Craft options require --with-craft or explicit craft component")
+    if "craft" in components and not {"reverse", "spec_kit"}.issubset(components):
+        raise InstallError("Craft requires explicitly selected reverse and spec-kit; dependencies are not silently installed")
     # Only a current managed selection survives updates; historic all never opts in.
     if previous.get("installed") and "shell_guard" in receipt_components(previous) and "shell_guard" not in components:
         components.append("shell_guard")
@@ -169,7 +187,16 @@ def scope(args):
     reverse = abs_path(args.reverse_root) if args.reverse_root else None
     if "shell_guard" in components and client != "pi":
         raise InstallError("shell-guard 插件仅适用于 Pi")
+    if "craft" in components and client != "pi":
+        raise InstallError("Craft is supported only for Pi")
+    if "craft" in components and not all(craft_options.values()):
+        raise InstallError("Craft unsupported artifact until published; provide --craft-bundle and explicit --craft-pi-node/--craft-pi-entry/--craft-pi-version/--craft-pi-distribution")
     tools = [REPO, root / "versions", root / ".installer"]
+    if craft_options["craft_bundle"]:
+        bundle_path = Path(craft_options["craft_bundle"])
+        if bundle_path == root or root.is_relative_to(bundle_path) or bundle_path.is_relative_to(root):
+            raise InstallError("Craft source bundle must be outside installation root")
+        tools.append(bundle_path)
     if agent:
         tools.append(agent)
     if reverse:
@@ -195,7 +222,7 @@ def scope(args):
             raise InstallError("成果项目与复用工具目录重叠")
     detection = None if args.node else shutil.which("node")
     node = str(abs_path(args.node)) if args.node else (str(abs_path(detection)) if detection else None)
-    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **guard_options, **({"spec_kit_version": spec_pin} if spec_pin is not None else {})}
+    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **guard_options, **craft_options, **({"spec_kit_version": spec_pin} if spec_pin is not None else {})}
 
 
 def reverse_identity(path):
@@ -336,12 +363,59 @@ def retired_project_continuity_migration(selected):
     return {"root": root, "plugin_dir": plugin_dir, "package_name": package_name, "registration": registration}
 
 
+def _craft_target_path_preflight(selected, components, resources):
+    """Portable Win32 scope for Craft writes; read-only, before lock/Journal/commands."""
+    if os.name != "nt" or "craft" not in selected.get("components", []):
+        return
+    root = Path(selected["root"])
+    # Content-addressed version keys are 20 ASCII units; reserve retry -8 hex.
+    version = root / "versions" / ("0" * 20 + "-00000000")
+    targets = [("craft-bundle/" + name, version / "craft-bundle" / name)
+               for name in components["craft"]["files"]]
+    targets += [("craft-pi/" + name, version / "craft-pi" / name)
+                for name in resources["files"]]
+    adapter = root / "adapters" / adapter_identity_key() / "pi"
+    targets += [("pi-adapter/" + p.relative_to(REPO / "adapters/pi").as_posix(),
+                 adapter / p.relative_to(REPO / "adapters/pi"))
+                for p in (REPO / "adapters/pi").rglob("*") if p.is_file()]
+    targets += [("pi-adapter/receipt-location.json", adapter / "receipt-location.json"),
+                ("version-complete", version / "complete.json"),
+                ("receipt", root / ".installer/receipt.json")]
+    if selected.get("agent_dir"):
+        agent = Path(selected["agent_dir"])
+        targets += [("pi-settings", agent / "settings.json"),
+                    ("pi-global-skill", agent / "skills/reverse-workflow/SKILL.md")]
+    tx = root / ".installer/transactions/20000101T000000Z-00000000"
+    targets += [("transaction/" + name, tx / name) for name in
+                ("journal.json", "plan.json", "agent/mcp.json")]
+    def units(path):
+        return len(str(path).encode("utf-16-le")) // 2
+    failures = []
+    for label, target in targets:
+        count, parent = units(target), units(target.parent)
+        # atomic() uses .installer- plus 8 random chars (19 total); reserve 24.
+        temporary = parent + 1 + 24
+        if count > 259 or parent > 247 or temporary > 259:
+            failures.append((max(count, temporary, parent + 12), label, count, parent, temporary))
+    if failures:
+        _, label, count, parent, temporary = max(failures)
+        raise InstallError(f"craft-path-too-long: 选择更短安装根；{label}；UTF16 file={count}/259, "
+                           f"parent={parent}/247, atomic-temp={temporary}/259 "
+                           "(24-unit basename budget; retry suffix reserved)")
+
+
 def make_plan(args, fetch=None):
     selected = scope(args)
     manifest = load_json(REPO / "components.json")
+    craft_local = craft_inputs = None
+    if "craft" in selected["components"]:
+        craft_local = {**cr.bundle(selected["craft_bundle"]), "repository": manifest["craft"]["repository"]}
+        craft_inputs = cr.resource_identity(cr.resource_files(REPO, Path(selected["root"]) / ".installer/receipt.json"))
+        _craft_target_path_preflight(selected, {"craft": craft_local}, craft_inputs)
+    craft_reverse = cr.reverse_contract(selected.get("reverse_root")) if "craft" in selected["components"] else None
     # Resolve only selected components; explicit local working copies need no upstream lookup.
     local_keys = {"reverse": "reverse_root", "shell_guard": "shell_guard_root"}
-    keys = [key for key in selected["components"] if not selected.get(local_keys.get(key, ""))]
+    keys = [key for key in selected["components"] if key != "craft" and not selected.get(local_keys.get(key, ""))]
     components = resolve(manifest, **({"fetch": fetch} if fetch else {}), components=keys,
                          **({"spec_kit_version": selected["spec_kit_version"]} if "spec_kit_version" in selected else {}))
     if "reverse" in selected["components"]:
@@ -350,6 +424,14 @@ def make_plan(args, fetch=None):
             components["reverse"] = {"repository": manifest["reverse"]["repository"], "ref": "local-working-copy", "commit": identity["commit"], "published_commit": None, "local_identity": identity, "mode": "read-only-working-copy"}
         else:
             components["reverse"]["mode"] = "clone-frozen-commit"
+    craft_runtime = craft_update = craft_resources = None
+    if "craft" in selected["components"]:
+        components["craft"] = craft_local
+        craft_resources = craft_inputs
+        craft_runtime = cr.pi_runtime(selected, components["craft"], run)
+        craft_update = cr.update_record(load_json(Path(selected["root"]) / ".installer/receipt.json", {}), components["craft"])
+        old_craft = load_json(Path(selected["root"]) / ".installer/receipt.json", {}).get("craft") or {}
+        cr.registration(sg.settings_at(selected["agent_dir"]), selected["agent_dir"], (old_craft.get("resources"),))
     retirement = retired_project_continuity_migration(selected)
     guard_migration = executable = gui_executable = None
     if "shell_guard" in selected["components"]:
@@ -390,7 +472,9 @@ def make_plan(args, fetch=None):
         component = components["shell_guard"]
         commands.append(("核验只读 shell-guard 独立包与冻结 tree hash: " + component["root"]) if selected.get("shell_guard_root") else ("git clone --no-checkout " + component["repository"] + " <version>/agent-plugins-shell-guard; git checkout --detach " + component["commit"]))
         commands.append("仅注册 shell-guard 独立子目录；Everything 只合并明确提供的 esPath/guiPath/autostart；迁移按冻结旧注册/hash 条件替换")
-    return {"installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
+    if "craft" in selected["components"]:
+        commands.append("Verify explicit Pi node/entry/version and exact local Craft bundle; copy to isolated version; journal execution resources and unique package registration")
+    return {"craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
 
 
 PI_RECEIPT_LINE = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
@@ -411,17 +495,19 @@ def pi_global_skill_text(receipt_path):
 
 
 def limits():
-    return {"host_resource_loading": "unverified", "mcp_handshake_and_tools_schema": "unverified", "reverse_real_task": "unverified", "spec_kit_real_workflow": "unverified", "provider_installation": "not_implemented", "portable_node_download": "not_implemented; use --node", "codex_plugin_registration": "not_implemented; official existing plugin referenced through project thin skill", "existing_project_template_upgrade": "not_implemented; preserve existing project templates", "package_artifact_provenance": "official npm lock integrity checked; PyPI hashes recorded, uv resolution used, wheel not independently rehashed", "all_agents": "pi/codex/claude supported; host loading and real task validation remain unverified"}
+    return {"host_resource_loading": "unverified", "mcp_handshake_and_tools_schema": "unverified", "reverse_real_task": "unverified", "spec_kit_real_workflow": "unverified", "provider_installation": "not_implemented", "portable_node_download": "not_implemented; use --node", "codex_plugin_registration": "not_implemented; official existing plugin referenced through project thin skill", "existing_project_template_upgrade": "not_implemented; preserve existing project templates", "package_artifact_provenance": "official npm lock integrity checked; PyPI hashes recorded, uv resolution used, wheel not independently rehashed", "craft_runtime": "unverified; no provider, owner, policy, cancellation or task execution", "craft_public_distribution": "unsupported until compatible real release artifacts are published", "all_agents": "pi/codex/claude supported; host loading and real task validation remain unverified"}
 
 
 def validate_plan(plan):
-    if plan.get("schema_version") != 1 or plan.get("adapter_version") != ADAPTER_VERSION:
-        raise InstallError("计划 schema/adapter 版本不兼容；重新 plan")
-    selected = plan["scope"]
+    selected = plan.get("scope") or {}
+    schema = 2 if "craft" in selected.get("components", []) else 1
+    if type(plan.get("schema_version")) is not int or plan["schema_version"] != schema or plan.get("adapter_version") != ADAPTER_VERSION:
+        raise InstallError("计划 schema/adapter 版本不兼容；Craft requires schema 2, core requires schema 1；重新 plan")
+    _craft_target_path_preflight(selected, plan.get("components") or {}, plan.get("craft_resources") or {})
     if "project_continuity" in selected.get("components", []):
         raise InstallError("冻结计划仍选择已移除的 project-continuity；请重新 plan")
     checked = scope(SimpleNamespace(**{**selected, **plan["resource_selection"], "components": ",".join(selected["components"]), "node": selected.get("node"), "uv": selected.get("uv"), "git": selected.get("git")}))
-    for key in ("components", "root", "client", "agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+    for key in ("components", "root", "client", "agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
         if checked.get(key) != selected.get(key):
             raise InstallError("冻结计划包含非规范路径或范围；重新 plan")
     if checked.get("spec_kit_version") != selected.get("spec_kit_version"):
@@ -448,6 +534,13 @@ def validate_plan(plan):
             raise InstallError("计划缺少精确稳定版本")
         if key == "reverse" and not re.fullmatch(r"[0-9a-f]{40}", str(component.get("commit"))):
             raise InstallError("计划缺少精确 reverse commit")
+    if "craft" in selected["components"]:
+        cr.validate_plan(plan, manifest["craft"])
+        cr.validate_resources(plan, REPO)
+        if cr.pi_runtime(selected, planned["craft"], run) != plan.get("craft_runtime"):
+            raise InstallError("Craft explicit Pi runtime drift since plan")
+    elif plan.get("craft_contract") or plan.get("craft_runtime") or plan.get("craft_resources") or plan.get("craft_reverse_contract"):
+        raise InstallError("Unselected Craft contract/runtime in plan")
     if "shell_guard" in selected["components"]:
         sg.validate_plan(plan, manifest["shell_guard"])
     elif plan.get("shell_guard_migration") or plan.get("everything_es_identity") or plan.get("everything_gui_identity") or selected.get("everything_autostart"):
@@ -520,16 +613,18 @@ def recover_pending_transactions(root):
     if not directory.is_dir():
         return []
     recovered = []
-    for journal_path in sorted(directory.glob("*/journal.json")):
+    for journal_path in sorted(directory.glob("*/journal.json"), reverse=True):
         data = load_json(journal_path, {})
         if data.get("status") != "pending":
             continue
-        preview = restore_journal(journal_path, apply=False)
+        if "craft_contract" in data:
+            cr.gate(data["craft_contract"])
+        preview = restore_journal(journal_path, apply=False, defer_receipt=root / ".installer/receipt.json")
         conflicts = [item for item in preview if item.get("conflicts")]
         if conflicts:
             names = ", ".join(item["path"] for item in conflicts[:3])
             raise InstallError(f"发现未完成事务 {journal_path.parent.name} 且文件已有后续修改；先审阅并 restore，拒绝继续安装: {names}")
-        restore_journal(journal_path, apply=True)
+        restore_journal(journal_path, apply=True, defer_receipt=root / ".installer/receipt.json")
         data["status"] = "recovered"
         data["recovery"] = {"mode": "automatic-safe-rollback", "files": preview}
         atomic(journal_path, encode_json(data))
@@ -688,6 +783,10 @@ def _install(plan, args):
             failures = sg.failures(previous, manifest["shell_guard"], run)
             if failures:
                 raise InstallError("活动 shell-guard 漂移；拒绝更新: " + "; ".join(failures))
+        if "craft" in previous_selection:
+            errors = cr.failures(previous)
+            if errors:
+                raise InstallError("Active Craft drift; refusing update: " + "; ".join(errors))
         recorded_config = previous.get("managed_rea_config")
         if recorded_config is not None and config_rea_entry(client, config) != recorded_config:
             raise InstallError("活动 REA 配置含后续用户修改或已缺失；拒绝覆盖，请先审阅差异并保留/迁移自定义项")
@@ -716,6 +815,9 @@ def _install(plan, args):
     transaction = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:8]
     tx = root / ".installer/transactions" / transaction
     journal = Journal(tx)
+    if "craft" in selection:
+        journal.data["craft_contract"] = copy.deepcopy(cr.CONTRACT)
+        journal.save()
     atomic(tx / "plan.json", encode_json(plan))
     try:
         stage = tx / "agent"
@@ -789,6 +891,10 @@ def _install(plan, args):
             if complete and complete.get("shell_guard_sha256") != local["tree_hash"]:
                 raise InstallError("shell-guard 插件发生漂移或缺少 hash；拒绝复用")
             guard = {**component, **local}
+        craft_installed = None
+        if "craft" in selection:
+            cr.reverse_contract(selected.get("reverse_root"), plan["craft_reverse_contract"])
+            craft_installed = cr.install_bundle(components["craft"], version_dir / "craft-bundle", journal)
         desired_config = None
         managed_rea = None
         if "rea" in selection:
@@ -886,6 +992,17 @@ def _install(plan, args):
             write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
             entry = (REPO / "adapters/claude/CLAUDE.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
             write_host_file(journal, ownership, project / "CLAUDE.md", entry, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
+        craft_data = None
+        if "craft" in selection:
+            craft_resources = version_dir / "craft-pi"
+            craft_files = cr.resource_files(REPO, receipt_path)
+            if cr.resource_identity(craft_files) != plan["craft_resources"]:
+                raise InstallError("Craft execution resource source inventory/hash drift before write")
+            for name, data in craft_files.items():
+                target = cr.no_links(craft_resources / name)
+                write_host_file(journal, ownership, target, data, client="Craft", owner_receipt=receipt_path, entries=entry_hashes)
+            craft_data = {**craft_installed, "contract": copy.deepcopy(cr.CONTRACT), "resources": str(craft_resources),
+                          "resource_hashes": {k: digest(v) for k, v in craft_files.items()}, "pi_runtime": plan["craft_runtime"]}
         if client == "pi" and agent is not None and (adapter is not None or resources["exclude_rea_skill"] or retirement or "shell_guard" in selection):
             settings_path = agent / "settings.json"
             settings = load_json(settings_path, {})
@@ -926,11 +1043,14 @@ def _install(plan, args):
                 settings.pop("skills", None)
             if "shell_guard" in selection:
                 settings = sg.merge_settings(settings, selected, guard["root"], previous, plan.get("shell_guard_migration"), manifest["shell_guard"])
+            craft_replacements = []
+            if "craft" in selection:
+                settings, craft_replacements = cr.merge_settings(settings, agent, previous, craft_data["resources"])
             if settings != before_settings:
                 observed = digest(settings_path.read_bytes()) if settings_path.exists() else None
                 if observed != plan["config_inputs"][str(settings_path)]:
                     raise InstallError("Pi settings 在激活前发生漂移；事务回退")
-                replacements = []
+                replacements = list(craft_replacements)
                 if "shell_guard" in selection:
                     old_root = ((previous.get("shell_guard") or {}).get("root") or (plan.get("shell_guard_migration") or {}).get("root"))
                     if old_root and guard and not sg.same_path(old_root, guard["root"]):
@@ -978,7 +1098,18 @@ def _install(plan, args):
             if guard["mode"] == "clone-frozen-commit":
                 sg.checkout_identity(guard["root"], components["shell_guard"], run)
             complete["shell_guard_sha256"] = guard["tree_hash"]
-        atomic(version_dir / "complete.json", encode_json(complete))
+        if "craft" in selection:
+            if not cr.same_content(cr.bundle(craft_installed["root"]), components["craft"]):
+                raise InstallError("Craft installed bundle drift before receipt")
+            cr.validate_plan(plan, manifest["craft"])
+            cr.validate_resources(plan, REPO)
+            if cr.pi_runtime(selected, components["craft"], run) != plan["craft_runtime"]:
+                raise InstallError("Craft Pi runtime drift before receipt activation")
+            complete["craft_sha256"] = craft_installed["sha256"]
+        if "craft" in selection:
+            journal.write(version_dir / "complete.json", encode_json(complete))
+        else:
+            atomic(version_dir / "complete.json", encode_json(complete))
         receipt_paths = {}
         if "rea" in selection:
             receipt_paths.update({"rea_prefix": str(paths["rea_prefix"]), "rea_package": str(paths["rea_package"])})
@@ -988,6 +1119,8 @@ def _install(plan, args):
             receipt_paths["reverse"] = str(paths["reverse"])
         if "shell_guard" in selection:
             receipt_paths["shell_guard"] = guard["root"]
+        if "craft" in selection:
+            receipt_paths["craft"] = craft_installed["root"]
         checks = {"selected_components": "passed", "scoped_config": "passed"}
         if "rea" in selection:
             checks["package_identity"] = "passed"
@@ -1018,6 +1151,11 @@ def _install(plan, args):
             "paths": receipt_paths,
             "runtime": {"node": node, "node_version": node_version, "node_sha256": digest(Path(node).read_bytes()) if node else None, "specify": str(specify) if specify else None},
             "reverse": reverse,
+            "craft": craft_data,
+            "craft_reverse_contract": plan.get("craft_reverse_contract"),
+            "craft_contract": copy.deepcopy(cr.CONTRACT) if craft_data else None,
+            "craft_source": {key: selected[key] for key in ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version")} if craft_data else None,
+            "craft_update": plan.get("craft_update"),
             "shell_guard": guard,
             "shell_guard_config": managed_shell_guard,
             "adapter": {"root": str(adapter) if adapter else None, "key": adapter_key, "codex_plugin_reference": (reverse or {}).get("codex_plugin")},
@@ -1035,7 +1173,7 @@ def _install(plan, args):
         return receipt
     except Exception as exc:
         journal.data["failure"] = {"type": type(exc).__name__, "message": str(exc)}
-        journal.data["rollback"] = restore_journal(journal.path, apply=True)
+        journal.data["rollback"] = restore_journal(journal.path, apply=True, defer_receipt=receipt_path)
         journal.finish("failed")
         raise
 
@@ -1093,6 +1231,8 @@ def verify(root):
             failures.append("reverse working copy drift")
         elif hashes.get("reverse_sha256") and hashes["reverse_sha256"] != stored_reverse.get("working_tree_sha256"):
             failures.append("reverse working copy identity drift")
+    if "craft" in selection or receipt.get("craft"):
+        failures.extend(cr.failures(receipt))
     if "shell_guard" in selection:
         failures.extend(sg.failures(receipt, load_json(REPO / "components.json")["shell_guard"], run))
     resources = receipt.get("resource_selection") or {}
@@ -1214,6 +1354,8 @@ def accept(root):
 def restore(root, transaction=None, apply=False):
     root = Path(root)
     receipt = load_json(root / ".installer/receipt.json", {})
+    if receipt.get("craft") or "craft" in (receipt.get("scope") or {}).get("components", []):
+        cr.gate(receipt.get("craft_contract"))
     transaction = transaction or receipt.get("transaction")
     if not transaction or not re.fullmatch(r"[A-Za-z0-9-]+", transaction):
         raise InstallError("需要有效的 --transaction，或活动 receipt")
@@ -1222,6 +1364,9 @@ def restore(root, transaction=None, apply=False):
         raise InstallError("找不到事务备份: " + transaction)
     if receipt.get("transaction") and transaction != receipt["transaction"]:
         raise InstallError("只允许恢复活动事务；请按最新到最旧依次回退，避免跨版本覆盖")
+    journal_contract = load_json(path).get("craft_contract")
+    if journal_contract is not None:
+        cr.gate(journal_contract)
     if apply:
         with locked(root):
             return {"transaction": transaction, "applied": True, "files": restore_journal(path, apply=True, defer_receipt=root / ".installer/receipt.json")}

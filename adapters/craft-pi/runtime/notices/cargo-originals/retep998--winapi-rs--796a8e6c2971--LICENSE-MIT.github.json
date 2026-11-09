@@ -1,0 +1,18 @@
+{
+  "name": "LICENSE-MIT",
+  "path": "LICENSE-MIT",
+  "sha": "6f1b4c850cd2bd0d165f122c0274afc95e10a851",
+  "size": 1073,
+  "url": "https://api.github.com/repos/retep998/winapi-rs/contents/LICENSE-MIT?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+  "html_url": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT",
+  "git_url": "https://api.github.com/repos/retep998/winapi-rs/git/blobs/6f1b4c850cd2bd0d165f122c0274afc95e10a851",
+  "download_url": "https://raw.githubusercontent.com/retep998/winapi-rs/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT",
+  "type": "file",
+  "content": "Q29weXJpZ2h0IChjKSAyMDE1LTIwMTggVGhlIHdpbmFwaS1ycyBEZXZlbG9w\nZXJzCgpQZXJtaXNzaW9uIGlzIGhlcmVieSBncmFudGVkLCBmcmVlIG9mIGNo\nYXJnZSwgdG8gYW55IHBlcnNvbiBvYnRhaW5pbmcgYSBjb3B5Cm9mIHRoaXMg\nc29mdHdhcmUgYW5kIGFzc29jaWF0ZWQgZG9jdW1lbnRhdGlvbiBmaWxlcyAo\ndGhlICJTb2Z0d2FyZSIpLCB0byBkZWFsCmluIHRoZSBTb2Z0d2FyZSB3aXRo\nb3V0IHJlc3RyaWN0aW9uLCBpbmNsdWRpbmcgd2l0aG91dCBsaW1pdGF0aW9u\nIHRoZSByaWdodHMKdG8gdXNlLCBjb3B5LCBtb2RpZnksIG1lcmdlLCBwdWJs\naXNoLCBkaXN0cmlidXRlLCBzdWJsaWNlbnNlLCBhbmQvb3Igc2VsbApjb3Bp\nZXMgb2YgdGhlIFNvZnR3YXJlLCBhbmQgdG8gcGVybWl0IHBlcnNvbnMgdG8g\nd2hvbSB0aGUgU29mdHdhcmUgaXMKZnVybmlzaGVkIHRvIGRvIHNvLCBzdWJq\nZWN0IHRvIHRoZSBmb2xsb3dpbmcgY29uZGl0aW9uczoKClRoZSBhYm92ZSBj\nb3B5cmlnaHQgbm90aWNlIGFuZCB0aGlzIHBlcm1pc3Npb24gbm90aWNlIHNo\nYWxsIGJlIGluY2x1ZGVkIGluIGFsbApjb3BpZXMgb3Igc3Vic3RhbnRpYWwg\ncG9ydGlvbnMgb2YgdGhlIFNvZnR3YXJlLgoKVEhFIFNPRlRXQVJFIElTIFBS\nT1ZJREVEICJBUyBJUyIsIFdJVEhPVVQgV0FSUkFOVFkgT0YgQU5ZIEtJTkQs\nIEVYUFJFU1MgT1IKSU1QTElFRCwgSU5DTFVESU5HIEJVVCBOT1QgTElNSVRF\nRCBUTyBUSEUgV0FSUkFOVElFUyBPRiBNRVJDSEFOVEFCSUxJVFksCkZJVE5F\nU1MgRk9SIEEgUEFSVElDVUxBUiBQVVJQT1NFIEFORCBOT05JTkZSSU5HRU1F\nTlQuIElOIE5PIEVWRU5UIFNIQUxMIFRIRQpBVVRIT1JTIE9SIENPUFlSSUdI\nVCBIT0xERVJTIEJFIExJQUJMRSBGT1IgQU5ZIENMQUlNLCBEQU1BR0VTIE9S\nIE9USEVSCkxJQUJJTElUWSwgV0hFVEhFUiBJTiBBTiBBQ1RJT04gT0YgQ09O\nVFJBQ1QsIFRPUlQgT1IgT1RIRVJXSVNFLCBBUklTSU5HIEZST00sCk9VVCBP\nRiBPUiBJTiBDT05ORUNUSU9OIFdJVEggVEhFIFNPRlRXQVJFIE9SIFRIRSBV\nU0UgT1IgT1RIRVIgREVBTElOR1MgSU4gVEhFClNPRlRXQVJFLgo=\n",
+  "encoding": "base64",
+  "_links": {
+    "self": "https://api.github.com/repos/retep998/winapi-rs/contents/LICENSE-MIT?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+    "git": "https://api.github.com/repos/retep998/winapi-rs/git/blobs/6f1b4c850cd2bd0d165f122c0274afc95e10a851",
+    "html": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT"
+  }
+}

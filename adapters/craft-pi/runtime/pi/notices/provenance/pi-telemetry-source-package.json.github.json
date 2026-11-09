@@ -1,0 +1,18 @@
+{
+  "name": "package.json",
+  "path": "packages/telemetry/package.json",
+  "sha": "eeb30b234231eb4059358e098c3989ff2ccaa8f9",
+  "size": 1216,
+  "url": "https://api.github.com/repos/earendil-works/pi/contents/packages/telemetry/package.json?ref=f9a26365568127461c47a07a37dcb42c140a3ac5",
+  "html_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/telemetry/package.json",
+  "git_url": "https://api.github.com/repos/earendil-works/pi/git/blobs/eeb30b234231eb4059358e098c3989ff2ccaa8f9",
+  "download_url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/telemetry/package.json",
+  "type": "file",
+  "content": "ewoJIm5hbWUiOiAiQGVhcmVuZGlsLXdvcmtzL3BpLXRlbGVtZXRyeSIsCgki\ndmVyc2lvbiI6ICIxLjUuMCIsCgkiZGVzY3JpcHRpb24iOiAiVmVuZG9yLW5l\ndXRyYWwgdGVsZW1ldHJ5IGNvbnRyYWN0cyBhbmQgdHlwZWQgc2NoZW1hIHV0\naWxpdGllcyBmb3IgcGkiLAoJInR5cGUiOiAibW9kdWxlIiwKCSJtYWluIjog\nIi4vZGlzdC9pbmRleC5qcyIsCgkidHlwZXMiOiAiLi9kaXN0L2luZGV4LmQu\ndHMiLAoJImV4cG9ydHMiOiB7CgkJIi4iOiB7CgkJCSJzb3VyY2UiOiAiLi9z\ncmMvaW5kZXgudHMiLAoJCQkidHlwZXMiOiAiLi9kaXN0L2luZGV4LmQudHMi\nLAoJCQkiaW1wb3J0IjogIi4vZGlzdC9pbmRleC5qcyIKCQl9LAoJCSIuL3Jl\nbmRlciI6IHsKCQkJInNvdXJjZSI6ICIuL3NyYy9yZW5kZXIudHMiLAoJCQki\ndHlwZXMiOiAiLi9kaXN0L3JlbmRlci5kLnRzIiwKCQkJImltcG9ydCI6ICIu\nL2Rpc3QvcmVuZGVyLmpzIgoJCX0sCgkJIi4vdGVzdGluZyI6IHsKCQkJInNv\ndXJjZSI6ICIuL3NyYy90ZXN0aW5nL2luZGV4LnRzIiwKCQkJInR5cGVzIjog\nIi4vZGlzdC90ZXN0aW5nL2luZGV4LmQudHMiLAoJCQkiaW1wb3J0IjogIi4v\nZGlzdC90ZXN0aW5nL2luZGV4LmpzIgoJCX0KCX0sCgkiZmlsZXMiOiBbCgkJ\nImRpc3QiLAoJCSJSRUFETUUubWQiCgldLAoJInNjcmlwdHMiOiB7CgkJImNs\nZWFuIjogIm5vZGUgLi4vLi4vc2NyaXB0cy9wYWNrYWdlLWZpbGVzLm1qcyBj\nbGVhbiBkaXN0IiwKCQkiYnVpbGQiOiAidHNjIC1wIHRzY29uZmlnLmJ1aWxk\nLmpzb24iLAoJCSJ0ZXN0IjogInZpdGVzdCAtLXJ1biIsCgkJInByZXB1Ymxp\nc2hPbmx5IjogIm5wbSBydW4gY2xlYW4gJiYgbnBtIHJ1biBidWlsZCIKCX0s\nCgkia2V5d29yZHMiOiBbCgkJInRlbGVtZXRyeSIsCgkJInRyYWNpbmciLAoJ\nCSJvYnNlcnZhYmlsaXR5IgoJXSwKCSJhdXRob3IiOiAiTWFyaW8gWmVjaG5l\nciIsCgkibGljZW5zZSI6ICJNSVQiLAoJInJlcG9zaXRvcnkiOiB7CgkJInR5\ncGUiOiAiZ2l0IiwKCQkidXJsIjogImdpdCtodHRwczovL2dpdGh1Yi5jb20v\nZWFyZW5kaWwtd29ya3MvcGkuZ2l0IiwKCQkiZGlyZWN0b3J5IjogInBhY2th\nZ2VzL3RlbGVtZXRyeSIKCX0sCgkiZW5naW5lcyI6IHsKCQkibm9kZSI6ICI+\nPTIyLjE5LjAiCgl9LAoJImRldkRlcGVuZGVuY2llcyI6IHsKCQkiQHR5cGVz\nL25vZGUiOiAiMjIuMTkuMTkiLAoJCSJ2aXRlc3QiOiAiNC4xLjEyIgoJfQp9\nCg==\n",
+  "encoding": "base64",
+  "_links": {
+    "self": "https://api.github.com/repos/earendil-works/pi/contents/packages/telemetry/package.json?ref=f9a26365568127461c47a07a37dcb42c140a3ac5",
+    "git": "https://api.github.com/repos/earendil-works/pi/git/blobs/eeb30b234231eb4059358e098c3989ff2ccaa8f9",
+    "html": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/telemetry/package.json"
+  }
+}

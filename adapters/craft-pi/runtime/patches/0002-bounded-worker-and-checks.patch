@@ -1,0 +1,1790 @@
+diff --git a/crates/ai/src/rebuild/kinds/mod.rs b/crates/ai/src/rebuild/kinds/mod.rs
+index 43a2162cfedb33d722fb4219bcc48abca57aafff..766935161bafbb20fddcb5073b193c57899e6c39 100644
+--- a/crates/ai/src/rebuild/kinds/mod.rs
++++ b/crates/ai/src/rebuild/kinds/mod.rs
+@@ -150,6 +150,19 @@ pub struct CheckCx<'a> {
+ }
+ 
+ impl CheckCx<'_> {
++    /// The immutable accepted input, when this is an owner check in the bounded path.
++    pub fn execution_policy(&self) -> Option<&policy::ExecutionPolicy> { self.worker.policy.as_deref() }
++
++    /// Resolve a check's external baseline without writing Craft capture/Evidence files.
++    pub fn external_baseline(&self, check_id: &str) -> Result<Option<PathBuf>, ToolError> {
++        let Some(p) = self.execution_policy() else { return Ok(None) };
++        let c = p.checks.iter().find(|c| c.id == check_id).ok_or_else(|| ToolError::invalid("Check absent from accepted plan."))?;
++        match (&c.baseline, c.kind) {
++            (Some(key), Some(kind)) => p.baseline.resolve(key, kind).map(Some),
++            _ => Err(ToolError::invalid("Check has no external baseline mapping.")),
++        }
++    }
++
+     /// Run an engine tool (the same ones the builder has).
+     pub fn call(&self, tool: &str, params: Value) -> Result<ToolOutput, ToolError> {
+         self.worker.call(tool, params)
+@@ -200,12 +213,21 @@ impl Worker {
+         let mut cx = CheckCx { worker: self, ws, round };
+         let mut out = Vec::new();
+         let from_plugins = craft_anything_engine::wasm_plugins::checks(&self.engine.session());
++        let plugin_error = (self.policy.is_some() && from_plugins.iter().any(|c| c.kinds.is_empty() || c.kinds.iter().any(|k| k == kind.id())))
++            .then(|| craft_anything_engine::execution_policy::refusal("unsupported", "Plugin checks have no reviewed identity."));
+         let plugin_checks = from_plugins
+             .into_iter()
+             .filter(|c| c.kinds.is_empty() || c.kinds.iter().any(|k| k == kind.id()))
+             .map(|check| Box::new(plugin_check::PluginJudge { check, kind: kind.id() }) as Box<dyn Check>);
+         let checks = if ws.manifest.own_project() { own::checks() } else { kind.checks(ws) };
+-        for c in checks.into_iter().chain(plugin_checks) {
++        let mut checks: Vec<Box<dyn Check>> = checks.into_iter().chain(plugin_checks).collect();
++        if let Some(p) = &self.policy {
++            let admission_error = plugin_error.or_else(|| p.revalidate_contract().err());
++            checks.push(Box::new(external_checks::ExternalConsoleCheck));
++            checks.push(Box::new(external_checks::ExternalScenarioCheck));
++            return self.run_planned_checks(ws, round, &mut cx, checks, admission_error);
++        }
++        for c in checks {
+             if !c.applies(&cx) {
+                 continue;
+             }
+diff --git a/crates/ai/src/rebuild/kinds/screenshot.rs b/crates/ai/src/rebuild/kinds/screenshot.rs
+index 1a793eaefc19d15c7c1eea560fc17bfb9970aef1..5f62bc57edacf586d0e2b9ad4e022f86e57feb99 100644
+--- a/crates/ai/src/rebuild/kinds/screenshot.rs
++++ b/crates/ai/src/rebuild/kinds/screenshot.rs
+@@ -44,7 +44,7 @@ impl Check for ScreenshotCheck {
+ 
+     /// A console program draws no window: its runs are compared instead ([`super::runs`]).
+     fn applies(&self, cx: &CheckCx) -> bool {
+-        super::runs::captured(cx.ws).is_empty()
++        cx.execution_policy().is_some() || super::runs::captured(cx.ws).is_empty()
+     }
+ 
+     fn run(&self, cx: &mut CheckCx) -> Result<CheckResult, ToolError> {
+@@ -85,9 +85,9 @@ impl Check for ScreenshotCheck {
+             });
+         }
+         // The person's pictures, and the picture of the original running (runtime study).
+-        let mut pictures = ws.references();
+-        pictures.extend(Some(ws.capture_dir().join("window.png")).filter(|p| p.is_file()));
+-        let bar = cx.build_settings().picture_good_enough;
++        let mut pictures = if let Some(path) = cx.external_baseline(self.id())? { vec![path] } else { ws.references() };
++        if cx.execution_policy().is_none() { pictures.extend(Some(ws.capture_dir().join("window.png")).filter(|p| p.is_file())); }
++        let bar = if cx.execution_policy().is_some() { Some(cx.worker.self_check.as_ref().map(|(_, bar)| *bar).unwrap_or(90.0)) } else { cx.build_settings().picture_good_enough };
+         let mut similarity = None;
+         let note = match picture_likeness(&img, &pictures) {
+             Likeness::Best { score, name } => {
+@@ -103,7 +103,7 @@ impl Check for ScreenshotCheck {
+             ),
+             Likeness::NoPictures => format!("The program starts and draws ({}×{}).", img.width, img.height),
+         };
+-        let (running, claims) = running_note(cx, &program, &base_args, &dir);
++        let (running, claims) = if cx.execution_policy().is_none() { running_note(cx, &program, &base_args, &dir) } else { (" External native PNG baseline only; runtime UI actions and persistence need their selected scenario check.".into(), Vec::new()) };
+         let note = note + &running;
+         artifacts.extend(dir.join("window.png").strip_prefix(&ws.root).ok().map(Path::to_path_buf).filter(|p| ws.root.join(p).is_file()));
+         Ok(CheckResult { artifacts, similarity, good_enough: bar, claims, ..CheckResult::new(self.id(), round, true, note) })
+@@ -304,6 +304,13 @@ pub(super) fn run_with(cx: &CheckCx, option: &str, file: &Path) -> Result<OwnRun
+     let app = cx.ws.app_dir();
+     let godot = cx.godot();
+     let Some((program, args)) = launch(&app, godot.as_deref()) else { return Ok(OwnRun::NoProgram) };
++    if cx.execution_policy().is_some() {
++        let app = craft_anything_engine::execution_policy::real(&app)?;
++        let executable = craft_anything_engine::execution_policy::real(&program)?;
++        if !executable.starts_with(&app) {
++            return Err(craft_anything_engine::execution_policy::refusal("unsupported", "Bounded native screenshot requires an executable inside the accepted app root; external launchers need separate qualification."));
++        }
++    }
+     if let Some(dir) = file.parent() {
+         std::fs::create_dir_all(dir).map_err(|e| ToolError::io(dir.display(), e))?;
+     }
+@@ -312,6 +319,13 @@ pub(super) fn run_with(cx: &CheckCx, option: &str, file: &Path) -> Result<OwnRun
+     with.extend(option_args(godot.is_some() && app.join("project.godot").is_file(), option, file));
+     let stop = cx.stop().clone();
+     let out = Process::new(&program).args(&with).cwd(&app).timeout(RUN_LIMIT).stdout_cap(256 * 1024).cancel_when(move || stop.is_cancelled()).run();
++    if cx.execution_policy().is_some() {
++        match &out {
++            Ok(output) if output.success => {},
++            Ok(_) => return Err(ToolError::new(ErrorCode::ProgramFailed, "Native screenshot process failed; a saved image alone is not a passed execution.")),
++            Err(error) => return Err(error.clone()),
++        }
++    }
+     let Ok(bytes) = std::fs::read(file) else {
+         let why = match &out {
+             Ok(o) if !o.success => {
+diff --git a/crates/ai/src/rebuild/mod.rs b/crates/ai/src/rebuild/mod.rs
+index 886cae3937a545a4531b60b790b3226270abf3c1..3736e654fc7e2cb87abc48d176e0e0d51ca4258a 100644
+--- a/crates/ai/src/rebuild/mod.rs
++++ b/crates/ai/src/rebuild/mod.rs
+@@ -41,11 +41,14 @@ use std::time::{Duration, Instant};
+ pub mod activity;
+ mod brief;
+ mod check;
++pub mod external_checks;
++pub use external_checks::{validate_external_inputs, CHECK_PLAN_REPORT_VERSION, CheckDisposition, CheckReasonCode, CheckReturnTo, CheckReturnKind, CheckSourceRefs, PlannedCheckRecord, CheckReturnItem, CheckReturnSummary, CheckPlanReport, read_check_plan_report};
+ pub mod feed;
+ pub mod kinds;
+ mod locate;
+ pub mod notes;
+ mod output;
++pub mod policy;
+ pub mod project;
+ pub mod question;
+ pub mod runs;
+@@ -150,6 +153,10 @@ pub struct RunOptions {
+     /// A free session is read first; this is the fallback while it is held; the saved settings
+     /// are the last fallback.
+     pub clean_room: Option<bool>,
++    /// None retains the upstream study/build/check behavior.
++    pub policy: Option<Arc<policy::ExecutionPolicy>>,
++    /// Explicit selected Pi RPC transport; no default or plain fallback.
++    pub policy_runtime: Option<Arc<dyn policy::PolicyRuntime>>,
+ }
+ 
+ impl Default for RunOptions {
+@@ -167,6 +174,8 @@ impl Default for RunOptions {
+             adapters: Default::default(),
+             wake: Wake::default(),
+             clean_room: None,
++            policy: None,
++            policy_runtime: None,
+         }
+     }
+ }
+@@ -219,13 +228,32 @@ pub struct RebuildRun {
+     pub root: PathBuf,
+     started: Instant,
+     activity: Arc<activity::Activity>,
++    worker: Option<std::thread::JoinHandle<()>>,
++    policy: Option<Arc<policy::ExecutionPolicy>>,
+ }
+ 
+ impl RebuildRun {
+     /// Start a run on a worker thread. Fails fast (before any work) when no coding agent is set up.
+     pub fn start(hub: &AiHub, ws: Workspace, opts: RunOptions) -> Result<RebuildRun, ToolError> {
+-        let cfg = hub.config();
+-        let entry = builder_backend(&cfg, opts.backend.as_deref().or_else(|| project_builder(&cfg, &ws)))?;
++        let admitted = policy::preflight(hub, &ws, &opts)?;
++        Self::start_admitted(hub, ws, opts, admitted)
++    }
++
++    fn start_admitted(hub: &AiHub, ws: Workspace, opts: RunOptions, admitted: Option<crate::BackendEntry>) -> Result<RebuildRun, ToolError> {
++        let entry = if opts.policy.is_some() {
++            admitted.ok_or_else(|| ToolError::invalid("Policy run has no validated backend snapshot."))?
++        } else {
++            let cfg = hub.config();
++            builder_backend(&cfg, opts.backend.as_deref().or_else(|| project_builder(&cfg, &ws)))?
++        };
++        // Defense before all transcript/model side effects, even if a future caller supplies
++        // an invalid admission snapshot. Never reselect this entry from mutable settings.
++        if opts.policy.is_some() && (entry.config.kind != BackendKind::AgentCli || entry.config.ssh_host.is_some() || entry.options.acp == Some(true) || !entry.options.args.is_empty()) {
++            return Err(craft_anything_engine::execution_policy::refusal("unsupported", "Accepted research cannot initialize an API/SSH/ACP backend."));
++        }
++        let lease = opts.policy.as_deref().map(policy::SourceLease::acquire).transpose()?;
++        // Recheck source/input identity under the cooperative lease.
++        if let Some(p) = &opts.policy { p.preflight(&ws)?; }
+         // The person's choice of mode is a session setting. A run that waited its turn uses the mode
+         // now, not the one when it was queued; a tool holds the session while it starts a run, so it
+         // passes the mode instead, and the saved settings are the last fallback.
+@@ -248,7 +276,7 @@ impl RebuildRun {
+         };
+         // A chosen extractor (an API backend, e.g. Kimi K3) takes a game's files out after a fresh
+         // study; the run only uses it in Deep mode on a game (see Worker::extract).
+-        let fresh = opts.message.is_none() || !ws.capture_dir().exists();
++        let fresh = opts.policy.is_none() && (opts.message.is_none() || !ws.capture_dir().exists());
+         let extractor = match hub.chosen(Role::Extractor).and_then(|n| hub.config().get(&n).cloned()) {
+             Some(e) if fresh && e.config.kind != BackendKind::AgentCli => {
+                 let _ = std::fs::remove_file(ws.root.join(EXTRACT_TRANSCRIPT));
+@@ -287,10 +315,13 @@ impl RebuildRun {
+             usage: Some(UsageClock { root: root.clone(), since: Instant::now() }),
+             self_check: None,
+             reset_progress_after_notes: false,
++            policy: opts.policy.clone(),
++            deadline: opts.policy.as_ref().map(|p| Instant::now() + Duration::from_secs(p.max_wall_secs)),
+         };
+         let r2 = running.clone();
+         let key_store = hub.keys.clone();
+-        std::thread::Builder::new()
++        let run_policy = opts.policy.clone();
++        let worker = std::thread::Builder::new()
+             .name("rebuild".into())
+             .spawn(move || {
+                 let mut ctx = ctx;
+@@ -298,10 +329,28 @@ impl RebuildRun {
+                 // A clone can run for hours: keep the computer from sleeping until it ends.
+                 let awake = craft_anything_platform::keep_awake();
+                 let _here = self_check::BuildingHere::new(&ws.root);
+-                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+-                    ctx.load_asset_keys(&key_store);
+-                    ctx.run(&mut ws, entry, api, extractor, &opts)
+-                }));
++                let budget_done = Arc::new(AtomicBool::new(false));
++                let budget_watch = ctx.deadline.map(|deadline| {
++                    let done = budget_done.clone(); let cancel = ctx.stop.clone();
++                    std::thread::Builder::new().name("accepted-run-deadline".into()).spawn(move || {
++                        while !done.load(Ordering::SeqCst) {
++                            if Instant::now() >= deadline { cancel.cancel(); break; }
++                            std::thread::sleep(Duration::from_millis(50));
++                        }
++                    })
++                }).transpose();
++                let result = match budget_watch {
++                    Err(e) => Ok(Err(ToolError::internal(format!("Cannot start the accepted run deadline monitor: {e}")))),
++                    Ok(watch) => {
++                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++                            if opts.policy.is_none() { ctx.load_asset_keys(&key_store); }
++                            ctx.run(&mut ws, entry, api, extractor, &opts)
++                        }));
++                        budget_done.store(true, Ordering::SeqCst);
++                        if let Some(watch) = watch { let _ = watch.join(); }
++                        result
++                    }
++                };
+                 let (ok, message, paused) = match result {
+                     Ok(Ok(m)) => (true, m, false),
+                     Ok(Err(e)) if e.code == ErrorCode::Cancelled => {
+@@ -319,12 +368,15 @@ impl RebuildRun {
+                 // The CLI can exit as soon as it sees completion: release the helper while its
+                 // supervisor threads are still available to stop it.
+                 drop(awake);
++                if opts.policy.is_some() { ctx.preview.lock().unwrap_or_else(PoisonError::into_inner).take(); }
+                 ctx.emit(RunEvent::Finished { ok, message, paused });
++                drop(ctx);
++                drop(lease);
+                 r2.store(false, Ordering::SeqCst);
+             })
+             .map_err(|e| ToolError::internal(e.to_string()))?;
+         let activity = feed.lock().unwrap_or_else(PoisonError::into_inner).activity();
+-        Ok(RebuildRun { rx, stop, inbox, running, preview, notes, clean_room, feed, root, started: Instant::now(), activity })
++        Ok(RebuildRun { rx, stop, inbox, running, preview, notes, clean_room, feed, root, started: Instant::now(), activity, worker: Some(worker), policy: run_policy })
+     }
+ 
+     /// Add something while it works; the agent reads it at its next step, and only then does it
+@@ -338,9 +390,9 @@ impl RebuildRun {
+     pub fn add_note(&self, text: String, shown: String, pictures: Vec<PathBuf>) -> u64 {
+         static NEXT: AtomicU64 = AtomicU64::new(1);
+         let id = NEXT.fetch_add(1, Ordering::Relaxed);
+-        let mut file_text = text.clone();
++        let mut file_text = self.policy.as_ref().map_or_else(|| text.clone(), |p| p.prompt(&text));
+         let mut questions = Vec::new();
+-        if !text.trim().is_empty() {
++        if !text.trim().is_empty() && self.policy.is_none() {
+             // A note already waiting carries what it carries; this one adds only what's new.
+             let waiting: Vec<AskedQuestion> = {
+                 let notes = self.notes.lock().unwrap_or_else(PoisonError::into_inner);
+@@ -416,6 +468,18 @@ impl RebuildRun {
+         self.stop.cancel();
+     }
+ 
++    /// Wait for the worker itself to exit, retaining all pending events. This observes the
++    /// Rust worker only; transport/OS descendant exit requires its separate receipt.
++    pub fn wait_for_completion(&mut self, timeout: Duration) -> Result<bool, ToolError> {
++        let start = Instant::now();
++        while self.worker.as_ref().is_some_and(|w| !w.is_finished()) {
++            if start.elapsed() >= timeout { return Ok(false); }
++            std::thread::sleep(Duration::from_millis(10));
++        }
++        if let Some(worker) = self.worker.take() { worker.join().map_err(|_| ToolError::internal("Rebuild worker panicked while exiting."))?; }
++        Ok(!self.is_running())
++    }
++
+     pub fn is_running(&self) -> bool {
+         self.running.load(Ordering::SeqCst)
+     }
+@@ -493,6 +557,8 @@ struct Worker {
+     self_check: Option<(Arc<dyn kinds::TargetKind>, f64)>,
+     /// A hook consumed a new request; persist its reset only after the builder finishes.
+     reset_progress_after_notes: bool,
++    policy: Option<Arc<policy::ExecutionPolicy>>,
++    deadline: Option<Instant>,
+ }
+ 
+ /// The project a run records its usage in, and when it last did.
+@@ -650,6 +716,10 @@ impl Worker {
+         }
+         // A cancelled step can't be reported, but the notes go in either way.
+         let _ = self.step(ws, Step::Build, Status::Building, "Reading what you added…");
++        if let Some(p) = &self.policy {
++            let texts = notes.into_iter().map(|n| n.text).collect::<Vec<_>>().join("\n");
++            return Some((p.prompt(&texts), Vec::new()));
++        }
+         let attached: Vec<AskedQuestion> = notes.iter().flat_map(|n| n.questions.iter().cloned()).collect();
+         // A note taken before the person asked something carries no answer for it; put the
+         // remaining ones before the notes so the builder has both in this turn.
+@@ -711,9 +781,9 @@ impl Worker {
+         Ok(CliSpec {
+             builder: Some(Builder { investigation: Some(ws.investigation_dir()), inbox: ws.inbox_dir() }),
+             deep,
+-            targets,
++            targets: if opts.policy.is_some() { Vec::new() } else { targets },
+             logs: Some(crate::failure_log::dir_in(&config_dir)),
+-            resume: ws.manifest.agent_session_for_mode(&entry.config.model, deep).map(str::to_string),
++            resume: if opts.policy.is_some() { None } else { ws.manifest.agent_session_for_mode(&entry.config.model, deep).map(str::to_string) },
+             preamble: Some(
+                 "You work inside Craft Anything for a person who doesn't code. The message below is your task.
+ 
+@@ -750,7 +820,7 @@ impl Worker {
+         // Fail before any work when the agent's tools are missing or it can't sign in.
+         let remote_host = entry.config.ssh_host.as_deref().map(str::trim).filter(|h| !h.is_empty());
+         let remote = remote_host.is_some();
+-        if api.is_none() {
++        if api.is_none() && opts.policy.is_none() {
+             let adapter = opts.adapters.for_backend(&entry.config.model, &entry.options);
+             if let Some(host) = remote_host {
+                 adapter.check_remote_tool_server(host, &self.stop)?;
+@@ -780,12 +850,12 @@ impl Worker {
+             ws.manifest.stack = project::first_stack(&opts.kinds, ws, deep).ok_or_else(no_kind)?.to_string();
+             ws.save()?;
+         }
+-        let kind = opts.kinds.detect(&ws.manifest.request, &ws.manifest.target, &ws.manifest.stack).ok_or_else(no_kind)?;
++        let kind = if let Some(p) = &opts.policy { opts.kinds.get(&p.kind_id) } else { opts.kinds.detect(&ws.manifest.request, &ws.manifest.target, &ws.manifest.stack) }.ok_or_else(no_kind)?;
+         self.self_check = Some((kind.clone(), opts.good_enough));
+         let kind = kind.as_ref();
+         self.editor = self.find_editor(&ws.manifest.stack)?;
+         let carrying_on = opts.continuing || (opts.message.is_none() && ws.builder_started());
+-        let first = (opts.message.is_none() && !carrying_on) || !ws.capture_dir().exists();
++        let first = opts.policy.is_none() && ((opts.message.is_none() && !carrying_on) || !ws.capture_dir().exists());
+         if first {
+             self.study(ws, kind)?;
+             if let Some((name, ex)) = extractor {
+@@ -824,6 +894,8 @@ impl Worker {
+         let has_history = resumable && (api_loop || resumed);
+         let mut agent: Box<dyn Conversation> = match api {
+             Some(a) => Box::new(a),
++            None if opts.policy.is_some() => opts.policy_runtime.as_ref().ok_or_else(|| ToolError::invalid("Missing bounded runtime."))?
++                .conversation(opts.policy.as_ref().cloned().ok_or_else(|| ToolError::invalid("Missing execution policy."))?, spec, self.stop.clone())?,
+             None => crate::cli_agents::builder_conversation(spec, self.approver(ws)),
+         };
+         // The builder's tool server is started in this run's mode (`--deep` or `--clean-room`).
+@@ -834,7 +906,7 @@ impl Worker {
+         let cx = BriefCx { ws, deep, ghidra, editor: self.editor.as_deref(), assets: self.assets, image_model: image_model.as_deref(), sees_pictures };
+         // The project's settings as they are now, for an agent that carries on its session.
+         let now = || kind.follow_up_sections(&cx).iter().map(|s| format!("\n\n{s}")).collect::<String>() + &pictures_reminder(ws, sees_pictures);
+-        let mut prompt = match &opts.message {
++        let mut prompt = if let Some(p) = &opts.policy { p.prompt(opts.message.as_deref().unwrap_or(&ws.manifest.request)) } else { match &opts.message {
+             // An agent with a saved session gets the follow-up; one without (an API loop) starts
+             // from the brief with the request added.
+             Some(m) if !first && has_history => follow_up(m, kind) + &now(),
+@@ -844,7 +916,7 @@ impl Worker {
+                 let b = brief(kind, &cx, opts.message.as_deref());
+                 if api_loop { format!("{API_BUILDER}{}\n\n{b}", if sees_pictures { "" } else { BLIND_BUILDER }) } else { b }
+             }
+-        };
++        }};
+         // The extraction step left the original's files in app/Original/: the builder starts from them.
+         if first && ws.app_dir().join(ORIGINALS_MANIFEST).is_file() {
+             prompt.push_str(ORIGINALS_READY);
+@@ -857,7 +929,7 @@ impl Worker {
+         });
+         // "Just ask" runs apart from the builder's session, and the person's message may follow on from it (#857).
+         let new_request = opts.message.as_deref().is_some_and(|m| !m.trim().is_empty());
+-        let mut asked = if new_request { craft_anything_engine::questions::untold(ws, deep) } else { Vec::new() };
++        let mut asked = if new_request && opts.policy.is_none() { craft_anything_engine::questions::untold(ws, deep) } else { Vec::new() };
+         let just_asked = just_asked(&asked);
+         prompt.insert_str(0, &just_asked);
+         fresh = fresh.map(|f| format!("{just_asked}{f}"));
+@@ -874,7 +946,7 @@ impl Worker {
+         }
+         let mut refinements = 0;
+         // Deep mode on a program: decompiling is required, so a build turn without any gets one reminder.
+-        let must_decompile = deep && matches!(ws.manifest.target, TargetRef::Local { .. });
++        let must_decompile = opts.policy.is_none() && deep && matches!(ws.manifest.target, TargetRef::Local { .. });
+         let mut reminded = false;
+         // The builder finished and only the check didn't: the build is there to check.
+         let mut only_check = carrying_on && !first && opts.message.is_none() && ws.manifest.awaiting_check;
+@@ -932,7 +1004,7 @@ impl Worker {
+                 // The stack is recorded as the one the build uses, once it shows: left to the builder,
+                 // or another than the default because the request asked for it. A game engine stays
+                 // (it says the project is a game, and its editor is found for it).
+-                if game::Builder::from_stack(&ws.manifest.stack).is_none()
++                if opts.policy.is_none() && game::Builder::from_stack(&ws.manifest.stack).is_none()
+                     && let Some(s) = stacks::used_in(&ws.app_dir())
+                 {
+                     ws.manifest.stack = s.name.clone();
+@@ -976,6 +1048,16 @@ impl Worker {
+             for c in &checks {
+                 self.emit(RunEvent::Checked(c.clone()));
+             }
++            if let Some(policy) = &opts.policy {
++                let report = read_check_plan_report(policy, &ws.root, round)?;
++                let records_ref = PathBuf::from("checks").join(format!("round-{round}")).join("accepted-check-plan.json");
++                if let Some(summary) = report.return_summary(records_ref).filter(|s| s.return_to != CheckReturnTo::ImplementationWorker) {
++                    // All diagnostics are already private on disk. No Builder retry or note
++                    // can turn a required evidence/capability/input failure into a code task.
++                    return Err(ToolError::new(ErrorCode::NotSupported, "Required checks require an owner return; see typed check metadata.")
++                        .with_details(serde_json::to_value(summary).map_err(|e| ToolError::internal(e.to_string()))?));
++                }
++            }
+             if let Some((p, more)) = self.added(ws, deep, sees_pictures) {
+                 asked.extend(more);
+                 progress.reset();
+@@ -984,7 +1066,7 @@ impl Worker {
+                 prompt = p;
+                 continue;
+             }
+-            let not_good = checks.iter().find(|c| !c.good(opts.good_enough));
++            let not_good = checks.iter().find(|c| !c.good(opts.good_enough) && opts.policy.as_ref().is_none_or(|p| p.checks.iter().any(|plan| plan.id == c.check && plan.required)));
+             if not_good.is_some() && progress_available && progress.stalled() {
+                 // A check-only resume skipped the builder's before-turn scan. A real edit
+                 // while the project was closed (or during this check) still starts an attempt.
+@@ -1007,8 +1089,8 @@ impl Worker {
+             // Nothing written yet: a fix for a build that doesn't exist sends the builder looking for one.
+             // It is asked to write the project and to show its build output (#736).
+             let refined = if app_is_empty(ws) { NO_PROJECT_PROMPT.to_string() } else { kind.refine(check, sees_pictures) };
+-            prompt = refined + &pictures_reminder(ws, sees_pictures);
+-            if !api_loop {
++            prompt = if let Some(p) = &opts.policy { p.prompt(&format!("Fix the implementation failure from the frozen check plan:\n{}", check.note)) } else { refined + &pictures_reminder(ws, sees_pictures) };
++            if !api_loop && opts.policy.is_none() {
+                 prompt.push_str(CHECK_BEFORE_REPLYING);
+             }
+         }
+@@ -1017,7 +1099,9 @@ impl Worker {
+         }
+         let last = ws.manifest.checks.last().cloned();
+         // A site that builds but isn't close enough is still usable; no working build is not.
+-        let usable = last.as_ref().is_some_and(|c| c.passed);
++        let usable = if let Some(policy) = &opts.policy {
++            last.as_ref().is_some_and(|last| policy.checks.iter().filter(|p| p.required).all(|p| ws.manifest.checks.iter().any(|c| c.round == last.round && c.check == p.id && c.good(opts.good_enough))))
++        } else { last.as_ref().is_some_and(|c| c.passed) };
+         if !usable {
+             let why = last.map(|c| c.note).unwrap_or_default();
+             return Err(ToolError::new(ErrorCode::ProgramFailed, format!("The build isn't working yet. {why}").trim().to_string())
+@@ -1085,6 +1169,10 @@ impl Worker {
+     /// Deep mode on a game: the chosen extractor takes the game's own files out into app/Original/
+     /// before the build (the person owns the game and chose this; nothing is decrypted).
+     fn extract(&mut self, ws: &mut Workspace, kind: &dyn kinds::TargetKind, name: &str, mut ex: crate::agent::ApiConversation) -> Result<(), ToolError> {
++        if let Some(p) = &self.policy {
++            p.revalidate_inputs()?;
++            return Err(craft_anything_engine::execution_policy::refusal("tool-denied", "Extractor is forbidden for accepted research."));
++        }
+         let TargetRef::Local { path } = ws.manifest.target.clone() else { return Ok(()) };
+         if kind.id() != kinds::GameKind::ID || self.engine.session().clean_room() {
+             return Ok(());
+@@ -1107,6 +1195,7 @@ impl Worker {
+     /// an error couldn't look at all (a browser that went away), which says nothing about the
+     /// build, so it gets a second go before the run stops, and the run says what is really wrong.
+     fn checks_with_a_retry(&self, ws: &Workspace, kind: &dyn kinds::TargetKind, round: u32) -> Result<Vec<CheckResult>, ToolError> {
++        if self.policy.is_some() { return self.run_checks(ws, kind, round); }
+         let e = match self.run_checks(ws, kind, round) {
+             Err(e) if e.code != ErrorCode::Cancelled => e,
+             done => return done,
+@@ -1241,7 +1330,14 @@ impl Worker {
+     }
+ 
+     fn converse_turn(&mut self, ws: &mut Workspace, agent: &mut dyn Conversation, text: &str, retry: bool) -> Result<String, ToolError> {
+-        if retry {
++        let deadline = self.deadline;
++        if let Some(p) = &self.policy {
++            p.revalidate_builder_inputs()?;
++            if deadline.is_some_and(|d| Instant::now() >= d) { return Err(ToolError::new(ErrorCode::TimedOut, "Accepted run deadline exhausted.")); }
++            // A retry must carry the full contract, including transports whose default retry
++            // otherwise substitutes a generic continuation instruction.
++            agent.send(text);
++        } else if retry {
+             agent.retry(text);
+         } else {
+             agent.send(text);
+@@ -1249,6 +1345,10 @@ impl Worker {
+         let mut reply = String::new();
+         let mut failed = None;
+         loop {
++            if self.deadline.is_some_and(|d| Instant::now() >= d) {
++                agent.stop();
++                return Err(ToolError::new(ErrorCode::TimedOut, "Accepted run deadline exhausted; transport cleanup must be observed."));
++            }
+             if self.stop.is_cancelled() {
+                 agent.stop();
+             }
+diff --git a/crates/ai/src/rebuild/runs.rs b/crates/ai/src/rebuild/runs.rs
+index 3df8e698aa485d06f73de7ec78ca8144dc3c89c3..9b329ce714078b76f5fb47969ee0d1d27ce15f09 100644
+--- a/crates/ai/src/rebuild/runs.rs
++++ b/crates/ai/src/rebuild/runs.rs
+@@ -52,7 +52,7 @@ pub struct RunSet {
+ fn must_work_alone(hub: &AiHub, ws: &Workspace, opts: &RunOptions) -> bool {
+     let cfg = hub.config();
+     let in_session = |e: &crate::BackendEntry| e.config.kind != BackendKind::AgentCli;
+-    let fresh = opts.message.is_none() || !ws.capture_dir().exists();
++    let fresh = opts.policy.is_none() && (opts.message.is_none() || !ws.capture_dir().exists());
+     builder_backend(&cfg, opts.backend.as_deref().or_else(|| super::project_builder(&cfg, ws))).is_ok_and(|e| in_session(&e))
+         || (fresh && hub.chosen(Role::Extractor).and_then(|n| cfg.get(&n).cloned()).is_some_and(|e| in_session(&e)))
+ }
+@@ -94,6 +94,7 @@ impl RunSet {
+     /// alone. Nothing overtakes the queue, so one waiting to be alone gets its turn. A project that
+     /// is working or queued is refused.
+     pub fn start(&mut self, hub: &AiHub, ws: Workspace, opts: RunOptions) -> Result<Started, ToolError> {
++        super::policy::preflight(hub, &ws, &opts)?;
+         if self.is_running(&ws.root) || self.position(&ws.root).is_some() {
+             return Err(
+                 ToolError::new(ErrorCode::BadInput, "This project is already building.").with_remediation("Add to it while it works, or stop it first.")
+diff --git a/crates/ai/src/rebuild/self_check.rs b/crates/ai/src/rebuild/self_check.rs
+index 378f88f290cd0bcb2e6393dd13f1a7a18efa2e2e..d4d8fa8a52c4003c0580fb4f9c50d22270311e52 100644
+--- a/crates/ai/src/rebuild/self_check.rs
++++ b/crates/ai/src/rebuild/self_check.rs
+@@ -118,6 +118,12 @@ impl Worker {
+     pub(super) fn answer_self_checks(&mut self, ws: &mut Workspace) -> Result<(), ToolError> {
+         let Some((kind, good_enough)) = self.self_check.clone() else { return Ok(()) };
+         let asks = Inbox::new(asks_dir(&ws.root));
++        if self.policy.is_some() {
++            for r in asks.pending() {
++                asks.answer(&r.id, &Answer { text: Some("unsupported: inline self-check is disabled; the owner runs the frozen check plan after the Builder exits. Missing original facts return needs-evidence; do not research or resolve original unknowns.".into()), ..Default::default() })?;
++            }
++            return Ok(());
++        }
+         for r in asks.pending() {
+             let checking = if ws.manifest.target == TargetRef::None {
+                 "The builder is checking its work…"
+diff --git a/crates/ai/src/rebuild/stand_in.rs b/crates/ai/src/rebuild/stand_in.rs
+index 4fdac8e374fce67c2352108bc7c71448f10d8f69..2e7cf0f41821fa6cc15d8b6e9fdc1b0912dd1a8b 100644
+--- a/crates/ai/src/rebuild/stand_in.rs
++++ b/crates/ai/src/rebuild/stand_in.rs
+@@ -57,6 +57,8 @@ impl StandIns {
+             let activity = feed.lock().unwrap_or_else(PoisonError::into_inner).activity();
+             Ok(RebuildRun {
+                 activity,
++                worker: None,
++                policy: None,
+                 rx,
+                 stop: CancelToken::default(),
+                 inbox: Inbox::new(ws.inbox_dir()),
+diff --git a/crates/ai/src/rebuild/study.rs b/crates/ai/src/rebuild/study.rs
+index 3d3b15e00a2f8023f54ed8a229c42dba6683a888..60155440e71dbf0865372a98110407dc0e9b6c44 100644
+--- a/crates/ai/src/rebuild/study.rs
++++ b/crates/ai/src/rebuild/study.rs
+@@ -11,6 +11,9 @@ pub(super) fn is_electron_runtime(program: &Path) -> bool {
+ 
+ impl Worker {
+     pub(super) fn study(&mut self, ws: &mut Workspace, kind: &dyn TargetKind) -> Result<(), ToolError> {
++        if self.policy.is_some() {
++            return Err(craft_anything_engine::execution_policy::refusal("needs-evidence", "Framework Study is forbidden for accepted research."));
++        }
+         match ws.manifest.target.clone() {
+             TargetRef::Website { url } => {
+                 self.step(ws, Step::Study, Status::Inspecting, &format!("Opening {url} in a private browser…"))?;
+diff --git a/crates/ai/src/rebuild/tests.rs b/crates/ai/src/rebuild/tests.rs
+index 5f327f4686a479ab52e9b53a9acfa49a61f579a7..7e450883c9926e114e2a2123c775aab37e99264c 100644
+--- a/crates/ai/src/rebuild/tests.rs
++++ b/crates/ai/src/rebuild/tests.rs
+@@ -1,6 +1,11 @@
+ use super::check::build_check;
+ use super::*;
+ 
++#[path = "policy_tests.rs"]
++mod accepted_policy;
++#[path = "return_tests.rs"]
++mod policy_returns;
++
+ #[path = "note_progress_tests.rs"]
+ mod note_progress;
+ 
+@@ -455,6 +460,8 @@ fn notes_added_while_it_works_reach_the_agent_at_its_next_step() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     assert!(w.added(&mut ws, true, true).is_none(), "nothing added, nothing to say");
+     use craft_anything_engine::questions::{self, AskedQuestion};
+@@ -528,6 +535,8 @@ fn a_note_written_for_the_hook_carries_its_answers() {
+         root: ws.root.clone(),
+         started: Instant::now(),
+         activity,
++        worker: None,
++        policy: None,
+     };
+     let id = run.add_note("make it blue".into(), "make it blue".into(), Vec::new());
+     let note = run.waiting().pop().unwrap();
+@@ -1361,6 +1370,8 @@ fn an_api_backend_builds_with_the_build_tools() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     w.attach(&ws).unwrap();
+     // The model writes a file with the Build tools, then answers.
+@@ -1478,6 +1489,8 @@ fn the_mechanics_sheet_is_required_and_held_against_the_code() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let check = |round| w.run_checks(&ws, &SheetKind, round).unwrap().remove(0);
+ 
+@@ -2513,6 +2526,8 @@ fn check_worker(ws: &Workspace, deep: bool) -> Worker {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     }
+ }
+ 
+@@ -2985,6 +3000,8 @@ fn preparing_the_builders_agent_does_not_lock_up() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let entry = crate::BackendEntry {
+         config: crate::BackendConfig {
+@@ -3027,6 +3044,8 @@ fn the_run_answers_the_builders_own_check_during_its_turn() {
+         usage: None,
+         self_check: Some((Arc::new(SheetKind), 90.0)),
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let mut builder = ChecksItsWork { root: ws.root.clone(), asked: None, reply: None };
+     let reply = w.turn(&mut ws, &mut builder, "Build it.", true, None).unwrap();
+@@ -3224,6 +3243,8 @@ fn a_note_the_builder_took_at_a_step_joins_the_feed_and_isnt_sent_again() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let dir = notes::notes_dir(&ws.inbox_dir());
+     notes::hand_over(&dir, 1, "make the header blue").unwrap();
+@@ -3528,6 +3549,8 @@ fn a_session_left_on_another_computer_starts_a_new_one_from_the_project() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let first = resumed_elsewhere("THE BRIEF", &ws.manifest.last_reply, None);
+     let reply = w.turn(&mut ws, &mut agent, "The person asks: make it blue", true, Some(first)).unwrap();
+@@ -3583,6 +3606,8 @@ fn a_missing_session_with_nothing_to_start_from_is_said_plainly() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let e = w
+         .turn_with_wait(&mut ws, &mut agent, "Carry on.", true, None, |_, _| panic!("a missing session without a fresh start must not be retried"))
+@@ -3649,6 +3674,8 @@ fn the_builders_conversation_travels_with_the_project() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+     let adapter = KeepsSessions(store.path().to_path_buf());
+     // No session yet, or one this computer doesn't have: nothing to keep, nothing said.
+@@ -3726,6 +3753,8 @@ fn a_build_says_when_it_waits_for_an_analysis_started_earlier() {
+         usage: None,
+         self_check: None,
+         reset_progress_after_notes: false,
++        policy: None,
++        deadline: None,
+     };
+ 
+     // Another process is already analysing this program: a fresh lock beside its project.
+diff --git a/crates/ai/src/rebuild/external_checks.rs b/crates/ai/src/rebuild/external_checks.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..ff685f57e55c6da5d5dabebf41ffdbc365981e76
+--- /dev/null
++++ b/crates/ai/src/rebuild/external_checks.rs
+@@ -0,0 +1,221 @@
++//! Controlled external baseline checks; no native Evidence import or original-program execution.
++use super::*;
++use craft_anything_engine::execution_policy::{BaselineKind, ExecutionPolicy, HashedRef, hash_file, read_capped, real, real_parent};
++use craft_anything_engine::workspace::Claim;
++use craft_anything_platform::process::Process;
++use serde::{Deserialize, Serialize};
++use std::collections::{BTreeMap, BTreeSet};
++mod build;
++mod plan;
++pub use build::BoundedBuildCheck;
++pub use plan::{CHECK_PLAN_REPORT_VERSION, CheckDisposition, CheckReasonCode, CheckReturnTo, CheckReturnKind, CheckSourceRefs, PlannedCheckRecord, CheckReturnItem, CheckReturnSummary, CheckPlanReport, read_check_plan_report};
++
++#[cfg(test)]
++pub(super) fn dependencies_ready(dependencies: &[String], results: &[CheckResult], threshold: f64) -> bool {
++    dependencies.iter().all(|id| results.iter().any(|result| &result.check == id && result.good(threshold)))
++}
++pub(super) fn result_disposition(result: &CheckResult, threshold: f64) -> CheckDisposition {
++    if result.good(threshold) { CheckDisposition::Executed } else { CheckDisposition::Failed }
++}
++
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct StateObservation {
++    pub relative_path: PathBuf,
++    pub sha256: Option<String>,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct SeedFile {
++    pub relative_path: PathBuf,
++    /// None explicitly means absent at the start. Some supplies immutable initial bytes.
++    pub content: Option<HashedRef>,
++}
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++pub enum ScenarioHarness {
++    #[serde(rename = "direct-exec-v1")]
++    DirectExecV1,
++}
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++pub enum ScenarioReset {
++    #[serde(rename = "fresh-copy-v1")]
++    FreshCopyV1,
++}
++/// v2 freezes the invocation harness, fresh-copy reset, initial seed and runtime file list.
++/// Every attempt starts in a new directory with a copy of the candidate executable and only
++/// explicitly listed runtime files. Existing app data is never reused as the initial oracle.
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct ExternalScenario {
++    pub version: u32,
++    pub task_id: String,
++    pub evidence_id: String,
++    pub harness: ScenarioHarness,
++    pub reset: ScenarioReset,
++    pub program: PathBuf,
++    pub runtime_files: Vec<PathBuf>,
++    pub seed_files: Vec<SeedFile>,
++    pub arguments: Vec<String>,
++    pub stdin: String,
++    pub environment: BTreeMap<String, String>,
++    pub timeout_secs: u64,
++    pub exit_code: i32,
++    pub stdout: String,
++    pub stderr: String,
++    pub state_files: Vec<StateObservation>,
++}
++fn relative(path: &Path) -> bool {
++    !path.as_os_str().is_empty() && !path.is_absolute()
++        && path.components().all(|c| matches!(c, std::path::Component::Normal(_)))
++}
++impl ExternalScenario {
++    fn validate(&self, p: &ExecutionPolicy, evidence: &str) -> Result<(), ToolError> {
++        let mut copied = BTreeSet::new();
++        let mut seeds = BTreeSet::new();
++        if self.version != 2 || !p.identity.task_ids.contains(&self.task_id) || self.evidence_id != evidence
++            || self.timeout_secs == 0 || self.timeout_secs > p.max_wall_secs || !relative(&self.program) {
++            return Err(invalid("Scenario must freeze version, task/evidence, own program and deadline."));
++        }
++        copied.insert(&self.program);
++        for path in &self.runtime_files {
++            if !relative(path) || !copied.insert(path) { return Err(invalid("Invalid or duplicate runtime file.")); }
++        }
++        for seed in &self.seed_files {
++            if !relative(&seed.relative_path) || copied.contains(&seed.relative_path) || !seeds.insert(&seed.relative_path) {
++                return Err(invalid("Seed files must be unique and separate from executable/runtime files."));
++            }
++            if let Some(content) = &seed.content {
++                let path = content.verify().map_err(|_| invalid("Immutable scenario seed is missing or changed."))?;
++                if path.starts_with(real_parent(&p.app_root)?) { return Err(invalid("Initial seeds must be immutable external references, not candidate app data.")); }
++            }
++        }
++        let mut states = BTreeSet::new();
++        for state in &self.state_files {
++            if !relative(&state.relative_path) || !states.insert(&state.relative_path) || !seeds.contains(&state.relative_path)
++                || state.sha256.as_ref().is_some_and(|h| h.len() != 64 || !h.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())) {
++                return Err(invalid("Every state observation requires a unique explicit initial seed/presence and lowercase expected hash."));
++            }
++        }
++        if self.state_files.is_empty() && self.stdout.is_empty() && self.stderr.is_empty() {
++            return Err(invalid("A scenario needs a nonempty observable stream or explicit state observation."));
++        }
++        Ok(())
++    }
++}
++fn invalid(message: &str) -> ToolError {
++    craft_anything_engine::execution_policy::refusal("needs-evidence", message)
++}
++fn scenario(p: &ExecutionPolicy, id: &str) -> Result<ExternalScenario, ToolError> {
++    let c = p.checks.iter().find(|c| c.id == id).ok_or_else(|| invalid("Check absent from plan."))?;
++    let key = c.baseline.as_deref().ok_or_else(|| invalid("Check has no baseline."))?;
++    let path = p.baseline.resolve(key, c.kind.ok_or_else(|| invalid("Check has no baseline kind."))?)
++        .map_err(|_| invalid("External scenario baseline is missing or changed."))?;
++    let bytes = read_capped(&path).map_err(|_| invalid("External scenario input cannot be read."))?;
++    let s: ExternalScenario = serde_json::from_slice(&bytes)
++        .map_err(|e| invalid(&format!("Unsupported external scenario format: {e}")))?;
++    let evidence = p.baseline.artifacts.iter().find(|a| a.key == key).map(|a| a.evidence_id.as_str()).ok_or_else(|| invalid("No provenance."))?;
++    s.validate(p, evidence)?;
++    Ok(s)
++}
++/// Read-only admission before creating a Workspace, lease or run directory. Reuses the
++/// engine's planned-input admission and the same semantic readers used by run preflight.
++/// Callers must match policy app_root/target/stack to their planned workspace; run start
++/// still performs full admission against the actual Workspace and selected runtime.
++pub fn validate_external_inputs(p: &ExecutionPolicy) -> Result<(), ToolError> {
++    p.preflight_inputs()?;
++    validate_baselines(p)
++}
++
++pub(super) fn validate_baselines(p: &ExecutionPolicy) -> Result<(), ToolError> {
++    for c in &p.checks {
++        match c.id.as_str() {
++            "app-screenshot" => {
++                let path = p.baseline.resolve(c.baseline.as_deref().unwrap_or_default(), BaselineKind::NativeScreenshot)?;
++                craft_anything_engine::tools::web_common::decode_png(&read_capped(&path)?)?;
++            }
++            "external-console" | "external-scenario" => { scenario(p, &c.id)?; }
++            _ => {}
++        }
++    }
++    Ok(())
++}
++
++pub struct ExternalConsoleCheck;
++pub struct ExternalScenarioCheck;
++impl kinds::Check for ExternalConsoleCheck {
++    fn id(&self) -> &'static str { "external-console" }
++    fn run(&self, cx: &mut kinds::CheckCx) -> Result<CheckResult, ToolError> { run_scenario(cx, self.id()) }
++}
++impl kinds::Check for ExternalScenarioCheck {
++    fn id(&self) -> &'static str { "external-scenario" }
++    fn run(&self, cx: &mut kinds::CheckCx) -> Result<CheckResult, ToolError> { run_scenario(cx, self.id()) }
++}
++
++/// Returns a newly created attempt root, after verifying all copied candidate and seed bytes.
++pub(super) fn prepare_scenario(s: &ExternalScenario, app: &Path, parent: &Path) -> Result<PathBuf, ToolError> {
++    static NEXT: AtomicU64 = AtomicU64::new(1);
++    let app = real(app)?;
++    std::fs::create_dir_all(parent).map_err(|e| ToolError::io(parent.display(), e))?;
++    let sandbox = parent.join(format!("scenario-{}-{}", craft_anything_engine::inbox::now_ms(), NEXT.fetch_add(1, Ordering::SeqCst)));
++    std::fs::create_dir(&sandbox).map_err(|e| ToolError::io(sandbox.display(), e))?;
++    let mut copied = Vec::new();
++    for relative in std::iter::once(&s.program).chain(s.runtime_files.iter()) {
++        let from = real(&app.join(relative))?;
++        if !from.starts_with(&app) { return Err(invalid("Scenario runtime file escapes app/.")); }
++        let digest = hash_file(&from)?;
++        let to = sandbox.join(relative);
++        if let Some(dir) = to.parent() { std::fs::create_dir_all(dir).map_err(|e| ToolError::io(dir.display(), e))?; }
++        std::fs::copy(&from, &to).map_err(|e| ToolError::io(to.display(), e))?;
++        if hash_file(&to)? != digest { return Err(invalid("Candidate runtime file changed during copy.")); }
++        copied.push(json!({"path": relative, "sha256": digest}));
++    }
++    for seed in &s.seed_files {
++        let to = sandbox.join(&seed.relative_path);
++        match &seed.content {
++            Some(reference) => {
++                let bytes = reference.read_verified()?;
++                if let Some(dir) = to.parent() { std::fs::create_dir_all(dir).map_err(|e| ToolError::io(dir.display(), e))?; }
++                std::fs::write(&to, bytes).map_err(|e| ToolError::io(to.display(), e))?;
++                if hash_file(&to)? != reference.sha256 { return Err(invalid("Scenario initial seed hash mismatch.")); }
++            }
++            None if to.exists() => return Err(invalid("Scenario initial absence is not satisfied.")),
++            None => {}
++        }
++    }
++    let receipt = serde_json::to_vec_pretty(&json!({"version":2,"harness":s.harness,"reset":s.reset,"runtime":copied,"seeds":s.seed_files}))
++        .map_err(|e| ToolError::internal(e.to_string()))?;
++    craft_anything_platform::fs::write_atomic_private(&sandbox.join("initial-seed-receipt.json"), &receipt)?;
++    Ok(sandbox)
++}
++pub(super) fn observe_state_files(root: &Path, states: &[StateObservation]) -> Result<Vec<Claim>, ToolError> {
++    let root = real(root)?;
++    let mut claims = Vec::new();
++    for state in states {
++        let path = real_parent(&root.join(&state.relative_path))?;
++        if !path.starts_with(&root) { return Err(invalid("Scenario state path escapes its fresh copy.")); }
++        let passed = match &state.sha256 { Some(expected) => hash_file(&path).is_ok_and(|h| h == *expected), None => !path.exists() };
++        claims.push(Claim::new(format!("State {}", state.relative_path.display()), passed, "state hash/presence differs"));
++    }
++    Ok(claims)
++}
++fn run_scenario(cx: &mut kinds::CheckCx, id: &str) -> Result<CheckResult, ToolError> {
++    let p = cx.execution_policy().ok_or_else(|| invalid("External checks require accepted research."))?;
++    let s = scenario(p, id)?;
++    let parent = cx.ws.checks_dir().join(format!("round-{}", cx.round));
++    if !real_parent(&parent)?.starts_with(real(&cx.ws.root)?) { return Err(invalid("Scenario output root escapes its workspace.")); }
++    let sandbox = prepare_scenario(&s, &cx.ws.app_dir(), &parent)?;
++    let program = sandbox.join(&s.program);
++    let cancel = cx.stop().clone();
++    let mut process = Process::new(&program).args(&s.arguments).cwd(&sandbox).env_clear().stdin_bytes(s.stdin.as_bytes())
++        .timeout(Duration::from_secs(s.timeout_secs)).stdout_cap(1024 * 1024).stderr_cap(1024 * 1024).cancel_when(move || cancel.is_cancelled());
++    for (key, value) in &s.environment { process = process.env(key, value); }
++    let out = process.run()?;
++    let mut claims = vec![Claim::new("Exact exit status", out.code == Some(s.exit_code), format!("expected {}, actual {:?}", s.exit_code, out.code)),
++        Claim::new("Exact ordered stdout", out.stdout_text() == s.stdout, "stdout differs"),
++        Claim::new("Exact ordered stderr", out.stderr_text() == s.stderr, "stderr differs")];
++    claims.extend(observe_state_files(&sandbox, &s.state_files)?);
++    let passed = claims.iter().all(|c| c.passed);
++    Ok(CheckResult { claims, ..CheckResult::new(id, cx.round, passed,
++        format!("Fresh-copy external scenario for task {} / evidence {}; seed receipt {}; exact status, streams and {} state observations. Raw observations do not close REA claims.",
++            s.task_id, s.evidence_id, sandbox.join("initial-seed-receipt.json").display(), s.state_files.len())) })
++}
+diff --git a/crates/ai/src/rebuild/external_checks/build.rs b/crates/ai/src/rebuild/external_checks/build.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..552d718779eb61982cc0d8ed6eda3bd118915a63
+--- /dev/null
++++ b/crates/ai/src/rebuild/external_checks/build.rs
+@@ -0,0 +1,60 @@
++//! Explicit command-and-artifact build checks for accepted research. Never infer a toolchain.
++use super::*;
++use craft_anything_engine::execution_policy::source_digest_excluding;
++
++pub struct BoundedBuildCheck;
++impl kinds::Check for BoundedBuildCheck {
++    fn id(&self) -> &'static str { "build" }
++    fn run(&self, cx: &mut kinds::CheckCx) -> Result<CheckResult, ToolError> {
++        let p = cx.execution_policy().ok_or_else(|| invalid("Missing build policy."))?;
++        let build = p.build.as_ref().ok_or_else(|| invalid("unsupported: no explicit build invocation."))?;
++        let command = p.commands.get(build.command_index).ok_or_else(|| invalid("Missing frozen build command."))?;
++        let app = real(&cx.ws.app_dir())?;
++        if real(&command.cwd)? != app { return Err(invalid("Build cwd changed.")); }
++        // Validate the entire list before moving even the first output; a later forbidden
++        // entry must not partially preserve earlier files or displace the live owner lease.
++        for artifact in &build.artifacts { p.authorize_build_artifact(artifact)?; }
++        static NEXT: AtomicU64 = AtomicU64::new(1);
++        let parent = cx.ws.checks_dir().join(format!("round-{}", cx.round));
++        if !real_parent(&parent)?.starts_with(real(&cx.ws.root)?) { return Err(invalid("Build receipt root escapes the workspace.")); }
++        std::fs::create_dir_all(&parent).map_err(|e| ToolError::io(parent.display(), e))?;
++        let receipt_dir = parent.join(format!("build-{}-{}", craft_anything_engine::inbox::now_ms(), NEXT.fetch_add(1, Ordering::SeqCst)));
++        std::fs::create_dir(&receipt_dir).map_err(|e| ToolError::io(receipt_dir.display(), e))?;
++        let mut prior = Vec::new();
++        for (index, artifact) in build.artifacts.iter().enumerate() {
++            let path = p.authorize_build_artifact(artifact)?;
++            if path.exists() {
++                let digest = hash_file(&path)?;
++                let preserved = receipt_dir.join(format!("previous-artifact-{index}"));
++                // Hashing is I/O: recheck aliases/protected roots immediately before rename.
++                let path = p.authorize_build_artifact(artifact)?;
++                std::fs::rename(&path, &preserved).map_err(|e| ToolError::io(path.display(), e))?;
++                prior.push(json!({"path":artifact,"sha256":digest,"preserved":preserved}));
++            }
++        }
++        let source_before = source_digest_excluding(&app, &build.artifacts)?;
++        let cancel = cx.stop().clone();
++        let (shell, flags): (&str, &[&str]) = if cfg!(windows) { ("cmd", &["/D", "/C"]) } else { ("sh", &["-c"]) };
++        let out = Process::new(shell).args(flags).arg(&command.command).cwd(&app)
++            .timeout(Duration::from_secs(command.timeout_secs)).stdout_cap(1024 * 1024).stderr_cap(1024 * 1024)
++            .cancel_when(move || cancel.is_cancelled()).run()?;
++        let source_after = source_digest_excluding(&app, &build.artifacts)?;
++        let mut claims = vec![Claim::new("Frozen build command executed successfully", out.success, format!("exit status {:?}", out.code)),
++            Claim::new("Build inputs retained their source identity", source_before == source_after, "build changed non-output source files")];
++        let mut outputs = Vec::new();
++        for artifact in &build.artifacts {
++            let path = p.authorize_build_artifact(artifact)?;
++            let digest = hash_file(&path).ok();
++            let nonempty = std::fs::metadata(&path).is_ok_and(|m| m.is_file() && m.len() > 0);
++            claims.push(Claim::new(format!("Fresh build artifact {}", artifact.display()), nonempty && digest.is_some(), "expected output was not freshly produced"));
++            outputs.push(json!({"path":artifact,"sha256":digest,"nonempty":nonempty}));
++        }
++        let receipt = json!({"version":1,"implementation":"bounded-command-build-v1","command":command,
++            "source_before_sha256":source_before,"source_after_sha256":source_after,"prior_artifacts":prior,
++            "outputs":outputs,"exit_code":out.code,"stdout":out.stdout_text(),"stderr":out.stderr_text()});
++        let bytes = serde_json::to_vec_pretty(&receipt).map_err(|e| ToolError::internal(e.to_string()))?;
++        craft_anything_platform::fs::write_atomic_private(&receipt_dir.join("build-receipt.json"), &bytes)?;
++        let passed = claims.iter().all(|claim| claim.passed);
++        Ok(CheckResult { claims, ..CheckResult::new("build", cx.round, passed, format!("Explicit build command and source/artifact hashes recorded in {}.", receipt_dir.join("build-receipt.json").display())) })
++    }
++}
+diff --git a/crates/ai/src/rebuild/external_checks/plan.rs b/crates/ai/src/rebuild/external_checks/plan.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..6023523cc4f7e8c25302409ffd5dd037de80270e
+--- /dev/null
++++ b/crates/ai/src/rebuild/external_checks/plan.rs
+@@ -0,0 +1,244 @@
++use super::*;
++
++/// Version 2 is required for typed routing; v1 files do not certify a return decision.
++pub const CHECK_PLAN_REPORT_VERSION: u32 = 2;
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum CheckDisposition { Executed, Failed, Skipped, Unsupported, NeedsEvidence, ExecutionError, Cancelled }
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum CheckReturnTo { None, ImplementationWorker, OriginalPrimary, SpecRunner, Lead }
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum CheckReasonCode {
++    Passed, ImplementationFailed, MissingEvidence, UnsupportedCapability, PermissionDenied,
++    InvalidInput, InputChanged, CheckExecutionError, NotApplicable, PrerequisiteBlocked,
++    PrerequisiteImplementationFailed, UnreviewedCheck, InvalidResult, UnverifiedResult, Cancelled,
++}
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum CheckReturnKind { NeedsEvidence, Unsupported, ImplementationFailed, ExecutionFailed, Cancelled }
++#[derive(Debug, Clone, Serialize, Deserialize)]
++pub struct CheckSourceRefs {
++    pub case_ref: HashedRef, pub scope_ref: HashedRef, pub workitem_ref: HashedRef,
++    pub feature_ref: HashedRef, pub acceptance_ref: HashedRef, pub bundle_ref: HashedRef,
++    pub check_plan_ref: HashedRef, pub baseline_refs: Vec<HashedRef>,
++    pub source_base_sha256: String,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++pub struct PlannedCheckRecord {
++    pub id: String, pub round: u32, pub required: bool, pub disposition: CheckDisposition,
++    pub return_to: CheckReturnTo, pub reason_code: CheckReasonCode,
++    /// Private diagnostic only. Public return summaries never include this text.
++    pub reason: String,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++pub struct CheckReturnItem {
++    pub id: String, pub round: u32, pub disposition: CheckDisposition,
++    pub return_to: CheckReturnTo, pub reason_code: CheckReasonCode,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++pub struct CheckReturnSummary {
++    pub version: u32, pub kind: CheckReturnKind, pub return_to: CheckReturnTo,
++    pub affected_tasks: Vec<String>, pub source_refs: CheckSourceRefs,
++    pub records_ref: PathBuf, pub records: Vec<CheckReturnItem>,
++}
++#[derive(Debug, Clone, Serialize, Deserialize)]
++pub struct CheckPlanReport {
++    pub version: u32, pub owner: String, pub round: u32, pub affected_tasks: Vec<String>,
++    pub source_refs: CheckSourceRefs, pub qualifications: Vec<Value>, pub checks: Vec<PlannedCheckRecord>,
++}
++impl PlannedCheckRecord {
++    fn valid_route(&self) -> bool {
++        use CheckDisposition as D; use CheckReturnTo as R; use CheckReasonCode as C;
++        matches!((self.disposition, self.return_to, self.reason_code),
++            (D::Executed, R::None, C::Passed) |
++            (D::Failed, R::ImplementationWorker, C::ImplementationFailed) |
++            (D::NeedsEvidence, R::OriginalPrimary, C::MissingEvidence) |
++            (D::Unsupported, R::Lead, C::UnsupportedCapability | C::PermissionDenied | C::UnreviewedCheck | C::InvalidResult | C::UnverifiedResult) |
++            (D::Unsupported, R::SpecRunner, C::InvalidInput | C::InputChanged) |
++            (D::ExecutionError, R::Lead, C::CheckExecutionError) |
++            (D::Cancelled, R::Lead, C::Cancelled) |
++            (D::Skipped, R::Lead, C::NotApplicable) |
++            (D::Skipped, R::ImplementationWorker, C::PrerequisiteImplementationFailed) |
++            (D::Skipped, R::OriginalPrimary | R::SpecRunner | R::Lead, C::PrerequisiteBlocked))
++    }
++}
++impl CheckPlanReport {
++    fn valid_shape(&self) -> bool {
++        let mut ids = BTreeSet::new();
++        self.version == CHECK_PLAN_REPORT_VERSION && self.round > 0 && !self.checks.is_empty()
++            && self.checks.iter().all(|c| c.round == self.round && ids.insert(&c.id) && c.valid_route())
++    }
++    /// Shared writer/reader validator. Routing tuples and dependency propagation are data
++    /// contracts, not trusted merely because this process normally writes the report.
++    pub fn validate(&self, policy: &ExecutionPolicy) -> Result<(), ToolError> {
++        if !self.valid_shape() || self.owner != policy.owner_id || self.affected_tasks != policy.identity.task_ids
++            || self.checks.len() != policy.checks.len()
++            || serde_json::to_value(&self.source_refs).ok() != serde_json::to_value(source_refs(policy)).ok() {
++            return Err(ToolError::invalid("Malformed typed check report."));
++        }
++        for (index, (record, plan)) in self.checks.iter().zip(&policy.checks).enumerate() {
++            if record.id != plan.id || record.required != plan.required { return Err(ToolError::invalid("Typed check report plan mismatch.")); }
++            let previous = self.checks.get(..index).ok_or_else(|| ToolError::invalid("Invalid check ordering."))?;
++            if plan.depends_on.iter().any(|id| !previous.iter().any(|r| &r.id == id)) { return Err(ToolError::invalid("Missing prior check dependency.")); }
++            let blocked = plan.depends_on.iter().find_map(|id| previous.iter().find(|r| &r.id == id && r.disposition != CheckDisposition::Executed));
++            match record.reason_code {
++                CheckReasonCode::PrerequisiteBlocked | CheckReasonCode::PrerequisiteImplementationFailed => {
++                    let dependency = blocked.ok_or_else(|| ToolError::invalid("Skipped check has no failed prerequisite."))?;
++                    let expected = if dependency.return_to == CheckReturnTo::ImplementationWorker { CheckReasonCode::PrerequisiteImplementationFailed } else { CheckReasonCode::PrerequisiteBlocked };
++                    if record.return_to != dependency.return_to || record.reason_code != expected { return Err(ToolError::invalid("Contradictory prerequisite return category.")); }
++                }
++                _ if blocked.is_some() && matches!(record.disposition, CheckDisposition::Executed | CheckDisposition::Failed)
++                    || blocked.is_some() && record.reason_code == CheckReasonCode::NotApplicable => return Err(ToolError::invalid("Check ran despite a blocked prerequisite.")),
++                _ => {},
++            }
++        }
++        Ok(())
++    }
++    /// Pure projection: stable codes and original references only, no diagnostic/provider text.
++    /// Returns required outcomes only. ImplementationFailed is refinable; all other returns
++    /// stop this batch. Optional unknowns stay in the private report without becoming passes.
++    pub fn return_summary(&self, records_ref: PathBuf) -> Option<CheckReturnSummary> {
++        if !self.valid_shape() {
++            return Some(CheckReturnSummary { version: CHECK_PLAN_REPORT_VERSION, kind: CheckReturnKind::ExecutionFailed,
++                return_to: CheckReturnTo::Lead, affected_tasks: self.affected_tasks.clone(), source_refs: self.source_refs.clone(), records_ref,
++                records: vec![CheckReturnItem { id: "check-report".into(), round: self.round, disposition: CheckDisposition::ExecutionError, return_to: CheckReturnTo::Lead, reason_code: CheckReasonCode::CheckExecutionError }] });
++        }
++        let blocked: Vec<_> = self.checks.iter().filter(|c| c.required && !matches!(c.return_to, CheckReturnTo::None | CheckReturnTo::ImplementationWorker)).collect();
++        let selected: Vec<_> = if blocked.is_empty() { self.checks.iter().filter(|c| c.required && c.return_to == CheckReturnTo::ImplementationWorker).collect() } else { blocked };
++        let first = selected.first()?;
++        let kind = match first.disposition {
++            _ if first.return_to == CheckReturnTo::ImplementationWorker => CheckReturnKind::ImplementationFailed,
++            CheckDisposition::NeedsEvidence => CheckReturnKind::NeedsEvidence,
++            CheckDisposition::Cancelled => CheckReturnKind::Cancelled,
++            CheckDisposition::ExecutionError => CheckReturnKind::ExecutionFailed,
++            _ if first.return_to == CheckReturnTo::OriginalPrimary => CheckReturnKind::NeedsEvidence,
++            _ => CheckReturnKind::Unsupported,
++        };
++        Some(CheckReturnSummary { version: CHECK_PLAN_REPORT_VERSION, kind, return_to: first.return_to,
++            affected_tasks: self.affected_tasks.clone(), source_refs: self.source_refs.clone(), records_ref,
++            records: selected.into_iter().map(|c| CheckReturnItem { id: c.id.clone(), round: c.round, disposition: c.disposition, return_to: c.return_to, reason_code: c.reason_code }).collect() })
++    }
++}
++/// Reads only the exact owner report for this round and binds its IDs/references to the policy.
++/// Older v1 diagnostics remain readable as JSON, but are not accepted as typed return metadata.
++pub fn read_check_plan_report(policy: &ExecutionPolicy, root: &Path, round: u32) -> Result<CheckPlanReport, ToolError> {
++    let path = root.join("checks").join(format!("round-{round}")).join("accepted-check-plan.json");
++    let report: CheckPlanReport = serde_json::from_slice(&read_capped(&path)?).map_err(|_| ToolError::invalid("Invalid typed check report."))?;
++    report.validate(policy)?;
++    if report.round != round { return Err(ToolError::invalid("Typed check report round mismatch.")); }
++    Ok(report)
++}
++fn source_refs(p: &ExecutionPolicy) -> CheckSourceRefs {
++    CheckSourceRefs { case_ref: p.identity.case_ref.clone(), scope_ref: p.identity.scope_ref.clone(), workitem_ref: p.identity.workitem_ref.clone(),
++        feature_ref: p.identity.feature_ref.clone(), acceptance_ref: p.identity.acceptance_ref.clone(), bundle_ref: p.original.bundle.clone(),
++        check_plan_ref: p.check_plan_ref.clone(), baseline_refs: p.baseline.artifacts.iter().flat_map(|a| [a.source.clone(), a.output.clone()]).collect(), source_base_sha256: p.source_base_sha256.clone() }
++}
++fn error_route(error: &ToolError) -> (CheckDisposition, CheckReturnTo, CheckReasonCode) {
++    use CheckDisposition as D; use CheckReturnTo as R; use CheckReasonCode as C;
++    // Only our stable contract reason codes qualify provenance/input failures. Never parse text.
++    match error.details.as_ref().and_then(|d| d.get("reason")).and_then(Value::as_str) {
++        // Cancellation always wins over any nested diagnostic details.
++        Some(_) if error.code == ErrorCode::Cancelled => return (D::Cancelled, R::Lead, C::Cancelled),
++        Some("needs-evidence" | "missing-input") => return (D::NeedsEvidence, R::OriginalPrimary, C::MissingEvidence),
++        Some("unsupported" | "tool-denied" | "path-denied" | "command-denied" | "effect-denied" | "model-policy") => return (D::Unsupported, R::Lead, C::UnsupportedCapability),
++        Some("identity-mismatch" | "source-drift" | "check-plan") => return (D::Unsupported, R::SpecRunner, C::InputChanged),
++        _ => {},
++    }
++    match error.code {
++        ErrorCode::Cancelled => (D::Cancelled, R::Lead, C::Cancelled),
++        ErrorCode::NoPermission | ErrorCode::ConsentRequired => (D::Unsupported, R::Lead, C::PermissionDenied),
++        ErrorCode::FeatureMissing | ErrorCode::NotSupported | ErrorCode::EngineMissing => (D::Unsupported, R::Lead, C::UnsupportedCapability),
++        ErrorCode::BadInput | ErrorCode::BadSettings => (D::Unsupported, R::SpecRunner, C::InvalidInput),
++        ErrorCode::FileChanged | ErrorCode::FileHashMismatch | ErrorCode::EvidenceHashMismatch | ErrorCode::StaleRevision => (D::Unsupported, R::SpecRunner, C::InputChanged),
++        // NotFound may mean a missing candidate executable; generic I/O is not original evidence.
++        _ => (D::ExecutionError, R::Lead, C::CheckExecutionError),
++    }
++}
++fn result_route(result: &CheckResult, threshold: f64) -> (CheckDisposition, CheckReturnTo, CheckReasonCode) {
++    if !result.unknowns.is_empty() { return (CheckDisposition::NeedsEvidence, CheckReturnTo::OriginalPrimary, CheckReasonCode::MissingEvidence); }
++    if result_disposition(result, threshold) == CheckDisposition::Failed { return (CheckDisposition::Failed, CheckReturnTo::ImplementationWorker, CheckReasonCode::ImplementationFailed); }
++    if result.claims.is_empty() && result.similarity.is_none() { return (CheckDisposition::Unsupported, CheckReturnTo::Lead, CheckReasonCode::UnverifiedResult); }
++    (CheckDisposition::Executed, CheckReturnTo::None, CheckReasonCode::Passed)
++}
++
++#[cfg(test)]
++mod policy_routing_tests {
++    use super::*;
++    #[test]
++    fn policy_error_codes_do_not_guess_evidence_from_io_or_diagnostic_text() {
++        for code in [ErrorCode::Internal, ErrorCode::FileError, ErrorCode::NotFound, ErrorCode::TimedOut, ErrorCode::ProgramFailed] {
++            let error = ToolError::new(code, "needs-evidence private provider/source body");
++            assert_eq!(error_route(&error), (CheckDisposition::ExecutionError, CheckReturnTo::Lead, CheckReasonCode::CheckExecutionError));
++        }
++        assert_eq!(error_route(&invalid("private missing evidence")), (CheckDisposition::NeedsEvidence, CheckReturnTo::OriginalPrimary, CheckReasonCode::MissingEvidence));
++        assert_eq!(error_route(&ToolError::new(ErrorCode::NoPermission, "private")), (CheckDisposition::Unsupported, CheckReturnTo::Lead, CheckReasonCode::PermissionDenied));
++        assert_eq!(error_route(&ToolError::new(ErrorCode::FileChanged, "private")), (CheckDisposition::Unsupported, CheckReturnTo::SpecRunner, CheckReasonCode::InputChanged));
++        assert_eq!(error_route(&ToolError::cancelled()), (CheckDisposition::Cancelled, CheckReturnTo::Lead, CheckReasonCode::Cancelled));
++    }
++    #[test]
++    fn policy_unknown_or_zero_claims_never_become_verified_and_optional_not_applicable_is_explicit() {
++        let mut result = CheckResult::new("x", 1, true, "private");
++        assert_eq!(result_route(&result, 90.0).2, CheckReasonCode::UnverifiedResult);
++        result.unknowns.push("unknown".into()); assert_eq!(result_route(&result, 90.0).0, CheckDisposition::NeedsEvidence);
++        let r = HashedRef { path: "private-reference".into(), sha256: "0".repeat(64) };
++        let refs = CheckSourceRefs { case_ref: r.clone(), scope_ref: r.clone(), workitem_ref: r.clone(), feature_ref: r.clone(), acceptance_ref: r.clone(), bundle_ref: r.clone(), check_plan_ref: r.clone(), baseline_refs: vec![r], source_base_sha256: "0".repeat(64) };
++        let record = PlannedCheckRecord { id: "optional".into(), round: 1, required: false, disposition: CheckDisposition::Skipped,
++            return_to: CheckReturnTo::Lead, reason_code: CheckReasonCode::NotApplicable, reason: "applies=false private diagnostic".into() };
++        let report = CheckPlanReport { version: CHECK_PLAN_REPORT_VERSION, owner: "test-owner".into(), round: 1, affected_tasks: vec!["T1".into()], source_refs: refs, qualifications: vec![], checks: vec![record] };
++        assert!(report.return_summary("report".into()).is_none());
++        assert_eq!(serde_json::to_value(&report).unwrap()["checks"][0]["reason_code"], "not-applicable");
++    }
++}
++
++impl Worker {
++    pub(in crate::rebuild) fn run_planned_checks(&self, ws: &Workspace, round: u32, cx: &mut kinds::CheckCx, merged: Vec<Box<dyn kinds::Check>>, admission_error: Option<ToolError>) -> Result<Vec<CheckResult>, ToolError> {
++        let Some(p) = &self.policy else { return Err(ToolError::invalid("Missing execution policy.")) };
++        let threshold = self.self_check.as_ref().map(|(_, threshold)| *threshold).ok_or_else(|| ToolError::invalid("Owner threshold missing."))?;
++        let mut records: Vec<PlannedCheckRecord> = Vec::new(); let mut results: Vec<CheckResult> = Vec::new();
++        for plan in &p.checks {
++            self.stop.check()?;
++            let count = merged.iter().filter(|c| c.id() == plan.id).count();
++            let dependency = plan.depends_on.iter().find_map(|id| records.iter().find(|r| &r.id == id && r.disposition != CheckDisposition::Executed));
++            let check: Box<dyn kinds::Check> = match plan.id.as_str() {
++                "build" => Box::new(BoundedBuildCheck), "app-screenshot" => Box::new(kinds::ScreenshotCheck),
++                "external-console" => Box::new(ExternalConsoleCheck), "external-scenario" => Box::new(ExternalScenarioCheck),
++                _ => return Err(ToolError::invalid("Unsupported planned check.")),
++            };
++            let input_error = p.revalidate_check_inputs(&plan.id).err();
++            let unavailable = if let Some(error) = &admission_error { Some((error_route(error), error.message.clone())) }
++                else if let Some(error) = &input_error { Some((error_route(error), error.message.clone())) }
++                else if count != 1 { Some(((CheckDisposition::Unsupported, CheckReturnTo::Lead, CheckReasonCode::UnreviewedCheck), "Check missing or duplicated after own/plugin merge.".into())) }
++                else if let Some(dependency) = dependency {
++                    let code = if dependency.return_to == CheckReturnTo::ImplementationWorker { CheckReasonCode::PrerequisiteImplementationFailed } else { CheckReasonCode::PrerequisiteBlocked };
++                    Some(((CheckDisposition::Skipped, dependency.return_to, code), "Prerequisite did not execute successfully.".into()))
++                } else if !check.applies(cx) { Some(((CheckDisposition::Skipped, CheckReturnTo::Lead, CheckReasonCode::NotApplicable), "applies=false; no observation executed.".into())) } else { None };
++            let (route, result, diagnostic) = if let Some((route, diagnostic)) = unavailable {
++                (route, CheckResult { unknowns: vec!["check-not-executed".into()], ..CheckResult::new(&plan.id, round, false, "Check not executed; see private plan report.") }, diagnostic)
++            } else {
++                match check.run(cx) {
++                    Ok(result) if result.check == plan.id && result.round == round => {
++                        let route = result_route(&result, threshold); let diagnostic = result.note.clone(); (route, result, diagnostic)
++                    }
++                    Ok(_) => ((CheckDisposition::Unsupported, CheckReturnTo::Lead, CheckReasonCode::InvalidResult), CheckResult::new(&plan.id, round, false, "Invalid check result."), "Check returned another identity/round.".into()),
++                    Err(e) if e.code == ErrorCode::Cancelled => return Err(e),
++                    Err(e) => {
++                        let route = error_route(&e);
++                        (route, CheckResult { unknowns: vec!["check-execution-unverified".into()], ..CheckResult::new(&plan.id, round, false, "Check could not execute; see private plan report.") }, e.message)
++                    }
++                }
++            };
++            records.push(PlannedCheckRecord { id: plan.id.clone(), round, required: plan.required, disposition: route.0, return_to: route.1, reason_code: route.2, reason: diagnostic });
++            results.push(result);
++        }
++        let dir = ws.checks_dir().join(format!("round-{round}"));
++        std::fs::create_dir_all(&dir).map_err(|e| ToolError::io(dir.display(), e))?;
++        let qualifications = p.baseline.artifacts.iter().map(|a| json!({"key":a.key,"origin_kind":a.origin_kind,"qualification":a.qualification(),"authority":a.authority,"losses":a.losses})).collect();
++        let report = CheckPlanReport { version: CHECK_PLAN_REPORT_VERSION, owner: p.owner_id.clone(), round, affected_tasks: p.identity.task_ids.clone(), source_refs: source_refs(p), qualifications, checks: records };
++        report.validate(p)?;
++        let bytes = serde_json::to_vec_pretty(&report).map_err(|e| ToolError::internal(e.to_string()))?;
++        craft_anything_platform::fs::write_atomic_private(&dir.join("accepted-check-plan.json"), &bytes)?;
++        Ok(results)
++    }
++}
+diff --git a/crates/ai/src/rebuild/policy.rs b/crates/ai/src/rebuild/policy.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..7b40bb3518aee49ca950e24ff0db86f5b2c2a6b3
+--- /dev/null
++++ b/crates/ai/src/rebuild/policy.rs
+@@ -0,0 +1,58 @@
++//! Public integration seam for the separately owned Pi RPC adapter/driver.
++//! No fallback adapter is installed by this module.
++use super::*;
++pub use craft_anything_engine::execution_policy::{AcceptedResearch, ExecutionMode, ExecutionPolicy, ModelIdentity};
++
++/// The selected transport owns model verification, RPC completion and native-tool restriction.
++/// Implementations must use a dedicated `Engine::bounded_builder` for their MCP connection,
++/// verify actual model identity before every prompt, refuse native tools/agents and wait for
++/// driver/child exit. A capability declaration is admission metadata, not live verification.
++pub trait PolicyRuntime: Send + Sync + std::fmt::Debug {
++    fn backend_id(&self) -> &str;
++    fn permission_contract(&self) -> &str;
++    fn conversation(&self, policy: Arc<ExecutionPolicy>, spec: CliSpec, stop: CancelToken) -> Result<Box<dyn Conversation>, ToolError>;
++}
++
++pub(super) fn preflight(hub: &AiHub, ws: &Workspace, opts: &RunOptions) -> Result<Option<crate::BackendEntry>, ToolError> {
++    let Some(p) = &opts.policy else { return Ok(None) };
++    p.preflight(ws)?;
++    super::external_checks::validate_baselines(p)?;
++    let runtime = opts.policy_runtime.as_ref().ok_or_else(|| missing("A Pi RPC PolicyRuntime must be explicitly injected."))?;
++    let cfg = hub.config();
++    let entry = builder_backend(&cfg, opts.backend.as_deref().or_else(|| project_builder(&cfg, ws)))?;
++    if entry.config.kind != BackendKind::AgentCli || entry.config.ssh_host.is_some() || entry.options.acp == Some(true)
++        || !entry.options.args.is_empty() || runtime.backend_id() != p.model.backend_id
++        || runtime.permission_contract() != p.model.permission_contract {
++        return Err(missing("Only the selected local bounded Pi RPC runtime, without extra args or ACP, is supported."));
++    }
++    if opts.kinds.get(&p.kind_id).is_none() { return Err(missing("The frozen kind is not registered.")); }
++    let plugins = craft_anything_engine::wasm_plugins::checks(&hub.engine.session());
++    if plugins.iter().any(|c| c.kinds.is_empty() || c.kinds.iter().any(|k| k == &p.kind_id)) {
++        return Err(missing("Plugin checks have no reviewed identity in this first slice."));
++    }
++    if !opts.good_enough.is_finite() || !(0.0..=100.0).contains(&opts.good_enough) {
++        return Err(missing("The check threshold must be a finite percentage."));
++    }
++    if let Some(feedback) = p.refine_feedback()? {
++        if feedback.good_enough != opts.good_enough { return Err(missing("Refine feedback threshold differs from this run's frozen check threshold.")); }
++    }
++    Ok(Some(entry))
++}
++fn missing(message: &str) -> ToolError { craft_anything_engine::execution_policy::refusal("unsupported", message) }
++
++/// Exclusive file admission lock. A crash leaves a stale mark deliberately; no automatic takeover.
++/// This is a cooperative writer lease, not a filesystem ACL or process-tree cleanup receipt.
++pub(super) struct SourceLease { path: PathBuf, file: Option<std::fs::File> }
++impl SourceLease {
++    pub(super) fn acquire(p: &ExecutionPolicy) -> Result<Self, ToolError> {
++        let path = p.app_root.join(".craft-owner.lock");
++        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&path)
++            .map_err(|e| craft_anything_engine::execution_policy::refusal("owner-conflict", format!("Cannot acquire source writer lease: {e}")))?;
++        use std::io::Write;
++        if let Err(e) = file.write_all(p.owner_id.as_bytes()) { let _ = std::fs::remove_file(&path); return Err(ToolError::io(path.display(), e)); }
++        Ok(Self { path, file: Some(file) })
++    }
++}
++impl Drop for SourceLease {
++    fn drop(&mut self) { drop(self.file.take()); let _ = std::fs::remove_file(&self.path); }
++}
+diff --git a/crates/ai/src/rebuild/policy_tests.rs b/crates/ai/src/rebuild/policy_tests.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..334f31d59e41e32ed3edf9964dbfce83dd4bc29b
+--- /dev/null
++++ b/crates/ai/src/rebuild/policy_tests.rs
+@@ -0,0 +1,289 @@
++use super::*;
++use craft_anything_engine::execution_policy::*;
++use craft_anything_engine::tools::web_common::{Image, encode_png};
++
++pub(super) fn hashed(path: &Path, bytes: &[u8]) -> HashedRef {
++    std::fs::write(path, bytes).unwrap(); HashedRef { path: path.into(), sha256: hash_file(path).unwrap() }
++}
++pub(super) fn fixture(root: &Path) -> (AiHub, Workspace, AcceptedResearch) {
++    let original = hashed(&root.join("original.bin"), b"original fixture");
++    let mut ws = Workspace::create(&root.join("projects"), "policy", "Build a native app", TargetRef::Local { path: original.path.clone() }).unwrap();
++    ws.manifest.stack = "Rust".into(); ws.save().unwrap(); std::fs::create_dir_all(ws.app_dir()).unwrap();
++    std::fs::write(ws.app_dir().join("implementation.txt"), "existing implementation fixture").unwrap();
++    let accepted = hashed(&root.join("accepted.json"), b"accepted offline fixture");
++    let baseline = root.join("external-baseline"); std::fs::create_dir_all(&baseline).unwrap();
++    let image = Image { width: 2, height: 2, rgba: vec![0,0,0,255,255,0,0,255,0,255,0,255,0,0,255,255] };
++    let png = hashed(&baseline.join("original.png"), &encode_png(&image).unwrap());
++    let checks = vec![PlannedCheck { id: "build".into(), implementation: "bounded-command-build-v1".into(), required: true, baseline: None, kind: None, depends_on: vec![] },
++        PlannedCheck { id: "app-screenshot".into(), implementation: "craft-native-screenshot-v1".into(), required: true, baseline: Some("window".into()), kind: Some(BaselineKind::NativeScreenshot), depends_on: vec!["build".into()] }];
++    let plan = hashed(&root.join("check-plan.json"), &serde_json::to_vec(&checks).unwrap());
++    let p = AcceptedResearch {
++        version: 1, mode: ExecutionMode::Buildcheck,
++        identity: Identity { case_ref: accepted.clone(), scope_ref: accepted.clone(), workitem_ref: accepted.clone(), feature_ref: accepted.clone(), acceptance_ref: accepted.clone(), task_ids: vec!["T1".into()] },
++        original: Original { target: ws.manifest.target.clone(), target_identity: original.sha256, bundle: accepted.clone(), traceability: accepted.clone(), scenarios: accepted.clone(), qualifications: accepted.clone(), environment: accepted.clone() },
++        baseline: ExternalBaseline { version: 1, root: baseline, bundle_sha256: accepted.sha256.clone(), artifacts: vec![ExternalArtifact { key: "window".into(), kind: BaselineKind::NativeScreenshot, origin_kind: ExternalOrigin::Rea, evidence_id: "external-window".into(), operation: "fixture-window".into(), provider: "fixture".into(), environment: "fixture".into(), authority: "test-only".into(), limitations: vec!["offline test".into()], source: png.clone(), output: png, converter_version: "identity-v1".into(), parameters: json!({}), field_mapping: json!({"png":"png"}), losses: vec![] }] },
++        check_plan_ref: plan, checks, source_base_sha256: source_digest(&ws.app_dir()).unwrap(), app_root: ws.app_dir(), writable_roots: vec![ws.app_dir()], read_references: vec![], commands: vec![FrozenCommand { command: if cfg!(windows) { "exit /b 0".into() } else { "true".into() }, cwd: ws.app_dir(), timeout_secs: 2 }], build: Some(BuildInvocation { command_index: 0, artifacts: vec!["program.exe".into()] }), protected_paths: vec![], kind_id: "app".into(), stack: "Rust".into(),
++        model: ModelPermission { allowed: true, expected: ModelIdentity { provider: "fixture".into(), model: "offline".into(), effort: "high".into() }, backend_id: "offline-rpc-fixture".into(), permission_contract: "pi-rpc-bounded-v1".into() }, owner_id: "owner-fixture".into(), max_wall_secs: 15, failed_feedback: None,
++    };
++    let mut session = craft_anything_engine::testing::session(); session.settings.deep_mode = true;
++    let hub = AiHub::with_stores(Arc::new(Engine::new(session)), root.join("config.toml"), crate::KeyStore::file_only(root.join("keys.toml")));
++    hub.add_backend(crate::BackendConfig { name: "policy-test".into(), kind: BackendKind::AgentCli, model: "nonexistent-test-driver".into(), base_url: None, ssh_host: None, enabled: true }, None).unwrap();
++    (hub, ws, p)
++}
++#[derive(Debug)]
++struct OfflineRuntime { prompts: Arc<Mutex<Vec<String>>> }
++impl policy::PolicyRuntime for OfflineRuntime {
++    fn backend_id(&self) -> &str { "offline-rpc-fixture" }
++    fn permission_contract(&self) -> &str { "pi-rpc-bounded-v1" }
++    fn conversation(&self, p: Arc<ExecutionPolicy>, spec: CliSpec, _: CancelToken) -> Result<Box<dyn Conversation>, ToolError> {
++        assert!(spec.resume.is_none(), "legacy study session cannot resume");
++        p.verify_actual_model(&p.model.expected)?; // Local fixture; no model process is started.
++        Ok(Box::new(OfflineConversation { prompts: self.prompts.clone(), pending: false }))
++    }
++}
++struct OfflineConversation { prompts: Arc<Mutex<Vec<String>>>, pending: bool }
++impl Conversation for OfflineConversation {
++    fn send(&mut self, text: &str) { self.prompts.lock().unwrap().push(text.into()); self.pending = true; }
++    fn poll(&mut self) -> Vec<AgentEvent> {
++        if !std::mem::take(&mut self.pending) { return vec![]; }
++        vec![AgentEvent::TurnDone { backend: "offline-fixture".into(), input_tokens: 0, output_tokens: 0, cost_usd: None, cost_is_estimate: false }]
++    }
++    fn answer_consent(&mut self, _: &str, _: bool) {}
++    fn stop(&mut self) { self.pending = false; }
++    fn is_busy(&self) -> bool { self.pending }
++}
++
++#[test]
++fn accepted_policy_preflight_precedes_cleanup_or_runtime_and_rejects_unselected_backends() {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, mut p) = fixture(root.path());
++    std::fs::write(ws.transcript_path(), "preserve transcript").unwrap();
++    p.model.allowed = false;
++    assert!(RebuildRun::start(&hub, Workspace::open(&ws.root).unwrap(), RunOptions { policy: Some(Arc::new(p.clone())), ..Default::default() }).is_err());
++    assert_eq!(std::fs::read_to_string(ws.transcript_path()).unwrap(), "preserve transcript");
++    assert!(!ws.app_dir().join(".craft-owner.lock").exists()); assert!(!ws.capture_dir().exists());
++    p.model.allowed = true;
++    assert!(RebuildRun::start(&hub, Workspace::open(&ws.root).unwrap(), RunOptions { policy: Some(Arc::new(p)), ..Default::default() }).is_err(), "missing explicit runtime must fail");
++}
++#[test]
++fn accepted_policy_initial_resume_followup_refine_never_study_extract_or_force_decompile() {
++    for mode in ["initial", "resume", "followup", "refine"] {
++        let root = tempfile::tempdir().unwrap(); let (hub, mut ws, mut p) = fixture(root.path());
++        ws.manifest.agent_session = Some("legacy-study-session".into()); ws.manifest.agent_session_by = Some("nonexistent-test-driver".into()); ws.manifest.agent_session_deep = Some(true); ws.save().unwrap();
++        std::fs::write(ws.transcript_path(), "preserved").unwrap();
++        if mode == "refine" {
++            p.mode = ExecutionMode::RefineOnly;
++            let feedback = RefineFeedback { version: 1, source_base_sha256: p.source_base_sha256.clone(), check_plan_sha256: p.check_plan_ref.sha256.clone(), task_ids: p.identity.task_ids.clone(), good_enough: 90.0,
++                failed_checks: vec![FailedRequiredCheck { id: "app-screenshot".into(), task_ids: vec!["T1".into()], result: CheckResult::new("app-screenshot", 1, false, "approved missing screenshot feedback") }] };
++            p.failed_feedback = Some(hashed(&root.path().join("failed.json"), &serde_json::to_vec(&feedback).unwrap()));
++        }
++        let prompts = Arc::new(Mutex::new(Vec::new()));
++        let opts = RunOptions { policy: Some(Arc::new(p)), policy_runtime: Some(Arc::new(OfflineRuntime { prompts: prompts.clone() })), continuing: mode == "resume", message: (mode == "followup").then(|| "Fix T1".into()), max_rounds: 0, ..Default::default() };
++        let mut run = RebuildRun::start(&hub, Workspace::open(&ws.root).unwrap(), opts).unwrap();
++        assert!(run.wait_for_completion(Duration::from_secs(10)).unwrap());
++        let events = run.poll();
++        assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: false, .. })), "missing implementation must fail its checks");
++        assert!(!events.iter().any(|e| matches!(e, RunEvent::Step { step: Step::Study, .. })));
++        assert!(!ws.capture_dir().exists()); assert!(!ws.app_dir().join(".craft-owner.lock").exists());
++        assert_eq!(std::fs::read_to_string(ws.transcript_path()).unwrap(), "preserved");
++        let prompts = prompts.lock().unwrap(); assert_eq!(prompts.len(), 1, "no DECOMPILE_FIRST turn");
++        assert!(prompts[0].contains("No new research") && prompts[0].contains("needs-evidence"));
++        assert!(!prompts[0].contains(DECOMPILE_FIRST));
++        if mode == "refine" { assert!(prompts[0].contains("approved missing screenshot feedback")); }
++        assert_eq!(Workspace::open(&ws.root).unwrap().manifest.target, ws.manifest.target);
++        let records: Value = serde_json::from_slice(&std::fs::read(ws.checks_dir().join("round-1/accepted-check-plan.json")).unwrap()).unwrap();
++        assert_eq!(records["checks"][1]["disposition"], "skipped");
++        assert_eq!(records["checks"][1]["required"], true);
++    }
++}
++#[test]
++fn accepted_policy_study_guard_and_source_owner_are_real() {
++    let root = tempfile::tempdir().unwrap(); let (_, mut ws, p) = fixture(root.path());
++    let mut w = check_worker(&ws, true); w.policy = Some(Arc::new(p.clone()));
++    assert!(w.study(&mut ws, &kinds::AppKind).is_err()); assert!(!ws.capture_dir().exists());
++    let lease = policy::SourceLease::acquire(&p).unwrap(); assert!(policy::SourceLease::acquire(&p).is_err());
++    drop(lease); assert!(policy::SourceLease::acquire(&p).is_ok());
++}
++#[test]
++fn accepted_policy_round_zero_reports_unsupported_without_research() {
++    let root = tempfile::tempdir().unwrap(); let (_, mut ws, p) = fixture(root.path());
++    let mut w = check_worker(&ws, true); w.policy = Some(Arc::new(p)); w.self_check = Some((Arc::new(kinds::AppKind), 90.0));
++    let asks = Inbox::new(self_check::asks_dir(&ws.root));
++    let id = asks.post(craft_anything_engine::inbox::RequestKind::Question, "check", "check now", vec![], false, None).unwrap();
++    w.answer_self_checks(&mut ws).unwrap();
++    let answer = asks.wait(&id, Duration::from_millis(100), &|| false).unwrap();
++    assert!(answer.as_text().contains("unsupported")); assert!(!ws.capture_dir().exists());
++}
++#[test]
++fn accepted_policy_backend_snapshot_survives_same_name_api_replacement() {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, p) = fixture(root.path());
++    std::fs::write(ws.transcript_path(), "preserve old transcript").unwrap();
++    let prompts = Arc::new(Mutex::new(Vec::new()));
++    let opts = RunOptions { backend: Some("policy-test".into()), policy: Some(Arc::new(p)), policy_runtime: Some(Arc::new(OfflineRuntime { prompts: prompts.clone() })), max_rounds: 0, ..Default::default() };
++    let admitted = policy::preflight(&hub, &ws, &opts).unwrap();
++    let mut config = hub.config(); config.backends[0].config.kind = BackendKind::Openai;
++    let replacement = config.backends[0].clone(); hub.save_config(&config).unwrap();
++    let mut run = RebuildRun::start_admitted(&hub, Workspace::open(&ws.root).unwrap(), opts.clone(), admitted).unwrap();
++    assert!(run.wait_for_completion(Duration::from_secs(10)).unwrap());
++    assert_eq!(prompts.lock().unwrap().len(), 1, "the validated CLI runtime still ran");
++    assert_eq!(std::fs::read_to_string(ws.transcript_path()).unwrap(), "preserve old transcript");
++    assert!(RebuildRun::start_admitted(&hub, Workspace::open(&ws.root).unwrap(), opts, Some(replacement)).is_err());
++    assert_eq!(std::fs::read_to_string(ws.transcript_path()).unwrap(), "preserve old transcript", "hard rejection precedes API cleanup even with an invalid snapshot");
++}
++
++#[test]
++fn accepted_policy_scenario_fresh_seed_rejects_no_save_despite_app_residue() {
++    use super::super::external_checks::{ExternalScenario, ScenarioHarness, ScenarioReset, SeedFile, StateObservation, prepare_scenario, observe_state_files};
++    let root = tempfile::tempdir().unwrap(); let (_, ws, _) = fixture(root.path());
++    std::fs::write(ws.app_dir().join("fixture-program"), "owned executable placeholder; preparation test only").unwrap();
++    let expected = hashed(&ws.app_dir().join("notes.json"), b"saved edited value").sha256;
++    let s = ExternalScenario { version: 2, task_id: "T1".into(), evidence_id: "raw-state".into(), harness: ScenarioHarness::DirectExecV1, reset: ScenarioReset::FreshCopyV1,
++        program: "fixture-program".into(), runtime_files: vec![], seed_files: vec![SeedFile { relative_path: "notes.json".into(), content: None }],
++        arguments: vec![], stdin: String::new(), environment: std::collections::BTreeMap::new(), timeout_secs: 1, exit_code: 0, stdout: String::new(), stderr: String::new(),
++        state_files: vec![StateObservation { relative_path: "notes.json".into(), sha256: Some(expected) }] };
++    let first = prepare_scenario(&s, &ws.app_dir(), &ws.checks_dir().join("round-1")).unwrap();
++    assert!(!observe_state_files(&first, &s.state_files).unwrap()[0].passed, "a no-save result cannot borrow the already matching app file");
++    std::fs::write(first.join("notes.json"), b"saved edited value").unwrap(); assert!(observe_state_files(&first, &s.state_files).unwrap()[0].passed);
++    let second = prepare_scenario(&s, &ws.app_dir(), &ws.checks_dir().join("round-1")).unwrap();
++    assert_ne!(first, second); assert!(!observe_state_files(&second, &s.state_files).unwrap()[0].passed, "retry cannot borrow the previous attempt's state");
++}
++
++#[test]
++fn accepted_policy_dependencies_require_claims_and_similarity_at_the_owner_threshold() {
++    let dependencies = vec!["prerequisite".into()];
++    let mut result = CheckResult { similarity: Some(30.0), ..CheckResult::new("prerequisite", 1, true, "looks incomplete") };
++    assert!(!super::super::external_checks::dependencies_ready(&dependencies, &[result.clone()], 90.0));
++    assert_eq!(super::super::external_checks::result_disposition(&result, 90.0), super::super::external_checks::CheckDisposition::Failed);
++    assert!(super::super::external_checks::dependencies_ready(&dependencies, &[result.clone()], 20.0));
++    result.similarity = Some(100.0); result.claims.push(craft_anything_engine::workspace::Claim::new("saved", false, "not saved"));
++    assert!(!super::super::external_checks::dependencies_ready(&dependencies, &[result], 90.0), "dependent effects stay blocked despite passed=true and perfect picture");
++}
++
++#[test]
++fn accepted_policy_build_requires_a_real_command_fresh_artifact_and_source_receipt() {
++    let root = tempfile::tempdir().unwrap(); let (_, mut ws, mut p) = fixture(root.path());
++    p.build = None; p.stack = "unknown toolchain".into(); ws.manifest.stack = p.stack.clone(); ws.save().unwrap();
++    assert!(p.preflight(&ws).is_err(), "unknown/no-op upstream build cannot pass policy admission");
++    p.build = Some(BuildInvocation { command_index: 0, artifacts: vec!["program.exe".into()] });
++    std::fs::write(ws.app_dir().join("program.exe"), b"stale compiled output").unwrap();
++    p.source_base_sha256 = source_digest(&ws.app_dir()).unwrap(); p.preflight(&ws).unwrap();
++    let mut w = check_worker(&ws, true); w.policy = Some(Arc::new(p.clone())); w.self_check = Some((Arc::new(kinds::AppKind), 90.0));
++    let results = w.run_checks(&ws, &kinds::AppKind, 1).unwrap();
++    assert!(!results[0].good(90.0), "exit zero plus an old artifact is not a build"); assert!(!ws.app_dir().join("program.exe").exists());
++    p.commands[0].command = if cfg!(windows) { "echo fresh-output>program.exe".into() } else { "printf fresh-output > program.exe".into() };
++    w.policy = Some(Arc::new(p));
++    let results = w.run_checks(&ws, &kinds::AppKind, 2).unwrap();
++    assert!(results[0].good(90.0), "actual frozen command created the declared output");
++    assert!(results[0].note.contains("build-receipt.json"));
++    assert_ne!(std::fs::read(ws.app_dir().join("program.exe")).unwrap(), b"stale compiled output");
++}
++
++#[test]
++fn accepted_policy_build_artifacts_preserve_owner_authority_and_reject_aliases_before_rename() {
++    use super::super::external_checks::CheckDisposition;
++    let root = tempfile::tempdir().unwrap(); let (_, ws, mut p) = fixture(root.path());
++    let protected_dir = ws.app_dir().join("private-control");
++    std::fs::create_dir_all(&protected_dir).unwrap();
++    let protected_file = protected_dir.join("authority.json");
++    std::fs::write(&protected_file, b"authoritative bytes").unwrap();
++    std::fs::write(ws.app_dir().join("spec.md"), b"frozen spec").unwrap();
++    std::fs::write(ws.app_dir().join("program.exe"), b"legitimate prior output").unwrap();
++    p.protected_paths.push(protected_file.clone());
++    p.source_base_sha256 = source_digest(&ws.app_dir()).unwrap();
++    p.preflight(&ws).unwrap();
++    let lease = policy::SourceLease::acquire(&p).unwrap();
++    let lock = ws.app_dir().join(".craft-owner.lock");
++    let original_lock = std::fs::read(&lock).unwrap();
++    let mut denied = vec![PathBuf::from(".craft-owner.lock"), PathBuf::from(".CRAFT-OWNER.LOCK"), PathBuf::from("spec.md"),
++        PathBuf::from("plan.md"), PathBuf::from("tasks.md"), PathBuf::from("checks/receipt.json"),
++        PathBuf::from("private-control/authority.json"), PathBuf::from("private-control"), PathBuf::from("private-control/authority.json/child")];
++    // A real directory alias is created after admission. On Windows a junction needs no
++    // symlink privilege; the test exercises canonical/reparse enforcement on this host.
++    let alias = ws.app_dir().join("output-alias");
++    #[cfg(windows)] {
++        let output = craft_anything_platform::process::Process::new("cmd")
++            .args(["/D", "/C", "mklink", "/J"]).arg(&alias).arg(&protected_dir)
++            .timeout(Duration::from_secs(5)).stdout_cap(4096).stderr_cap(4096).run().unwrap();
++        assert!(output.success, "junction fixture failed: {}", output.stderr_text());
++    }
++    #[cfg(unix)] std::os::unix::fs::symlink(&protected_dir, &alias).unwrap();
++    #[cfg(any(windows, unix))] denied.push("output-alias/authority.json".into());
++    for artifact in denied {
++        // Legal first entry must remain untouched if any later entry is forbidden.
++        p.build.as_mut().unwrap().artifacts = vec!["program.exe".into(), artifact.clone()];
++        assert!(p.preflight(&ws).is_err(), "admission accepted {artifact:?}");
++        let w = { let mut w = check_worker(&ws, true); w.policy = Some(Arc::new(p.clone())); w.self_check = Some((Arc::new(kinds::AppKind), 90.0)); w };
++        let results = w.run_checks(&ws, &kinds::AppKind, 1).unwrap();
++        assert!(!results[0].good(90.0), "build accepted {artifact:?}");
++        assert_eq!(super::super::external_checks::result_disposition(&results[0], 90.0), CheckDisposition::Failed);
++        assert_eq!(std::fs::read(&lock).unwrap(), original_lock, "owner marker changed for {artifact:?}");
++        assert_eq!(std::fs::read(&protected_file).unwrap(), b"authoritative bytes");
++        assert_eq!(std::fs::read(ws.app_dir().join("spec.md")).unwrap(), b"frozen spec");
++        assert_eq!(std::fs::read(ws.app_dir().join("program.exe")).unwrap(), b"legitimate prior output");
++        assert!(policy::SourceLease::acquire(&p).is_err(), "second owner acquired after {artifact:?}");
++    }
++    let round_dir = ws.checks_dir().join("round-1");
++    assert!(std::fs::read_dir(&round_dir).unwrap().all(|entry| entry.unwrap().file_name() == "accepted-check-plan.json"), "refusal must precede build receipt/rename/command effects");
++    drop(lease);
++}
++
++#[test]
++fn accepted_policy_public_readonly_admission_checks_planned_inputs_and_scenario_before_outputs() {
++    use super::super::external_checks::{ExternalScenario, ScenarioHarness, ScenarioReset, SeedFile, StateObservation};
++    let root = tempfile::tempdir().unwrap(); let (_, _, mut p) = fixture(root.path());
++    let planned_workspace = root.path().join("not-created/workspace");
++    let planned_app = planned_workspace.join("app");
++    p.app_root = planned_app.clone(); p.writable_roots = vec![planned_app.clone()];
++    p.commands[0].cwd = planned_app.clone();
++    p.source_base_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".into();
++    let seed = hashed(&root.path().join("immutable-seed.json"), b"original seed bytes");
++    let scenario = ExternalScenario { version: 2, task_id: "T1".into(), evidence_id: "external-window".into(),
++        harness: ScenarioHarness::DirectExecV1, reset: ScenarioReset::FreshCopyV1,
++        program: "program.exe".into(), runtime_files: vec![], seed_files: vec![SeedFile { relative_path: "state.json".into(), content: Some(seed.clone()) }],
++        arguments: vec![], stdin: String::new(), environment: std::collections::BTreeMap::new(), timeout_secs: 2, exit_code: 0,
++        stdout: String::new(), stderr: String::new(), state_files: vec![StateObservation { relative_path: "state.json".into(), sha256: Some(seed.sha256.clone()) }] };
++    p.checks[1].id = "external-scenario".into(); p.checks[1].implementation = "external-scenario-v2".into(); p.checks[1].kind = Some(BaselineKind::Scenario);
++    p.check_plan_ref = hashed(&p.check_plan_ref.path, &serde_json::to_vec(&p.checks).unwrap());
++    let scenario_path = p.baseline.root.join("scenario.json");
++    let install_scenario = |p: &mut AcceptedResearch, s: &ExternalScenario| {
++        let r = hashed(&scenario_path, &serde_json::to_vec(s).unwrap());
++        p.baseline.artifacts[0].source = r.clone(); p.baseline.artifacts[0].output = r; p.baseline.artifacts[0].kind = BaselineKind::Scenario;
++    };
++    install_scenario(&mut p, &scenario);
++    let assert_readonly = |p: &AcceptedResearch, expected: bool| {
++        let before = source_digest(root.path()).unwrap();
++        let result = super::super::validate_external_inputs(p);
++        assert_eq!(result.is_ok(), expected, "{result:?}");
++        assert_eq!(source_digest(root.path()).unwrap(), before, "admission must not change any fixture/input bytes or create records");
++        assert!(!planned_workspace.exists()); assert!(!planned_app.exists());
++        assert!(!root.path().join("run-root").exists());
++    };
++    assert_readonly(&p, true);
++    let mut missing = p.clone(); missing.baseline.artifacts[0].output.path = root.path().join("missing-baseline.json");
++    assert_readonly(&missing, false);
++    let mut bad = scenario.clone(); bad.version = 1; install_scenario(&mut p, &bad); assert_readonly(&p, false);
++    bad = scenario.clone(); bad.task_id = "unselected-task".into(); install_scenario(&mut p, &bad); assert_readonly(&p, false);
++    bad = scenario.clone(); bad.seed_files.clear(); install_scenario(&mut p, &bad); assert_readonly(&p, false);
++    bad = scenario.clone(); bad.seed_files[0].content.as_mut().unwrap().sha256 = "0".repeat(64);
++    install_scenario(&mut p, &bad); assert_readonly(&p, false);
++    install_scenario(&mut p, &scenario);
++    let mut invalid_path = p.clone(); invalid_path.writable_roots = vec![root.path().into()]; assert_readonly(&invalid_path, false);
++    let mut invalid_tasks = p.clone(); invalid_tasks.identity.task_ids.clear(); assert_readonly(&invalid_tasks, false);
++    let mut invalid_artifact = p.clone(); invalid_artifact.build.as_mut().unwrap().artifacts = vec![".craft-owner.lock".into()]; assert_readonly(&invalid_artifact, false);
++    let mut invalid_source = p.clone(); invalid_source.source_base_sha256 = "0".repeat(64); assert_readonly(&invalid_source, false);
++    // Existing seed-app admission uses the same source rule without constructing metadata.
++    std::fs::create_dir(root.path().join("existing-fixture")).unwrap();
++    let (_, existing, mut existing_policy) = fixture(&root.path().join("existing-fixture"));
++    let before = source_digest(&existing.app_dir()).unwrap();
++    super::super::validate_external_inputs(&existing_policy).unwrap();
++    assert_eq!(source_digest(&existing.app_dir()).unwrap(), before);
++    existing_policy.source_base_sha256 = "0".repeat(64);
++    assert!(super::super::validate_external_inputs(&existing_policy).is_err());
++}
++
++#[test]
++fn accepted_policy_default_remains_upstream() {
++    let opts = RunOptions::default(); assert!(opts.policy.is_none() && opts.policy_runtime.is_none());
++    let root = tempfile::tempdir().unwrap(); let (_, ws, _) = fixture(root.path());
++    assert!(super::super::brief::continue_prompt(&kinds::AppKind).contains("rebuild_check"));
++    assert!(!super::super::brief::brief(&kinds::AppKind, &BriefCx { ws: &ws, deep: true, ghidra: false, editor: None, assets: false, image_model: None, sees_pictures: true }, None).is_empty());
++}
+diff --git a/crates/ai/src/rebuild/return_tests.rs b/crates/ai/src/rebuild/return_tests.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..d2bc01c9b72f8293a1ef10e94f438ba4191be84d
+--- /dev/null
++++ b/crates/ai/src/rebuild/return_tests.rs
+@@ -0,0 +1,200 @@
++use super::*;
++use super::accepted_policy::{fixture, hashed};
++use craft_anything_engine::execution_policy::*;
++
++#[derive(Debug, Clone, Copy)]
++enum Action { None, RemoveBaseline, BreakOutputPath, FixValue, OptionalThenFix, DriftContract, Cancel }
++#[derive(Debug)]
++struct ReturnRuntime { calls: Arc<Mutex<usize>>, action: Action }
++impl policy::PolicyRuntime for ReturnRuntime {
++    fn backend_id(&self) -> &str { "offline-rpc-fixture" }
++    fn permission_contract(&self) -> &str { "pi-rpc-bounded-v1" }
++    fn conversation(&self, policy: Arc<ExecutionPolicy>, _: CliSpec, stop: CancelToken) -> Result<Box<dyn Conversation>, ToolError> {
++        Ok(Box::new(ReturnConversation { policy, stop, calls: self.calls.clone(), action: self.action, pending: false }))
++    }
++}
++struct ReturnConversation { policy: Arc<ExecutionPolicy>, stop: CancelToken, calls: Arc<Mutex<usize>>, action: Action, pending: bool }
++impl Conversation for ReturnConversation {
++    fn send(&mut self, _: &str) {
++        let mut calls = self.calls.lock().unwrap(); *calls += 1;
++        match self.action {
++            Action::RemoveBaseline if *calls == 1 => std::fs::remove_file(&self.policy.baseline.artifacts[0].output.path).unwrap(),
++            Action::BreakOutputPath if *calls == 1 => std::fs::create_dir(self.policy.app_root.join("program.exe")).unwrap(),
++            Action::OptionalThenFix if *calls == 1 => std::fs::remove_file(&self.policy.baseline.artifacts[0].output.path).unwrap(),
++            Action::OptionalThenFix | Action::FixValue if *calls == 2 => std::fs::write(self.policy.app_root.join("value.txt"), b"correct\r\n").unwrap(),
++            Action::DriftContract if *calls == 1 => std::fs::write(&self.policy.identity.scope_ref.path, b"contract changed").unwrap(),
++            Action::Cancel => self.stop.cancel(),
++            _ => {},
++        }
++        self.pending = true;
++    }
++    fn poll(&mut self) -> Vec<AgentEvent> {
++        if !std::mem::take(&mut self.pending) { return vec![]; }
++        vec![AgentEvent::TurnDone { backend: "offline".into(), input_tokens: 0, output_tokens: 0, cost_usd: None, cost_is_estimate: false }]
++    }
++    fn answer_consent(&mut self, _: &str, _: bool) {}
++    fn stop(&mut self) {}
++    fn is_busy(&self) -> bool { self.pending }
++}
++struct DuplicateKind;
++impl TargetKind for DuplicateKind {
++    fn id(&self) -> &'static str { "app" }
++    fn words(&self) -> KindWords { kinds::AppKind.words() }
++    fn detect(&self, _: &DetectCx) -> Option<u32> { Some(100) }
++    fn default_stack(&self, _: &DetectCx) -> &'static str { "Rust" }
++    fn goal(&self) -> &'static str { "a fixture" }
++    fn checks(&self, ws: &Workspace) -> Vec<Box<dyn Check>> {
++        let mut checks = kinds::AppKind.checks(ws); checks.push(Box::new(kinds::BuildCheck)); checks
++    }
++}
++fn run(root: &Path, action: Action, duplicate: bool) -> (Workspace, AcceptedResearch, Vec<RunEvent>, usize) {
++    let (hub, ws, p) = fixture(root);
++    run_policy(hub, ws, p, action, duplicate)
++}
++fn run_policy(hub: AiHub, ws: Workspace, p: AcceptedResearch, action: Action, duplicate: bool) -> (Workspace, AcceptedResearch, Vec<RunEvent>, usize) {
++    let calls = Arc::new(Mutex::new(0)); let mut kinds = KindRegistry::built_in(); if duplicate { kinds.register(Arc::new(DuplicateKind)); }
++    let opts = RunOptions { policy: Some(Arc::new(p.clone())), policy_runtime: Some(Arc::new(ReturnRuntime { calls: calls.clone(), action })), kinds, max_rounds: 3, ..Default::default() };
++    let mut run = RebuildRun::start(&hub, Workspace::open(&ws.root).unwrap(), opts).unwrap();
++    assert!(run.wait_for_completion(Duration::from_secs(15)).unwrap());
++    assert!(!ws.app_dir().join(".craft-owner.lock").exists(), "worker exit releases cooperative lease");
++    let events = run.poll(); let count = *calls.lock().unwrap(); (ws, p, events, count)
++}
++#[test]
++fn policy_required_returns_stop_after_one_builder_and_preserve_original_refs() {
++    for (action, duplicate, kind, route) in [(Action::RemoveBaseline, false, CheckReturnKind::NeedsEvidence, CheckReturnTo::OriginalPrimary),
++        (Action::BreakOutputPath, false, CheckReturnKind::Unsupported, CheckReturnTo::Lead),
++        (Action::None, true, CheckReturnKind::Unsupported, CheckReturnTo::Lead)] {
++        let root = tempfile::tempdir().unwrap(); let (ws, p, events, calls) = run(root.path(), action, duplicate);
++        assert_eq!(calls, 1, "required owner return must not send a second prompt");
++        assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: false, .. })));
++        let report = read_check_plan_report(&p, &ws.root, 1).unwrap();
++        let summary = report.return_summary("checks/round-1/accepted-check-plan.json".into()).unwrap();
++        assert_eq!(summary.kind, kind); assert_eq!(summary.return_to, route);
++        assert_eq!(summary.affected_tasks, p.identity.task_ids);
++        assert_eq!(summary.source_refs.case_ref, p.identity.case_ref);
++        assert_eq!(summary.source_refs.workitem_ref, p.identity.workitem_ref);
++        assert_eq!(summary.source_refs.acceptance_ref, p.identity.acceptance_ref);
++        assert_eq!(summary.source_refs.check_plan_ref, p.check_plan_ref);
++        let public = serde_json::to_value(&summary).unwrap();
++        assert!(!public.to_string().contains("diagnostic"));
++        assert!(public["records"].as_array().unwrap().iter().all(|r| r.get("reason").is_none()));
++        assert!(!ws.checks_dir().join("round-2").exists());
++    }
++    #[cfg(windows)] {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, mut p) = business_fixture(root.path(), false);
++    p.commands[0].command = "echo not-an-executable>program.exe".into();
++    let (ws, p, events, calls) = run_policy(hub, ws, p, Action::None, false);
++    assert_eq!(calls, 1, "unqualified process execution is not a code-refine retry");
++    assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: false, .. })));
++    let report = read_check_plan_report(&p, &ws.root, 1).unwrap();
++    assert_eq!(report.return_summary("report".into()).unwrap().kind, CheckReturnKind::ExecutionFailed);
++    let path = ws.checks_dir().join("round-1/accepted-check-plan.json");
++    let mut old: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap(); old["version"] = json!(1);
++    std::fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
++    assert!(read_check_plan_report(&p, &ws.root, 1).is_err(), "v1 cannot certify typed return");
++    }
++}
++#[test]
++fn policy_missing_baseline_preflight_is_zero_prompts_and_cancel_keeps_existing_stop_gate() {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, p) = fixture(root.path());
++    let calls = Arc::new(Mutex::new(0)); std::fs::remove_file(&p.baseline.artifacts[0].output.path).unwrap();
++    let opts = RunOptions { policy: Some(Arc::new(p)), policy_runtime: Some(Arc::new(ReturnRuntime { calls: calls.clone(), action: Action::None })), ..Default::default() };
++    assert!(RebuildRun::start(&hub, ws, opts).is_err()); assert_eq!(*calls.lock().unwrap(), 0);
++    let root = tempfile::tempdir().unwrap(); let (_, _, events, calls) = run(root.path(), Action::Cancel, false);
++    assert_eq!(calls, 1); assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: false, paused: true, .. })));
++}
++
++#[cfg(windows)]
++fn business_fixture(root: &Path, optional: bool) -> (AiHub, Workspace, AcceptedResearch) {
++    use external_checks::{ExternalScenario, ScenarioHarness, ScenarioReset};
++    let (hub, ws, mut p) = fixture(root);
++    // Real offline process: candidate copy of Windows cmd executes built-in TYPE in fresh cwd.
++    let command = std::env::var("COMSPEC").unwrap();
++    std::fs::copy(command, ws.app_dir().join("program-seed.exe")).unwrap();
++    p.commands[0].command = "copy /Y program-seed.exe program.exe >nul".into();
++    std::fs::write(ws.app_dir().join("value.txt"), if optional { &b"correct\r\n"[..] } else { &b"wrong\r\n"[..] }).unwrap();
++    let scenario = ExternalScenario { version: 2, task_id: "T1".into(), evidence_id: "external-window".into(), harness: ScenarioHarness::DirectExecV1, reset: ScenarioReset::FreshCopyV1,
++        program: "program.exe".into(), runtime_files: vec!["value.txt".into()], seed_files: vec![], arguments: vec!["/D".into(), "/C".into(), "type value.txt".into()], stdin: String::new(),
++        environment: std::collections::BTreeMap::new(), timeout_secs: 2, exit_code: 0, stdout: "correct\r\n".into(), stderr: String::new(), state_files: vec![] };
++    let r = hashed(&p.baseline.root.join("scenario.json"), &serde_json::to_vec(&scenario).unwrap());
++    let mut artifact = p.baseline.artifacts[0].clone(); artifact.key = "business".into(); artifact.kind = BaselineKind::Scenario; artifact.source = r.clone(); artifact.output = r;
++    p.baseline.artifacts.push(artifact);
++    if optional {
++        p.checks[1].required = false;
++        // A later required check stays independent of this optional unsupported screenshot.
++    } else { p.checks.truncate(1); }
++    p.checks.push(PlannedCheck { id: "external-scenario".into(), implementation: "external-scenario-v2".into(), required: true, baseline: Some("business".into()), kind: Some(BaselineKind::Scenario), depends_on: vec!["build".into()] });
++    p.check_plan_ref = hashed(&p.check_plan_ref.path, &serde_json::to_vec(&p.checks).unwrap());
++    p.source_base_sha256 = source_digest(&ws.app_dir()).unwrap();
++    (hub, ws, p)
++}
++#[cfg(windows)]
++#[test]
++fn policy_executed_business_mismatch_refines_once_then_passes() {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, p) = business_fixture(root.path(), false);
++    let (ws, p, events, calls) = run_policy(hub, ws, p, Action::FixValue, false);
++    assert_eq!(calls, 2, "real executed mismatch may request exactly one fix: {events:?}");
++    assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: true, .. })), "{events:?}");
++    let failed = read_check_plan_report(&p, &ws.root, 1).unwrap();
++    assert_eq!(failed.checks[1].return_to, CheckReturnTo::ImplementationWorker);
++    assert_eq!(failed.checks[1].reason_code, CheckReasonCode::ImplementationFailed);
++    assert!(read_check_plan_report(&p, &ws.root, 2).unwrap().return_summary("report".into()).is_none());
++}
++#[test]
++fn policy_typed_report_rejects_contradictory_v2_routes_and_dependencies() {
++    let root = tempfile::tempdir().unwrap(); let (ws, p, _, _) = run(root.path(), Action::None, false);
++    let report = read_check_plan_report(&p, &ws.root, 1).unwrap(); report.validate(&p).unwrap();
++    let path = ws.checks_dir().join("round-1/accepted-check-plan.json");
++    let mut cases = Vec::new();
++    for route in [CheckReturnTo::None, CheckReturnTo::ImplementationWorker] {
++        let mut bad = report.clone(); bad.checks[0].disposition = CheckDisposition::NeedsEvidence;
++        bad.checks[0].return_to = route; bad.checks[0].reason_code = CheckReasonCode::MissingEvidence; cases.push(bad);
++    }
++    let mut bad = report.clone(); bad.round = 0; for c in &mut bad.checks { c.round = 0; } cases.push(bad);
++    let mut bad = report.clone(); bad.checks[1].reason_code = CheckReasonCode::PrerequisiteBlocked; bad.checks[1].return_to = CheckReturnTo::Lead; cases.push(bad);
++    let mut bad = report.clone(); bad.checks[1].disposition = CheckDisposition::Executed; bad.checks[1].reason_code = CheckReasonCode::Passed; bad.checks[1].return_to = CheckReturnTo::None; cases.push(bad);
++    for bad in cases {
++        assert!(bad.validate(&p).is_err());
++        std::fs::write(&path, serde_json::to_vec(&bad).unwrap()).unwrap();
++        assert!(read_check_plan_report(&p, &ws.root, 1).is_err(), "malformed current v2 must never certify success/refine");
++        if bad.round == 0 || !matches!(bad.checks[0].return_to, CheckReturnTo::ImplementationWorker) {
++            assert!(bad.return_summary("report".into()).is_some(), "malformed shape cannot disappear as None");
++        }
++    }
++    std::fs::write(&path, serde_json::to_vec(&report).unwrap()).unwrap();
++    read_check_plan_report(&p, &ws.root, 1).unwrap();
++}
++
++#[cfg(windows)]
++#[test]
++fn policy_optional_missing_does_not_block_required_second_turn_and_contract_drift_does() {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, mut p) = business_fixture(root.path(), true);
++    std::fs::write(ws.app_dir().join("value.txt"), b"wrong\r\n").unwrap(); p.source_base_sha256 = source_digest(&ws.app_dir()).unwrap();
++    let (ws, p, events, calls) = run_policy(hub, ws, p, Action::OptionalThenFix, false);
++    assert_eq!(calls, 2, "optional missing baseline must not stop required fix: {events:?}");
++    assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: true, .. })));
++    let report = read_check_plan_report(&p, &ws.root, 2).unwrap();
++    assert_eq!(report.checks[1].disposition, CheckDisposition::NeedsEvidence);
++    assert_eq!(report.checks[2].disposition, CheckDisposition::Executed);
++    assert!(!Workspace::open(&ws.root).unwrap().manifest.checks.iter().find(|c| c.round == 2 && c.check == "app-screenshot").unwrap().unknowns.is_empty());
++    // The same artifact shared by a required dependency remains required, not optional.
++    let mut shared = p.clone(); shared.checks[2].depends_on.push("app-screenshot".into());
++    assert!(shared.revalidate_builder_inputs().is_err());
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, p) = business_fixture(root.path(), false);
++    let (ws, p, events, calls) = run_policy(hub, ws, p, Action::DriftContract, false);
++    assert_eq!(calls, 1, "contract drift allows no new Builder");
++    assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: false, .. })));
++    assert_eq!(read_check_plan_report(&p, &ws.root, 1).unwrap().return_summary("report".into()).unwrap().return_to, CheckReturnTo::SpecRunner);
++}
++
++#[cfg(windows)]
++#[test]
++fn policy_optional_missing_evidence_preserves_unknown_without_refining_unrelated_required() {
++    let root = tempfile::tempdir().unwrap(); let (hub, ws, p) = business_fixture(root.path(), true);
++    let (ws, p, events, calls) = run_policy(hub, ws, p, Action::RemoveBaseline, false);
++    assert_eq!(calls, 1, "{events:?}"); assert!(events.iter().any(|e| matches!(e, RunEvent::Finished { ok: true, .. })), "{events:?}");
++    let report = read_check_plan_report(&p, &ws.root, 1).unwrap(); assert!(!report.checks[1].required);
++    assert_ne!(report.checks[1].disposition, CheckDisposition::Executed);
++    let saved = Workspace::open(&ws.root).unwrap(); assert!(!saved.manifest.checks[1].unknowns.is_empty());
++    assert!(report.return_summary("report".into()).is_none());
++}

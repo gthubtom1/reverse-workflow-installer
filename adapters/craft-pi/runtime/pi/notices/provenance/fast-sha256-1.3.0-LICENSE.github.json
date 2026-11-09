@@ -1,0 +1,18 @@
+{
+  "name": "LICENSE",
+  "path": "LICENSE",
+  "sha": "cf1ab25da0349f84a3fdd40032f0ce99db813b8b",
+  "size": 1210,
+  "url": "https://api.github.com/repos/dchest/fast-sha256-js/contents/LICENSE?ref=2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529",
+  "html_url": "https://github.com/dchest/fast-sha256-js/blob/2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529/LICENSE",
+  "git_url": "https://api.github.com/repos/dchest/fast-sha256-js/git/blobs/cf1ab25da0349f84a3fdd40032f0ce99db813b8b",
+  "download_url": "https://raw.githubusercontent.com/dchest/fast-sha256-js/2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529/LICENSE",
+  "type": "file",
+  "content": "VGhpcyBpcyBmcmVlIGFuZCB1bmVuY3VtYmVyZWQgc29mdHdhcmUgcmVsZWFz\nZWQgaW50byB0aGUgcHVibGljIGRvbWFpbi4KCkFueW9uZSBpcyBmcmVlIHRv\nIGNvcHksIG1vZGlmeSwgcHVibGlzaCwgdXNlLCBjb21waWxlLCBzZWxsLCBv\ncgpkaXN0cmlidXRlIHRoaXMgc29mdHdhcmUsIGVpdGhlciBpbiBzb3VyY2Ug\nY29kZSBmb3JtIG9yIGFzIGEgY29tcGlsZWQKYmluYXJ5LCBmb3IgYW55IHB1\ncnBvc2UsIGNvbW1lcmNpYWwgb3Igbm9uLWNvbW1lcmNpYWwsIGFuZCBieSBh\nbnkKbWVhbnMuCgpJbiBqdXJpc2RpY3Rpb25zIHRoYXQgcmVjb2duaXplIGNv\ncHlyaWdodCBsYXdzLCB0aGUgYXV0aG9yIG9yIGF1dGhvcnMKb2YgdGhpcyBz\nb2Z0d2FyZSBkZWRpY2F0ZSBhbnkgYW5kIGFsbCBjb3B5cmlnaHQgaW50ZXJl\nc3QgaW4gdGhlCnNvZnR3YXJlIHRvIHRoZSBwdWJsaWMgZG9tYWluLiBXZSBt\nYWtlIHRoaXMgZGVkaWNhdGlvbiBmb3IgdGhlIGJlbmVmaXQKb2YgdGhlIHB1\nYmxpYyBhdCBsYXJnZSBhbmQgdG8gdGhlIGRldHJpbWVudCBvZiBvdXIgaGVp\ncnMgYW5kCnN1Y2Nlc3NvcnMuIFdlIGludGVuZCB0aGlzIGRlZGljYXRpb24g\ndG8gYmUgYW4gb3ZlcnQgYWN0IG9mCnJlbGlucXVpc2htZW50IGluIHBlcnBl\ndHVpdHkgb2YgYWxsIHByZXNlbnQgYW5kIGZ1dHVyZSByaWdodHMgdG8gdGhp\ncwpzb2Z0d2FyZSB1bmRlciBjb3B5cmlnaHQgbGF3LgoKVEhFIFNPRlRXQVJF\nIElTIFBST1ZJREVEICJBUyBJUyIsIFdJVEhPVVQgV0FSUkFOVFkgT0YgQU5Z\nIEtJTkQsCkVYUFJFU1MgT1IgSU1QTElFRCwgSU5DTFVESU5HIEJVVCBOT1Qg\nTElNSVRFRCBUTyBUSEUgV0FSUkFOVElFUyBPRgpNRVJDSEFOVEFCSUxJVFks\nIEZJVE5FU1MgRk9SIEEgUEFSVElDVUxBUiBQVVJQT1NFIEFORCBOT05JTkZS\nSU5HRU1FTlQuCklOIE5PIEVWRU5UIFNIQUxMIFRIRSBBVVRIT1JTIEJFIExJ\nQUJMRSBGT1IgQU5ZIENMQUlNLCBEQU1BR0VTIE9SCk9USEVSIExJQUJJTElU\nWSwgV0hFVEhFUiBJTiBBTiBBQ1RJT04gT0YgQ09OVFJBQ1QsIFRPUlQgT1Ig\nT1RIRVJXSVNFLApBUklTSU5HIEZST00sIE9VVCBPRiBPUiBJTiBDT05ORUNU\nSU9OIFdJVEggVEhFIFNPRlRXQVJFIE9SIFRIRSBVU0UgT1IKT1RIRVIgREVB\nTElOR1MgSU4gVEhFIFNPRlRXQVJFLgoKRm9yIG1vcmUgaW5mb3JtYXRpb24s\nIHBsZWFzZSByZWZlciB0byA8aHR0cDovL3VubGljZW5zZS5vcmc+Cg==\n",
+  "encoding": "base64",
+  "_links": {
+    "self": "https://api.github.com/repos/dchest/fast-sha256-js/contents/LICENSE?ref=2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529",
+    "git": "https://api.github.com/repos/dchest/fast-sha256-js/git/blobs/cf1ab25da0349f84a3fdd40032f0ce99db813b8b",
+    "html": "https://github.com/dchest/fast-sha256-js/blob/2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529/LICENSE"
+  }
+}

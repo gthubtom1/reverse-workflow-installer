@@ -1,0 +1,18 @@
+{
+  "name": "package.json",
+  "path": "packages/schema/package.json",
+  "sha": "4e176a57c0f301650a66d1361c7ae366386c7d3f",
+  "size": 1381,
+  "url": "https://api.github.com/repos/earendil-works/pi/contents/packages/schema/package.json?ref=f9a26365568127461c47a07a37dcb42c140a3ac5",
+  "html_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/schema/package.json",
+  "git_url": "https://api.github.com/repos/earendil-works/pi/git/blobs/4e176a57c0f301650a66d1361c7ae366386c7d3f",
+  "download_url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/schema/package.json",
+  "type": "file",
+  "content": "ewoJIm5hbWUiOiAiQGVhcmVuZGlsLXdvcmtzL3BpLXNjaGVtYSIsCgkidmVy\nc2lvbiI6ICIxLjUuMCIsCgkiZGVzY3JpcHRpb24iOiAiSlNPTiBTY2hlbWEg\ndmFsaWRhdGlvbiB3aXRob3V0IGV2YWw6IGRyYWZ0cyAyMDIwLTEyIGFuZCA3\nLCBjb21waWxlZCBpbnRvIHBsYWluIGNsb3N1cmVzIiwKCSJ0eXBlIjogIm1v\nZHVsZSIsCgkibWFpbiI6ICIuL2Rpc3QvaW5kZXguanMiLAoJInR5cGVzIjog\nIi4vZGlzdC9pbmRleC5kLnRzIiwKCSJleHBvcnRzIjogewoJCSIuIjogewoJ\nCQkic291cmNlIjogIi4vc3JjL2luZGV4LnRzIiwKCQkJInR5cGVzIjogIi4v\nZGlzdC9pbmRleC5kLnRzIiwKCQkJImltcG9ydCI6ICIuL2Rpc3QvaW5kZXgu\nanMiCgkJfSwKCQkiLi9mb3JtYXRzIjogewoJCQkic291cmNlIjogIi4vc3Jj\nL2Zvcm1hdHMvaW5kZXgudHMiLAoJCQkidHlwZXMiOiAiLi9kaXN0L2Zvcm1h\ndHMvaW5kZXguZC50cyIsCgkJCSJpbXBvcnQiOiAiLi9kaXN0L2Zvcm1hdHMv\naW5kZXguanMiCgkJfQoJfSwKCSJzaWRlRWZmZWN0cyI6IGZhbHNlLAoJImZp\nbGVzIjogWwoJCSJkaXN0IiwKCQkiUkVBRE1FLm1kIiwKCQkiQ0hBTkdFTE9H\nLm1kIiwKCQkiTElDRU5TRVMiCgldLAoJInNjcmlwdHMiOiB7CgkJImNsZWFu\nIjogIm5vZGUgLi4vLi4vc2NyaXB0cy9wYWNrYWdlLWZpbGVzLm1qcyBjbGVh\nbiBkaXN0IiwKCQkiYnVpbGQiOiAidHNjIC1wIHRzY29uZmlnLmJ1aWxkLmpz\nb24iLAoJCSJ0ZXN0IjogInZpdGVzdCAtLXJ1biIsCgkJImJlbmNoIjogIm5v\nZGUgLS1leHBvc2UtZ2MgdGVzdC9iZW5jaC9hbGwudHMiLAoJCSJwcmVwdWJs\naXNoT25seSI6ICJucG0gcnVuIGNsZWFuICYmIG5wbSBydW4gYnVpbGQiCgl9\nLAoJImtleXdvcmRzIjogWwoJCSJqc29uLXNjaGVtYSIsCgkJInZhbGlkYXRp\nb24iLAoJCSJ2YWxpZGF0b3IiLAoJCSJjc3AiCgldLAoJImF1dGhvciI6ICJF\nYXJlbmRpbCBXb3JrcyIsCgkibGljZW5zZSI6ICJNSVQiLAoJInJlcG9zaXRv\ncnkiOiB7CgkJInR5cGUiOiAiZ2l0IiwKCQkidXJsIjogImdpdCtodHRwczov\nL2dpdGh1Yi5jb20vZWFyZW5kaWwtd29ya3MvcGkuZ2l0IiwKCQkiZGlyZWN0\nb3J5IjogInBhY2thZ2VzL3NjaGVtYSIKCX0sCgkiZW5naW5lcyI6IHsKCQki\nbm9kZSI6ICI+PTIyLjE5LjAiCgl9LAoJImRldkRlcGVuZGVuY2llcyI6IHsK\nCQkiQGNmd29ya2VyL2pzb24tc2NoZW1hIjogIjQuMS4xIiwKCQkiQG9oLW15\nLXBpL29tcHR5cGUiOiAiMTguMTMuMyIsCgkJImFqdiI6ICI4LjIwLjAiLAoJ\nCSJhanYtZm9ybWF0cyI6ICIzLjAuMSIsCgkJImF0YS12YWxpZGF0b3IiOiAi\nMS42MS4zIiwKCQkidHlwZWJveCI6ICIxLjMuMjciLAoJCSJ2aXRlc3QiOiAi\nNC4xLjEyIiwKCQkiem9kIjogIjQuNi43IgoJfQp9Cg==\n",
+  "encoding": "base64",
+  "_links": {
+    "self": "https://api.github.com/repos/earendil-works/pi/contents/packages/schema/package.json?ref=f9a26365568127461c47a07a37dcb42c140a3ac5",
+    "git": "https://api.github.com/repos/earendil-works/pi/git/blobs/4e176a57c0f301650a66d1361c7ae366386c7d3f",
+    "html": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/schema/package.json"
+  }
+}

@@ -19,6 +19,14 @@
     "api": "https://api.github.com/repos/gthubtom1/reverse-skill",
     "policy": "latest-release-or-main-resolved-commit"
   },
+  "craft": {
+    "repository": "https://github.com/storytold/craft-anything",
+    "policy": "explicit-verified-local-bundle; remote-artifact-unsupported-until-published",
+    "base_commit": "0326b4de8051f85a0f3139cd82f88f76911e6a35",
+    "optional": true,
+    "clients": ["pi"],
+    "requires": ["reverse", "spec_kit"]
+  },
   "shell_guard": {
     "repository": "https://github.com/gthubtom1/agent-plugins",
     "api": "https://api.github.com/repos/gthubtom1/agent-plugins",

@@ -7,3 +7,17 @@ __pycache__/
 receipt*.json
 *-local.json
 *.log
+
+# Installer-owned Rust build output; frozen source/fixture inputs stay visible.
+/target/
+/adapters/craft-pi/runtime/executor/target/
+/adapters/craft-pi/runtime/executor/test-artifacts/
+/adapters/craft-pi/runtime/executor/build-history/
+/adapters/craft-pi/runtime/executor/staging/
+/adapters/craft-pi/runtime/executor/check.result.json
+/adapters/craft-pi/runtime/executor/test.result.json
+/adapters/craft-pi/runtime/executor/stage.result.json
+/adapters/craft-pi/runtime/bridge/tests/**/*.exe
+/adapters/craft-pi/runtime/bridge/tests/**/*.dll
+/adapters/craft-pi/runtime/executor/tests/**/*.exe
+/adapters/craft-pi/runtime/executor/tests/**/*.dll

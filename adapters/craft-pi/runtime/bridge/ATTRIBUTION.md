@@ -1,0 +1,1 @@
+Copyright (c) 2026 gthubtom1. Project-owned bridge is distributed under the MIT option of its unchanged MIT OR Apache-2.0 declaration. This is not official Craft/Pi source. Dependencies retain their original licenses.

@@ -1,0 +1,14 @@
+# Frozen Craft shipping sources, snapshots, patches, notices and execution resources.
+# Preserve their raw bytes, including nested SOURCE/manifest identities.
+/adapters/craft-pi/** -text
+
+# Exact recipe_identity() inputs from scripts/build_craft_bundle.py.
+# craft.py/configuration.py/versions.py also become the frozen resource lib/.
+/scripts/build_craft_bundle.py -text
+/scripts/craft_sources.py -text
+/scripts/craft_cargo_notices.py -text
+/scripts/test_craft_owned.py -text
+/scripts/packaging_process.py -text
+/scripts/craft.py -text
+/scripts/configuration.py -text
+/scripts/versions.py -text

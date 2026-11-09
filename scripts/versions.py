@@ -32,12 +32,12 @@ def stable(version):
     return bool(re.fullmatch(r"\d+\.\d+\.\d+", version))
 
 
-COMPONENTS = ("rea", "spec_kit", "reverse", "shell_guard")
+COMPONENTS = ("rea", "spec_kit", "reverse", "shell_guard", "craft")
 
 
 def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
     """Resolve requested components, optionally pinning Spec Kit to a stable release."""
-    requested = [key for key in COMPONENTS if key != "shell_guard"] if components is None else [str(key) for key in components]
+    requested = [key for key in COMPONENTS if key not in ("shell_guard", "craft")] if components is None else [str(key) for key in components]
     for key in requested:
         if key not in COMPONENTS:
             raise InstallError(f"未知组件: {key}")
@@ -46,6 +46,8 @@ def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
             raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
         if not isinstance(spec_kit_version, str) or not stable(spec_kit_version):
             raise InstallError("--spec-kit-version 必须是精确稳定版本（例如 1.3.1）")
+    if "craft" in requested:
+        raise InstallError("Craft remote artifacts unsupported until compatible verified release assets are published; use --craft-bundle")
     result = {}
     if "rea" in requested:
         rea = fetch(manifest["rea"]["metadata"])

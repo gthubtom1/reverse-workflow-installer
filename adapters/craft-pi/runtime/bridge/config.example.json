@@ -1,0 +1,38 @@
+{
+  "provider": "magpie",
+  "model": "gpt/gpt-6.1-sol",
+  "thinking": "high",
+  "public_selection": null,
+  "pi": {
+    "program": "REQUIRED_ABSOLUTE_NODE_EXE",
+    "argv": [
+      "REQUIRED_ABSOLUTE_OFFICIAL_PI_ENTRY_JS"
+    ]
+  },
+  "task_cwd": "REQUIRED_ABSOLUTE_OWNED_TASK_CWD",
+  "agent_dir": "REQUIRED_ABSOLUTE_OWNED_AGENT_DIR",
+  "session_dir": "REQUIRED_ABSOLUTE_OWNED_SESSION_DIR",
+  "session_path": null,
+  "instructions": "Implement only the approved task through the explicitly selected MCP tools. Do not delegate, research, install, or change scope. Return missing evidence to the owner. Preserve source and history on cancellation.",
+  "credential_env_keys": [
+    "CRAFT_PI_PROVIDER_API_KEY"
+  ],
+  "selected_mcp_tools": [
+    "mcp__OWNER_MUST_REPLACE__build_file_read"
+  ],
+  "cancel": {
+    "marker": "REQUIRED_ABSOLUTE_OWNED_CANCEL_MARKER",
+    "run_id": "OWNER_GENERATES_FRESH_RANDOM_RUN_ID",
+    "turn_id": "OWNER_GENERATES_FRESH_RANDOM_TURN_ID",
+    "generation": 1,
+    "token": "OWNER_GENERATES_FRESH_RANDOM_TOKEN"
+  },
+  "deadlines": {
+    "input_ms": 5000,
+    "command_ms": 10000,
+    "turn_ms": 120000,
+    "grace_ms": 3000,
+    "shutdown_ms": 3000,
+    "hard_kill_ms": 3000
+  }
+}

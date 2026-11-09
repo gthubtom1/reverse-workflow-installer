@@ -1,0 +1,571 @@
+{
+  "schema_version": 1,
+  "scope": "original source license supplements for actually compiled headless Cargo packages",
+  "packages": [
+    {
+      "crate": "base64-simd-0.8.0",
+      "repository": "https://github.com/Nugine/simd",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "d74c030d9dc4f3cae02146d1f497ff62726ef09a"
+        },
+        "path_in_vcs": "crates/base64-simd"
+      },
+      "archive_sha256": "339abbe78e73178762e23bea9dfd08e697eb3f3301cd4be981c0f78ba5859195",
+      "license_sources": [
+        {
+          "path": "Nugine--simd--d74c030d9dc4--LICENSE",
+          "sha256": "71674605ec4c087fe9eb534e3e4f9e26eb2e4aabcd76a29fd156c6a844d44b3d",
+          "source_url": "https://github.com/Nugine/simd/blob/d74c030d9dc4f3cae02146d1f497ff62726ef09a/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/Nugine/simd/contents/LICENSE?ref=d74c030d9dc4f3cae02146d1f497ff62726ef09a",
+          "source_path": "LICENSE",
+          "response": "Nugine--simd--d74c030d9dc4--LICENSE.github.json",
+          "response_sha256": "24b52ab56a51ca276642f587453803c144653ae2754c2dd5c31beb66ca4348ee"
+        }
+      ],
+      "commit": "d74c030d9dc4f3cae02146d1f497ff62726ef09a",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "crc-catalog-2.5.0",
+      "repository": "https://github.com/akhilles/crc-catalog.git",
+      "license": "MIT OR Apache-2.0",
+      "vcs": {
+        "git": {
+          "sha1": "ed4ad631f22b05055c21a3a4127eb7cf6d75bb62"
+        },
+        "path_in_vcs": ""
+      },
+      "archive_sha256": "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853",
+      "license_sources": [
+        {
+          "path": "crc-catalog-2.5.0-MIT.txt",
+          "sha256": "5ef8fcfb6cccec8fcae043c834099a60c8b7406408db576e026d2b7e67dc5cf5",
+          "source_path": "LICENSES/MIT.txt",
+          "source_url": "https://github.com/akhilles/crc-catalog/blob/ed4ad631f22b05055c21a3a4127eb7cf6d75bb62/LICENSES/MIT.txt",
+          "response": "crc-MIT.response.json",
+          "response_sha256": "386b58cd54787f9bf814710144f246f1a6c3b1b6e87c19f7dc75ee950f7cb516"
+        }
+      ],
+      "commit": "ed4ad631f22b05055c21a3a4127eb7cf6d75bb62",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "iced-x86-1.22.0",
+      "repository": "https://github.com/icedland/iced",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "cae65b1e90451f22c65f580d4acc752c8a486754"
+        },
+        "path_in_vcs": "src/rust/iced-x86"
+      },
+      "archive_sha256": "c23ad4d19dca41180e835ef6fbd2c1ee655777eca086ad80dd517e0513322879",
+      "license_sources": [
+        {
+          "path": "icedland--iced--cae65b1e9045--LICENSE.txt",
+          "sha256": "93a47598376fd3f276b631e75149340087153c6ff1635a53c5790249e9124e2d",
+          "source_url": "https://github.com/icedland/iced/blob/cae65b1e90451f22c65f580d4acc752c8a486754/LICENSE.txt",
+          "retrieval_url": "https://api.github.com/repos/icedland/iced/contents/LICENSE.txt?ref=cae65b1e90451f22c65f580d4acc752c8a486754",
+          "source_path": "LICENSE.txt",
+          "response": "icedland--iced--cae65b1e9045--LICENSE.txt.github.json",
+          "response_sha256": "1f1c205a7bec2fbc3486d80e541ed13da78f8d14ac3afa8c99882acba88ca805"
+        }
+      ],
+      "commit": "cae65b1e90451f22c65f580d4acc752c8a486754",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_allocator-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_allocator"
+      },
+      "archive_sha256": "a9222664e7018ba33c0781da9b8b97007afdf86e4702123dde331c0f32168550",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_ast-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_ast"
+      },
+      "archive_sha256": "6b02c8089e522e19f85f03e384042b9acd2e7013e125bc11e17ff052160b5ce8",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_ast_macros-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_ast_macros"
+      },
+      "archive_sha256": "b795bfdf0b88722a9f0e9a61a9ef6d2ecd115a728f5f0290fcc66da3ec5151ea",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_ast_visit-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_ast_visit"
+      },
+      "archive_sha256": "62ee65572c656f232524b4c55c0fe8fc9b54a0f444a40c74727f623aecb2dd54",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_codegen-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_codegen"
+      },
+      "archive_sha256": "5534ee12503faae4e633c0dff6b873450116e5c97bd75adf6fb3d6274a9dc317",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_data_structures-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_data_structures"
+      },
+      "archive_sha256": "b6fbea321d618c6b87789cfc19aee4e332525b25420c8c5644ea71f1ffae5e68",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_diagnostics-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_diagnostics"
+      },
+      "archive_sha256": "a93ce3ad9aacc728d625990815e41a844e3285c518b8a4508c4f1a423f5251cd",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_ecmascript-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_ecmascript"
+      },
+      "archive_sha256": "52605e06c9ef037d346a45e89db78f60962e39f26f648b41d930854354ba1e93",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_estree-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_estree"
+      },
+      "archive_sha256": "58d091d1d56046eca8741fc89d7e205a9c4c560ff80313be931a6be57edbcc3e",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_index-5.0.0",
+      "repository": "https://github.com/oxc-project/oxc-index-vec",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "8e09fe324eb6df02f56e4eacdfac958930300380"
+        },
+        "path_in_vcs": ""
+      },
+      "archive_sha256": "191884bee6c3744909a51acc7d78d4ae370d817b25875b10642f632327b6296e",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc-index-vec--8e09fe324eb6--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc-index-vec/blob/8e09fe324eb6df02f56e4eacdfac958930300380/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc-index-vec/contents/LICENSE?ref=8e09fe324eb6df02f56e4eacdfac958930300380",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc-index-vec--8e09fe324eb6--LICENSE.github.json",
+          "response_sha256": "ca8d5d5b403448fadace68b5288d1cacc533d262db4cefc10df9f7b905edc6e8"
+        }
+      ],
+      "commit": "8e09fe324eb6df02f56e4eacdfac958930300380",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_parser-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_parser"
+      },
+      "archive_sha256": "71ce9e6d646d84b30f8eb4e1a1b50c69e66f4ef08066c721a3b82a451326bad4",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_regular_expression-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_regular_expression"
+      },
+      "archive_sha256": "369f33abce8a9a6a49c97a16579d8bb42331f1dd0ea5826412729ab94085c155",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_semantic-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_semantic"
+      },
+      "archive_sha256": "2819478f4352d619c21b14ace45c08c78b9eacdcb2d5cd4c90072e0ef58119ab",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_span-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_span"
+      },
+      "archive_sha256": "152232e21d62e0ddd2a6c23867121c3252e663f05cdc432578d9e1efc52a253b",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_str-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_str"
+      },
+      "archive_sha256": "37716fe1827bf766fa68e9f1011408ca0149b90903ae171289c48401229e2f34",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "oxc_syntax-0.153.0",
+      "repository": "https://github.com/oxc-project/oxc",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+        },
+        "path_in_vcs": "crates/oxc_syntax"
+      },
+      "archive_sha256": "d2214f0546f6df736d976b611782df7072fbe8010e4f3bbd3b98bee37e814b6a",
+      "license_sources": [
+        {
+          "path": "oxc-project--oxc--7f56ec9301e7--LICENSE",
+          "sha256": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+          "source_url": "https://github.com/oxc-project/oxc/blob/7f56ec9301e7327b4402c3010c87803b58b6ea30/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/oxc-project/oxc/contents/LICENSE?ref=7f56ec9301e7327b4402c3010c87803b58b6ea30",
+          "source_path": "LICENSE",
+          "response": "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json",
+          "response_sha256": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713"
+        }
+      ],
+      "commit": "7f56ec9301e7327b4402c3010c87803b58b6ea30",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "vsimd-0.8.0",
+      "repository": "https://github.com/Nugine/simd",
+      "license": "MIT",
+      "vcs": {
+        "git": {
+          "sha1": "d74c030d9dc4f3cae02146d1f497ff62726ef09a"
+        },
+        "path_in_vcs": "crates/vsimd"
+      },
+      "archive_sha256": "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64",
+      "license_sources": [
+        {
+          "path": "Nugine--simd--d74c030d9dc4--LICENSE",
+          "sha256": "71674605ec4c087fe9eb534e3e4f9e26eb2e4aabcd76a29fd156c6a844d44b3d",
+          "source_url": "https://github.com/Nugine/simd/blob/d74c030d9dc4f3cae02146d1f497ff62726ef09a/LICENSE",
+          "retrieval_url": "https://api.github.com/repos/Nugine/simd/contents/LICENSE?ref=d74c030d9dc4f3cae02146d1f497ff62726ef09a",
+          "source_path": "LICENSE",
+          "response": "Nugine--simd--d74c030d9dc4--LICENSE.github.json",
+          "response_sha256": "24b52ab56a51ca276642f587453803c144653ae2754c2dd5c31beb66ca4348ee"
+        }
+      ],
+      "commit": "d74c030d9dc4f3cae02146d1f497ff62726ef09a",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    },
+    {
+      "crate": "winapi-x86_64-pc-windows-gnu-0.4.0",
+      "repository": "https://github.com/retep998/winapi-rs",
+      "license": "MIT/Apache-2.0",
+      "vcs": null,
+      "archive_sha256": "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f",
+      "license_sources": [
+        {
+          "path": "retep998--winapi-rs--796a8e6c2971--LICENSE-MIT",
+          "sha256": "ce7bc3499fee93d5022ef430d5e4201e79a6d9154f3974e42f41349f0569e09b",
+          "source_url": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT",
+          "retrieval_url": "https://api.github.com/repos/retep998/winapi-rs/contents/LICENSE-MIT?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+          "source_path": "LICENSE-MIT",
+          "response": "retep998--winapi-rs--796a8e6c2971--LICENSE-MIT.github.json",
+          "response_sha256": "4daa483ed30211dfab10bf0542157f04d2d246b5734a7c498262786921627c9e"
+        }
+      ],
+      "commit": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+      "tag": "0.3.9",
+      "package_identity": {
+        "path": "retep998--winapi-rs--796a8e6c2971--x86_64--Cargo.toml",
+        "sha256": "bfae0ed252a110efdc81caa66355772db19cf2a3619d591118e7bc271a661d26",
+        "source_url": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/x86_64/Cargo.toml",
+        "retrieval_url": "https://api.github.com/repos/retep998/winapi-rs/contents/x86_64/Cargo.toml?ref=796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+        "source_path": "x86_64/Cargo.toml",
+        "response": "retep998--winapi-rs--796a8e6c2971--x86_64--Cargo.toml.github.json",
+        "response_sha256": "c0ae261894413eabe9c00a7f4500e6ac775b7fcd0921a9787d1c14d6cfa3781a"
+      },
+      "association": "archive repository/name/version matches exact release tag target manifest; archive has no vcs commit, so not an artifact-to-commit attestation"
+    },
+    {
+      "crate": "yaxpeax-arm-0.5.0",
+      "repository": "http://git.iximeow.net/yaxpeax-arm/",
+      "license": "0BSD",
+      "vcs": {
+        "git": {
+          "sha1": "a2723ae2043777472dd373feef4b9c40d52569bb"
+        },
+        "path_in_vcs": ""
+      },
+      "archive_sha256": "79f8d9808ad0b7e434882c66e50704138e7c0bdf3408a9f3159c50603dc3168c",
+      "license_sources": [],
+      "commit": "a2723ae2043777472dd373feef4b9c40d52569bb",
+      "association": "locked crate archive and .cargo_vcs_info commit/path; exact source association, not cryptographic publisher attestation"
+    }
+  ],
+  "files": {
+    "Nugine--simd--d74c030d9dc4--LICENSE": "71674605ec4c087fe9eb534e3e4f9e26eb2e4aabcd76a29fd156c6a844d44b3d",
+    "Nugine--simd--d74c030d9dc4--LICENSE.github.json": "24b52ab56a51ca276642f587453803c144653ae2754c2dd5c31beb66ca4348ee",
+    "crc-MIT.response.json": "386b58cd54787f9bf814710144f246f1a6c3b1b6e87c19f7dc75ee950f7cb516",
+    "crc-catalog-2.5.0-MIT.txt": "5ef8fcfb6cccec8fcae043c834099a60c8b7406408db576e026d2b7e67dc5cf5",
+    "icedland--iced--cae65b1e9045--LICENSE.txt": "93a47598376fd3f276b631e75149340087153c6ff1635a53c5790249e9124e2d",
+    "icedland--iced--cae65b1e9045--LICENSE.txt.github.json": "1f1c205a7bec2fbc3486d80e541ed13da78f8d14ac3afa8c99882acba88ca805",
+    "oxc-project--oxc--7f56ec9301e7--LICENSE": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+    "oxc-project--oxc--7f56ec9301e7--LICENSE.github.json": "785545c89b9bafcf62793daeb07f4738bdb26d81b110f8f397bdb34f06fc7713",
+    "oxc-project--oxc-index-vec--8e09fe324eb6--LICENSE": "95ced5ecf1133fbf41d409b5555c86c344f83f3b019926057ddbc07cfdcc27b3",
+    "oxc-project--oxc-index-vec--8e09fe324eb6--LICENSE.github.json": "ca8d5d5b403448fadace68b5288d1cacc533d262db4cefc10df9f7b905edc6e8",
+    "retep998--winapi-rs--796a8e6c2971--LICENSE-MIT": "ce7bc3499fee93d5022ef430d5e4201e79a6d9154f3974e42f41349f0569e09b",
+    "retep998--winapi-rs--796a8e6c2971--LICENSE-MIT.github.json": "4daa483ed30211dfab10bf0542157f04d2d246b5734a7c498262786921627c9e",
+    "retep998--winapi-rs--796a8e6c2971--x86_64--Cargo.toml": "bfae0ed252a110efdc81caa66355772db19cf2a3619d591118e7bc271a661d26",
+    "retep998--winapi-rs--796a8e6c2971--x86_64--Cargo.toml.github.json": "c0ae261894413eabe9c00a7f4500e6ac775b7fcd0921a9787d1c14d6cfa3781a",
+    "winapi-0.3.9-commit.json": "2c30a10763dbcae89ecd8d69f9da4ca9ebb32685ddeccd5066093993bb230a30"
+  },
+  "missing_grants": [
+    "yaxpeax-arm-0.5.0"
+  ],
+  "qualification": "locked archive and exact source association; not a blanket legal or publisher attestation"
+}

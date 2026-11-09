@@ -1,0 +1,104 @@
+name: craft-portable-packaging
+on:
+  pull_request:
+    paths:
+      - scripts/build_craft_bundle.py
+      - scripts/packaging_process.py
+      - scripts/craft_sources.py
+      - scripts/craft_cargo_notices.py
+      - scripts/test_craft_owned.py
+      - tests/test_craft_sources.py
+      - tests/test_craft_packaging.py
+      - tests/test_pi_notices.py
+      - adapters/craft-pi/runtime/**
+      - .github/workflows/craft-packaging.yml
+  workflow_dispatch:
+    inputs:
+      build_native:
+        description: Build frozen native sources on a pre-provisioned trusted GNU runner
+        type: boolean
+        default: false
+      bundle_version:
+        description: Explicit approved three-part bundle version (required for native build)
+        type: string
+        required: false
+permissions:
+  contents: read
+jobs:
+  offline-packaging:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Run offline packaging tests using preinstalled Python
+        shell: pwsh
+        run: |
+          $versions = Get-ChildItem (Join-Path $env:RUNNER_TOOL_CACHE 'Python/3.12*') -Directory | Sort-Object Name -Descending
+          if (!$versions) { throw 'Preinstalled Python 3.12 is required' }
+          $pythonRoot = Join-Path $versions[0].FullName 'x64'
+          if ($IsWindows) { $python = Join-Path $pythonRoot 'python.exe' }
+          else { $python = Join-Path $pythonRoot 'bin/python' }
+          & $python -B -m unittest discover -s tests -p test_craft_packaging.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $python -B -m unittest discover -s tests -p test_pi_notices.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $python -B -m unittest discover -s tests -p test_craft_sources.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+  windows-gnu-build:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_native
+    # Never execute untrusted PR builds on a self-hosted machine. No tools are installed here.
+    runs-on: [self-hosted, Windows, X64, craft-gnu-1.99.0]
+    timeout-minutes: 90
+    env:
+      CRAFT_PYTHON: ${{ vars.CRAFT_PYTHON }}
+      CRAFT_CARGO: ${{ vars.CRAFT_CARGO }}
+      CRAFT_RUSTC: ${{ vars.CRAFT_RUSTC }}
+      CRAFT_GCC: ${{ vars.CRAFT_GCC }}
+      CRAFT_OBJDUMP: ${{ vars.CRAFT_OBJDUMP }}
+      CRAFT_GNU_DLL_DIR: ${{ vars.CRAFT_GNU_DLL_DIR }}
+      BUNDLE_VERSION: ${{ inputs.bundle_version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate explicit build prerequisites
+        shell: pwsh
+        run: |
+          foreach ($key in 'CRAFT_PYTHON','CRAFT_CARGO','CRAFT_RUSTC','CRAFT_GCC','CRAFT_OBJDUMP','CRAFT_GNU_DLL_DIR') {
+            $value = [Environment]::GetEnvironmentVariable($key)
+            if (!$value -or !(Test-Path -LiteralPath $value)) { throw "Explicit build prerequisite missing: $key" }
+          }
+          if ($env:BUNDLE_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Approved bundle_version required' }
+          if (!(Test-Path adapters/craft-pi/runtime/source-manifest.json)) { throw 'Canonical reviewed source freeze is pending' }
+      - name: Offline packaging checks
+        shell: pwsh
+        run: |
+          & $env:CRAFT_PYTHON -B -m unittest discover -s tests -p test_craft_packaging.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build exact locked Windows GNU binaries and DLL closure
+        shell: pwsh
+        run: |
+          & $env:CRAFT_PYTHON -B scripts/build_craft_bundle.py build --version $env:BUNDLE_VERSION --stage .local/ci/native --output .local/ci/craft-bundle --cargo $env:CRAFT_CARGO --rustc $env:CRAFT_RUSTC --gcc $env:CRAFT_GCC --objdump $env:CRAFT_OBJDUMP --dll-dir $env:CRAFT_GNU_DLL_DIR
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $env:CRAFT_PYTHON -B scripts/build_craft_bundle.py release-artifact --bundle .local/ci/craft-bundle --output .local/ci/craft-windows-gnu.zip
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Acquire official Pi upstream for this runner; never upload its tree
+        shell: pwsh
+        run: |
+          & $env:CRAFT_PYTHON -B scripts/build_craft_bundle.py acquire-pi --stage .local/ci/pi
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Run preserved P1/P2 offline regressions from the published source layout
+        shell: pwsh
+        run: |
+          & $env:CRAFT_PYTHON -B scripts/test_craft_owned.py --source-layout .local/ci/native/source --output .local/ci/owned-tests --cargo $env:CRAFT_CARGO --rustc $env:CRAFT_RUSTC --gcc $env:CRAFT_GCC --node .local/ci/pi/pi/distribution/node/node.exe --target-dir .local/ci/native/owned-test-target --cargo-home .local/ci/native/cargo-home --release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Preserve prepared artifacts (not a release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prepared-craft-windows-gnu
+          path: |
+            .local/ci/craft-windows-gnu.zip*
+            .local/ci/pi/acquisition-result.json
+            .local/ci/pi/rpc-probe/probe-result.json
+            .local/ci/owned-tests/*.json
+            .local/ci/owned-tests/*.log

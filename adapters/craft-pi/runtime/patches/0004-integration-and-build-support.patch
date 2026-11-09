@@ -1,0 +1,227 @@
+diff --git a/docs/accepted-research-adapter.md b/docs/accepted-research-adapter.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..638b12eec5a19d203c205331487a93649d2b853d
+--- /dev/null
++++ b/docs/accepted-research-adapter.md
+@@ -0,0 +1,84 @@
++# Bounded accepted-research adapter (contract v1)
++
++This fork slice adds a library API for implementing already accepted tasks. The upstream default remains `RunOptions::default().policy == None`. It does not install a model, transport, provider configuration or OS sandbox.
++
++## Library boundary
++
++`craft_anything_engine::execution_policy::ExecutionPolicy` is an alias of `AcceptedResearch`. All persisted input structures deny unknown fields. ExecutionMode accepts exactly `buildcheck` and `refine-only`. HashedRef verifies bytes against lowercase SHA-256. Source admission checks the independent existing app/ root, original target, task/reference identities, original bundle, nonempty qualifications/environment material, frozen check plan, baseline source/output hashes, model permission and explicit writable roots. A source snapshot includes all source files except `.git`, `target`, `node_modules` and the cooperative owner marker; links/special files and excessive trees are rejected. This exclusion is part of the snapshot contract, not a claim to hash build artifacts or dependencies.
++
++Before creating any Workspace, lease or run-root, call the public read-only entry:
++
++```rust,ignore
++craft_anything_ai::rebuild::validate_external_inputs(&policy)?;
++```
++
++It reuses `ExecutionPolicy::preflight_inputs()` plus the exact PNG/scenario/seed readers used at run admission. `policy.app_root` describes the planned independent app: existing app/seed source is hashed; a missing app permits only the explicit empty-source digest. All reference/task/model/check-plan/path/build-artifact checks run without creating metadata, output roots or model sessions. Existing immutable seed files still require their hashes and must be outside the planned app. The executor must compare the policy's app_root, target and stack with its planned Workspace before creating it. `preflight(&Workspace)` retains checks against the actual existing root, manifest target/stack and app placement, then reuses the same input admission; start still repeats all full checks. No schema fields or runtime trait signatures change.
++
++RunOptions inputs:
++
++```rust,ignore
++policy: Option<Arc<ExecutionPolicy>>,
++policy_runtime: Option<Arc<dyn PolicyRuntime>>,
++```
++
++`rebuild::policy::PolicyRuntime: Send + Sync + Debug` has:
++
++```rust,ignore
++fn backend_id(&self) -> &str;
++fn permission_contract(&self) -> &str;
++fn conversation(&self, policy: Arc<ExecutionPolicy>, spec: CliSpec,
++                stop: CancelToken) -> Result<Box<dyn Conversation>, ToolError>;
++```
++
++The backend ID is an exact caller-selected pin and must equal `policy.model.backend_id`; the permission contract is exactly `pi-rpc-bounded-v1`. Only local AgentCli with no SSH, extra args or ACP is admitted. The runtime must verify actual provider/model/effort before prompts, restrict native tools, own cancellation and wait for its RPC driver/child exit. `verify_actual_model()` supplies the exact identity comparison. A static runtime capability string does not verify any live model.
++
++No generic upstream CLI policy flag was added. A dedicated executor MCP entry must deserialize/verify its contract and workspace, insert `Arc<InboxDir(ws.inbox_dir())>` into its own isolated Session, then construct `Arc::new(Engine::bounded_builder(session, policy))` and pass it to `craft_anything_mcp::serve` or `serve_stdio`. Do not use the generic unrestricted `craft-anything-cli mcp` as that endpoint. `BuilderCallPolicy` is inserted internally by the bounded Engine at dispatch; manually inserting it into the owner session is not admission or a substitute for that Engine.
++
++The bounded MCP connection lists the six Build tools only. Calls to other tools and discovery/meta/resource/prompt methods fail. Engine dispatch separately checks canonical tool IDs, declared effects, actual paths, hashed read references and exact commands. File paths are project-relative. Read references must be staged and hash-admitted inside that Workspace's `reference/` directory; an outside-workspace reference fails admission. The Builder reads only each exact admitted file. Command cwd is the admitted app directory; command strings must match FrozenCommand exactly. The omitted upstream command timeout is 600 seconds and must fit the frozen limit. Allowed build scripts still execute as the user and may make their own system calls. This is a tool boundary for trusted source, not OS isolation.
++
++## Provenance and checks
++
++ExternalOrigin is an exact enum with serialized values `external/rea` and `external/observation`. REA exports remain external records, never Craft-native Evidence. Raw observations require authority `raw-observation` and an external record identifier; Craft-shaped `ev_<64hex>` identifiers are refused on the raw-observation path. All source/output hashes, provider/environment/operation, mappings and losses remain required. `ExternalArtifact::qualification()` returns `RawObservationReaClaimsUnknown` for raw observations: it cannot close REA claims. Unknown origins or hand-written accepted_claim fields are rejected. The original bundle reference must actually hash to the frozen digest; there is no test bypass.
++
++The supported first slice selects these reviewed implementations after the ordinary own/plugin list has been formed:
++
++| ID | Implementation identity | Baseline |
++|---|---|---|
++| build | bounded-command-build-v1 | Exact frozen command plus explicit freshly produced artifacts |
++| app-screenshot | craft-native-screenshot-v1 | One explicitly mapped external PNG |
++| external-console | external-console-v2 | ExternalScenario v2 JSON, console kind |
++| external-scenario | external-scenario-v2 | ExternalScenario v2 JSON, scenario kind |
++
++Each selected build requires `AcceptedResearch.build = Some(BuildInvocation { command_index, artifacts })`; the index refers to the exact frozen command/cwd/deadline in `commands`. Prior declared outputs are preserved, then the command must execute successfully and produce new nonempty outputs. Admission and execution share `authorize_build_artifact`: the whole output list is checked before preservation, and each path is rechecked immediately before rename and on output read. Exact output files must also satisfy writable-root capabilities; owner locks, workspace/runtime records, spec/plan/tasks, protected-path ancestors/descendants and link/reparse aliases are refused. Existing output directories/special files are refused. These checks preserve the cooperative lease and authority files; they are not atomic OS isolation against concurrent filesystem mutation. The build receipt hashes source inputs before/after (excluding declared outputs), records fresh artifact hashes and refuses source drift. Unknown toolchains, absent build contracts and no-op commands cannot inherit the upstream build success. The upstream None profile retains its original inferred toolchain behavior. C# may use an explicit csc command and executable path without a dotnet installation.
++
++ExternalScenario v2 freezes `harness: direct-exec-v1`, `reset: fresh-copy-v1`, explicit `runtime_files` and `seed_files` in addition to the original task/evidence, argv/stdin/env/cwd/timeout/observation fields. SeedFile names a relative path and optional hashed immutable initial bytes; None requires initial absence. Every observed state file has a corresponding seed declaration. Each attempt gets a newly created directory, verified copies of only the candidate program/runtime files, and verified initial seeds. Old app data and prior attempts cannot satisfy the post-state oracle. The fixed direct-exec harness implementation is part of this pinned patch series, not a user-supplied script or arbitrary reset command.
++
++At least one required behavioral check beyond build is necessary. Unknown/duplicate IDs, missing dependencies and unreviewed plugin checks fail admission; plugins appearing during execution also fail. The native screenshot implementation uses the mapped PNG and the fixed comparison bar, without reading fake Craft capture files or running original-program study. It qualifies appearance only. CLI/scenario observations freeze task/evidence identity, app-relative executable, argv, stdin, explicit environment, timeout, exit status, ordered stdout/stderr and state-file presence/hashes. Unsupported UI input or missing business observations cannot be represented as an empty success. An invocation/harness supplies only the observations its exact external scenario declares; arbitrary UI or full business equivalence is not inferred.
++
++Refine-only requires nonempty existing source and hashed structured RefineFeedback: version, current source digest, check-plan hash, exact task IDs, owner threshold and actual failed required CheckResults. The threshold must match RunOptions; invalid/passing/unrelated feedback is refused. Approved feedback is included in the first/refreshed prompt.
++
++Each selected check yields an explicit PlannedCheckRecord with executed, failed, skipped, unsupported, needs-evidence, execution-error or cancelled disposition in `checks/round-N/accepted-check-plan.json`. The report format is now **version 2**: added routing fields are required, not defaulted. Old v1 JSON remains historical diagnostics and cannot certify a typed return. `rebuild::{CheckPlanReport, PlannedCheckRecord, CheckDisposition, CheckReturnTo, CheckReasonCode, CheckReturnKind, CheckSourceRefs, CheckReturnSummary, read_check_plan_report}` are public. The reader and writer both call `CheckPlanReport::validate(&ExecutionPolicy)`: nonzero round, legal disposition/return_to/reason_code tuples, plan order and dependency return propagation are mandatory. Malformed v2 input is rejected, not projected into success/refinement; direct projection of malformed shape yields execution-failed/lead. Before each Builder message/tool dispatch, `revalidate_builder_inputs` checks immutable contract hashes/model/target/path safety plus the required-check dependency closure. Optional artifact availability remains per-check, so an unrelated optional missing baseline can coexist with a required second-turn fix. Any shared optional prerequisite of a required check is in that closure. Optional path escape/permissions and global reference drift remain fatal. The reader validates owner/round/planned IDs and original reference bindings. `report.return_summary(records_ref)` returns stable codes and original task/case/scope/workitem/feature/acceptance/bundle/check-plan/baseline references without diagnostic text. `Some(ImplementationFailed)` permits only bounded implementation refinement; required original-primary/lead/spec-runner returns stop this batch before further Builder messages. None is not a candidate or cleanup proof.
++
++Only stable contract reasons identify missing external input; generic IO/internal/NotFound/timeout/program-execution errors return execution-error to lead, permission/capability failures return unsupported to lead, and input/hash/version conflicts return to spec-runner. No diagnostic English is parsed as authority. Actual executed build/business assertion mismatches may refine. Private `reason` stays in the plan file; public return items omit it. Shared contract provenance and each check's artifact availability are validated separately: an optional missing baseline remains unknown without blocking unrelated required checks. Required unknown/skipped/zero-claim unqualified results cannot certify success. Existing cancellation/cleanup ownership remains separate; no automatic evidence collection or unknown closure is introduced. Required skips remain failures/unknown. Dependency admission and dispositions use CheckResult.good(owner threshold), including all claims, unknowns and similarity; a failed prerequisite cannot run dependent effects. The record retains bundle SHA, origins and qualification. Inline round-zero self-check returns unsupported to avoid Builder reentry; owner post-turn checks remain available. It does not tell the Builder to research or close original unknowns.
++
++## Lifecycle and compatibility
++
++Admission freezes the validated BackendEntry and passes that snapshot into initialization, avoiding a second mutable-config selection; a hard guard before transcript/API initialization rejects unsupported snapshots. Admission precedes transcript/note cleanup, extractor/model session creation and worker spawn; queued starts recheck. The source lease is a cooperative exclusive file, with no automatic stale-owner takeover. Initial/resume/followup/refine prompts and retry instructions use the same accepted input. Study and Extractor paths have explicit rejection guards; Deep does not force DECOMPILE_FIRST. Original target stays unchanged. This first slice always constructs a fresh policy-mode native session; compatible saved-session reuse needs separate qualification. Old transcript/session materials remain preserved.
++
++`RebuildRun::wait_for_completion(Duration) -> Result<bool, ToolError>` waits for the Rust Worker JoinHandle and retains pending events. false means the deadline elapsed. The policy budget monitor cancels the same token used by owner checks; local preview is released on bounded-run completion. Finished/TurnDone alone is not proof of process cleanup or acceptance. External executor must confirm driver/child exit and block replacement writes when cleanup is unknown. The source lease and Worker join alone do not certify all OS descendants.
++
++## Build and support boundary
++
++Pinned upstream base: `0326b4de8051f85a0f3139cd82f88f76911e6a35`. Preserve Cargo.lock and all upstream licenses/notices. The generated series manifest records complete changed source inventory and patch hashes. Apply patches in order to this exact base, without committing user source or silently upgrading dependencies.
++
++| Environment/path | Qualification in this slice |
++|---|---|
++| Windows x86_64 GNU, Rust/Cargo stable 1.99 | Selected local check/test path; upstream rust-version remains 1.97 |
++| Windows MSVC | Not qualified here; no local cl/link/SDK |
++| Other OS/architectures, wasm | Not verified by this worker |
++| Generic CLI/API/ACP/SSH/model backends | Unsupported for accepted-research policy; upstream None policy is unchanged |
++| Pi RPC runtime/MCP process injection | Public seam only; implementation belongs to the separate executor/bridge |
++| Live provider/model, native GUI/business experiment | Not run by this worker |
++| OS sandbox and all descendant cleanup | Not claimed |
++
++Future installer staging must build the complete fixed dependency graph plus patches, verify runtime/permission contract capability and run matching fixtures before activation. This is source support information, not a prebuilt release or installer activation. Missing formatter/clippy components are reported rather than installed globally.
+diff --git a/policy-build-job.py b/policy-build-job.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..788e02658a0a4f6b041e89a8bd2c74c33ebdcdc8
+--- /dev/null
++++ b/policy-build-job.py
+@@ -0,0 +1,42 @@
++"""Local bounded verification job. Does not change host configuration."""
++import json
++import os
++from pathlib import Path
++import subprocess
++import sys
++import time
++
++ROOT = Path(__file__).resolve().parent
++STATUS = ROOT / "policy-build-status.json"
++
++
++def run():
++    env = os.environ.copy()
++    env["PATH"] = os.environ["POLICY_GNU_TOOL_DIR"] + ";" + env["PATH"]
++    env["CARGO_TARGET_DIR"] = str(ROOT / "target/policy-worker")
++    env["CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER"] = str(Path(os.environ["POLICY_GNU_TOOL_DIR"]) / "gcc.exe")
++    env["CARGO_HTTP_TIMEOUT"] = "20"
++    env["CARGO_NET_RETRY"] = "1"
++    args = ["cargo", "+stable-x86_64-pc-windows-gnu"] + sys.argv[2:]
++    tag = sys.argv[1]
++    status = {"state": "running", "pid": os.getpid(), "command": args, "started": time.time(), "timeout_seconds": 600}
++    STATUS.write_text(json.dumps(status, indent=2), encoding="utf-8")
++    with (ROOT / (tag + ".stdout.log")).open("wb") as out, (ROOT / (tag + ".stderr.log")).open("wb") as err:
++        try:
++            child = subprocess.Popen(args, cwd=ROOT, env=env, stdin=subprocess.DEVNULL, stdout=out, stderr=err)
++            status["cargo_pid"] = child.pid
++            STATUS.write_text(json.dumps(status, indent=2), encoding="utf-8")
++            result = child.wait(timeout=600)
++            status.update(state="finished", exit_code=result)
++        except subprocess.TimeoutExpired:
++            subprocess.run(["taskkill", "/PID", str(child.pid), "/T", "/F"], stdout=out, stderr=err, timeout=15)
++            child.wait(timeout=15)
++            status.update(state="timed-out", exit_code=None)
++        except Exception as exc:
++            status.update(state="failed-to-start", error=str(exc))
++    status["ended"] = time.time()
++    STATUS.write_text(json.dumps(status, indent=2), encoding="utf-8")
++
++
++if __name__ == "__main__":
++    run()
+diff --git a/policy-export-patches.py b/policy-export-patches.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..2b9f0c1d49997a2394e1cf8f198a3a41e1974b8a
+--- /dev/null
++++ b/policy-export-patches.py
+@@ -0,0 +1,83 @@
++"""Export ordered local source patches, without changing the index or creating a commit."""
++from hashlib import sha256
++import json
++from pathlib import Path
++import subprocess
++import sys
++
++ROOT = Path(__file__).resolve().parent
++BASE = "0326b4de8051f85a0f3139cd82f88f76911e6a35"
++OUT = ROOT / "patches/bounded-accepted-research"
++
++
++def git(*args, accepted=(0,)):
++    result = subprocess.run(["git", *args], cwd=ROOT, stdin=subprocess.DEVNULL,
++                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
++    if result.returncode not in accepted:
++        raise RuntimeError(result.stderr.decode("utf-8", errors="replace"))
++    return result.stdout
++
++
++def main():
++    if git("rev-parse", "HEAD").decode().strip() != BASE:
++        raise RuntimeError("Export requires the exact admitted upstream HEAD")
++    tracked = set(git("diff", "--name-only", "-z", "HEAD").decode().strip("\0").split("\0")) - {""}
++    untracked = set(git("ls-files", "--others", "--exclude-standard", "-z").decode().strip("\0").split("\0")) - {""}
++    excluded = {p for p in untracked if p.endswith(".log") or p == "policy-build-status.json" or p.startswith("patches/")}
++    sources = sorted(tracked | (untracked - excluded))
++    if any(not p.endswith((".rs", ".md", ".py", "Cargo.toml", "Cargo.lock")) for p in sources):
++        raise RuntimeError("Unexpected non-source file; inspect it before exporting")
++    if "Cargo.lock" in sources:
++        raise RuntimeError("This slice must not change the upstream dependency lock")
++    groups = [
++        ("0001-engine-contract-and-dispatch.patch", [p for p in sources if p.startswith("crates/engine/")]),
++        ("0002-bounded-worker-and-checks.patch", [p for p in sources if p.startswith("crates/ai/")]),
++        ("0003-bounded-mcp-exposure.patch", [p for p in sources if p.startswith("crates/mcp/")]),
++        ("0004-integration-and-build-support.patch", [p for p in sources if not p.startswith("crates/")]),
++    ]
++    if set(p for _, paths in groups for p in paths) != set(sources):
++        raise RuntimeError("Source group coverage differs")
++    OUT.mkdir(parents=True, exist_ok=True)
++    inventory = []
++    for p in sources:
++        data = (ROOT / p).read_bytes()
++        inventory.append({"path": p, "state": "modified" if p in tracked else "added",
++                          "sha256": sha256(data).hexdigest(), "bytes": len(data)})
++    patches = []
++    for name, paths in groups:
++        current_tracked = sorted(set(paths) & tracked)
++        data = git("diff", "--binary", "--full-index", "HEAD", "--", *current_tracked) if current_tracked else b""
++        for p in sorted(set(paths) - tracked):
++            data += git("diff", "--no-index", "--binary", "--full-index", "--", "/dev/null", p, accepted=(1,))
++        (OUT / name).write_bytes(data)
++        patches.append({"file": name, "sha256": sha256(data).hexdigest(), "bytes": len(data), "sources": paths})
++    identity = {"version": 1, "upstream": "https://github.com/storytold/craft-anything.git", "base_commit": BASE,
++                "base_tree": git("rev-parse", "HEAD^{tree}").decode().strip(),
++                "lock_sha256": sha256((ROOT / "Cargo.lock").read_bytes()).hexdigest(),
++                "upstream_lock_sha256": sha256(git("show", "HEAD:Cargo.lock")).hexdigest(),
++                "series": patches, "source_inventory": inventory,
++                "excluded_local_artifacts": sorted(excluded),
++                "notes": ["No commits or real-index writes", "Generated patches/manifests and build logs are not recursively included", "Apply in listed order to the exact base; source inventory hashes refer to local bytes"]}
++    if "--verify-replay" in sys.argv:
++        replay_name = sys.argv[sys.argv.index("--replay-name") + 1] if "--replay-name" in sys.argv else "policy-patch-replay"
++        if Path(replay_name).name != replay_name or replay_name in (".", ".."):
++            raise RuntimeError("Replay name must be one local directory name")
++        replay = ROOT / "target" / replay_name
++        if replay.exists():
++            raise RuntimeError("Replay root already exists; preserve it and choose an explicit new verification root")
++        git("worktree", "add", "--detach", str(replay), BASE)
++        for patch in patches:
++            path = str(OUT / patch["file"])
++            git("-C", str(replay), "apply", "--check", path)
++            git("-C", str(replay), "apply", path)
++        mismatches = [entry["path"] for entry in inventory
++                      if sha256((replay / entry["path"]).read_bytes()).hexdigest() != entry["sha256"]]
++        if mismatches:
++            raise RuntimeError("Replayed source bytes differ: " + repr(mismatches))
++        identity["replay"] = {"base": BASE, "root": str(replay), "check_and_apply": "passed", "matching_source_files": len(inventory)}
++    (OUT / "series.json").write_text(json.dumps(identity, indent=2) + "\n", encoding="utf-8")
++    print(json.dumps({"patches": len(patches), "sources": len(sources), "series": str(OUT / "series.json")}))
++
++
++if __name__ == "__main__":
++    main()

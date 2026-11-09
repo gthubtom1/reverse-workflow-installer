@@ -11,6 +11,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Fetch exact public v0.6.1 reader for compatibility regression
+        shell: pwsh
+        run: |
+          git fetch --no-tags --depth=1 origin refs/tags/v0.6.1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $legacy = (git rev-parse 'FETCH_HEAD^{commit}').Trim()
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ($legacy -ne '02341811920dc419eb4af27eb836f8e683eddc96') { throw 'Public v0.6.1 tag identity changed' }
       - name: Select preinstalled Python
         shell: pwsh
         run: |

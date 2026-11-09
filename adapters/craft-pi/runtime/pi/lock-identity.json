@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "package": "@earendil-works/pi-coding-agent",
+  "version": "1.5.0",
+  "registry": "https://registry.npmjs.org",
+  "lockfile_version": 3,
+  "lock_sha256": "5b33fe049dfe2391aa3f4b38a62233f815f60ac6ea120ad76f5c462ee038a055",
+  "node_version": "v24.20.0",
+  "scripts": "disabled; npm ci --ignore-scripts --bin-links=false",
+  "qualification": "standalone CLI version and no-model RPC get_state tested; provider/native feature acceptance separate"
+}

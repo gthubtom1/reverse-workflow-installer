@@ -1,10 +1,21 @@
 # Reverse Workflow Installer
 
-安装器与 Pi 入口包版本 **0.6.1**。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。shell-guard 0.3.0 已完成适配：常见只读 `for`/`if`/`test`/`echo`/`printf` 形式允许；单个字面项目内 `rm` 移入 TEMP；Everything 行为与硬保护保持不变，不弹确认窗口。目标来源为已发布的 `shell-guard-v0.3.0`，安装器冻结其 commit/tree，不回退 main 或旧版本。
+安装器与 Pi 入口包源码版本 **0.7.0**，事务协议保持 **0.2.0**。0.7 新增可选 Craft 执行后端分发与受控入口，实际发布/安装以 tag/receipt 为准；当前工作树是待发布的 release candidate。Pi 可选的独立 [shell-guard](docs/shell-guard-install.md) 默认关闭；需要时显式使用 `--with-shell-guard`。默认 `all` 的既有选择规则保持不变。shell-guard 0.3.0 已完成适配：常见只读 `for`/`if`/`test`/`echo`/`printf` 形式允许；单个字面项目内 `rm` 移入 TEMP；Everything 行为与硬保护保持不变，不弹确认窗口。目标来源为已发布的 `shell-guard-v0.3.0`，安装器冻结其 commit/tree，不回退 main 或旧版本。
 
 把官方 [REA](https://github.com/morluto/rea)、增强版 [reverse-skill](https://github.com/gthubtom1/reverse-skill)、官方 [GitHub Spec Kit](https://github.com/github/spec-kit) 和可选的官方 [grilling](https://github.com/mattpocock/skills) 访谈技能接入 **Pi 或 Codex** 的独立安装仓库。Python 3.11+，安装器只使用标准库。
 
 REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务；`grilling` 在 Pi 中负责方案决策树、隐含前提和结论审查。本仓库负责安装、范围明确的配置、更新与恢复，不修改 REA、Spec Kit 或 `grilling` 官方正文。
+
+可选 [Craft 本地 bundle](docs/craft-install.md) 提供隔离分发/更新/verify/restore 与 Pi 按需 execution 入口，默认关闭；普通 implementation-worker 继续默认，Craft 仅由原 R46/Spec runner 为明确批次 opt-in。需显式选择 Pi、reverse、Spec Kit，提供合格 bundle、独立 Pi Node/CLI/version，并通过 reverse descriptor/version/文件摘要与受管入口门。含 Craft 的冻结 plan 为 schema 2，普通核心 plan 与 receipt 为 schema 1；旧 verify/restore 不认证 Craft，使用新 reader。**候选源码、发行资产、安装、宿主加载和业务接受须分别取证**；本 README 不证明候选已发布或已完整验收，不以 official latest 替代兼容补丁资产。
+
+Craft 的后续入口：
+
+- [上游维护手册](docs/craft-upstream-maintenance.md)与[新对话升级提示词](docs/craft-upgrade-prompt.md)：固定版本差异、最小适配、验证门和三层回滚。
+- [精确公开 pin 获取 Craft/reverse](docs/craft-acquisition.md)：使用真实发布记录准备换机输入；公开资产是否可用以实际 pin/tag/commit/hash 为准。
+- [原 R46/Spec 到生产 handoff 的指令](adapters/craft-pi/references/execution.md)：按实际 receipt、owner `--inspect` 与 bundled entry protocol 核 validate/prepare/run 能力；production prepare-contract 按包 manifest 定位，不猜开发目录或把接口实现当已接受。
+- [runtime 源码与身份入口](adapters/craft-pi/runtime/README.md)和[打包/官方 Pi 获取](docs/craft-packaging.md)：新机器通过 `acquire-pi` 获取完整官方 Pi/Node 树及锁定依赖，不重分发 Pi ZIP、不复制个人配置；许可/发布资格另核。
+
+原目标加壳时，先由原 PRIMARY/REA 在原 scope 内分析并保留原 identity 与派生材料限制，再由 Spec 冻结可实现行为；Craft 不必亲自脱壳。缺事实返回原链，检查只阻依赖任务；单个 A/B 样本无修复收益证据，不保证全软件 1:1 复刻。实际宿主重载/新会话加载仍须独立核验。
 
 ## Pi user profiles and skills
 

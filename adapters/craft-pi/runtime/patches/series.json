@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "upstream": "https://github.com/storytold/craft-anything.git",
+  "base_commit": "0326b4de8051f85a0f3139cd82f88f76911e6a35",
+  "base_tree": "31e94ff75d8bf3f75cb195f6a6283a179671dd7c",
+  "lock_sha256": "bb00d8c23971ea4b595a10e50c1eadb44b2372b5d3859e9ea2933a9e5916a043",
+  "upstream_lock_sha256": "bb00d8c23971ea4b595a10e50c1eadb44b2372b5d3859e9ea2933a9e5916a043",
+  "series": [
+    {
+      "file": "0001-engine-contract-and-dispatch.patch",
+      "sha256": "e7c02157451c9ac24dc19d067e3e314587e707e5e10e9852345d4740d3a79b19",
+      "bytes": 55568,
+      "sources": [
+        "crates/engine/src/execution_policy.rs",
+        "crates/engine/src/execution_policy/tests.rs",
+        "crates/engine/src/lib.rs",
+        "crates/engine/src/tools/interaction_tools.rs"
+      ]
+    },
+    {
+      "file": "0002-bounded-worker-and-checks.patch",
+      "sha256": "f7e0f8287b3b654f29da76f5837641c662ef7501419fa46ab10d19e6d89059e9",
+      "bytes": 121476,
+      "sources": [
+        "crates/ai/src/rebuild/external_checks.rs",
+        "crates/ai/src/rebuild/external_checks/build.rs",
+        "crates/ai/src/rebuild/external_checks/plan.rs",
+        "crates/ai/src/rebuild/kinds/mod.rs",
+        "crates/ai/src/rebuild/kinds/screenshot.rs",
+        "crates/ai/src/rebuild/mod.rs",
+        "crates/ai/src/rebuild/policy.rs",
+        "crates/ai/src/rebuild/policy_tests.rs",
+        "crates/ai/src/rebuild/return_tests.rs",
+        "crates/ai/src/rebuild/runs.rs",
+        "crates/ai/src/rebuild/self_check.rs",
+        "crates/ai/src/rebuild/stand_in.rs",
+        "crates/ai/src/rebuild/study.rs",
+        "crates/ai/src/rebuild/tests.rs"
+      ]
+    },
+    {
+      "file": "0003-bounded-mcp-exposure.patch",
+      "sha256": "a40949cbae1d7614d4b49863eb7ddbcfec07128d9835fb097913cb4abc4c43d2",
+      "bytes": 6191,
+      "sources": [
+        "crates/mcp/src/bounded_policy_tests.rs",
+        "crates/mcp/src/lib.rs"
+      ]
+    },
+    {
+      "file": "0004-integration-and-build-support.patch",
+      "sha256": "8602e33f91e3b24122c26d71b1903bd80428986fbc78b3e3905e6090876794a3",
+      "bytes": 22592,
+      "sources": [
+        "docs/accepted-research-adapter.md",
+        "policy-build-job.py",
+        "policy-export-patches.py"
+      ]
+    }
+  ],
+  "source_inventory": [
+    {
+      "path": "crates/ai/src/rebuild/external_checks.rs",
+      "state": "added",
+      "sha256": "3506d1bf53fb59392ca87b51125eb0960cf6c9972590193c798cceb08d6a03c5",
+      "bytes": 12353
+    },
+    {
+      "path": "crates/ai/src/rebuild/external_checks/build.rs",
+      "state": "added",
+      "sha256": "790aae6cea3f67feeb1094798b14067c45763f1ff26adb1e1a95ddf7c5da252f",
+      "bytes": 4607
+    },
+    {
+      "path": "crates/ai/src/rebuild/external_checks/plan.rs",
+      "state": "added",
+      "sha256": "8f4c6849f60199a9ef1af97e9bbf660886e46d4ced02b4adca6d6448f48d0756",
+      "bytes": 19661
+    },
+    {
+      "path": "crates/ai/src/rebuild/kinds/mod.rs",
+      "state": "modified",
+      "sha256": "cc9ec80c5b1a25a8cfa77aeb32dcee1242c0da842d56cca8a05fdac134bfabfb",
+      "bytes": 14964
+    },
+    {
+      "path": "crates/ai/src/rebuild/kinds/screenshot.rs",
+      "state": "modified",
+      "sha256": "f8ac3e51b5d766ff6da2ffef56f112cbd75574cf6b94e1afee2562e422f61ac8",
+      "bytes": 24379
+    },
+    {
+      "path": "crates/ai/src/rebuild/mod.rs",
+      "state": "modified",
+      "sha256": "d17a75be1aaf5b5dd6a5f77d4c4ba296c834a41f4b1f59ac5db29199a50c26c8",
+      "bytes": 84442
+    },
+    {
+      "path": "crates/ai/src/rebuild/policy.rs",
+      "state": "added",
+      "sha256": "77dabbaf9b99f2b661e65800eaa92166c59e2204433e667cf25c163597c8044e",
+      "bytes": 3755
+    },
+    {
+      "path": "crates/ai/src/rebuild/policy_tests.rs",
+      "state": "added",
+      "sha256": "7e59eed09c3a088e88329da1570ca5f4d58021ba67461471972744db4650d8f7",
+      "bytes": 24589
+    },
+    {
+      "path": "crates/ai/src/rebuild/return_tests.rs",
+      "state": "added",
+      "sha256": "8084ecfdad144bb7d36f48920618eb979efc629f3a41af66430d52d442cbea71",
+      "bytes": 14460
+    },
+    {
+      "path": "crates/ai/src/rebuild/runs.rs",
+      "state": "modified",
+      "sha256": "2bbd2b42aeb017768510de71df978950fbc16b6127b42e9621dc78255f2fbee6",
+      "bytes": 21744
+    },
+    {
+      "path": "crates/ai/src/rebuild/self_check.rs",
+      "state": "modified",
+      "sha256": "691d23225244acc573bc45e4980aec7ec4098178aa36d78ef484d09bb823eae2",
+      "bytes": 12368
+    },
+    {
+      "path": "crates/ai/src/rebuild/stand_in.rs",
+      "state": "modified",
+      "sha256": "e7c1ddebb9ffbf173b0aebe4da75da37330ffda61f4c98a3c5ba4c2ff0802027",
+      "bytes": 4098
+    },
+    {
+      "path": "crates/ai/src/rebuild/study.rs",
+      "state": "modified",
+      "sha256": "c65253cc9c44038302d6238132cdcfa2ffc300a884df64f5f86bcaf3fc01aeec",
+      "bytes": 18893
+    },
+    {
+      "path": "crates/ai/src/rebuild/tests.rs",
+      "state": "modified",
+      "sha256": "4df5702b2af0a539cf5337d8c782188040daa8572ac73a3fa3df381ddd69589d",
+      "bytes": 203556
+    },
+    {
+      "path": "crates/engine/src/execution_policy.rs",
+      "state": "added",
+      "sha256": "f6a1d0990bf0388b35a4a36059157f2e455e4f53a0cd0ac018e848c9b7cbb94f",
+      "bytes": 35748
+    },
+    {
+      "path": "crates/engine/src/execution_policy/tests.rs",
+      "state": "added",
+      "sha256": "057b3e71eeb08515d7dc2614c1f12191c7b05cb36bf19e464b45e16efee79940",
+      "bytes": 12138
+    },
+    {
+      "path": "crates/engine/src/lib.rs",
+      "state": "modified",
+      "sha256": "7b2379e1057b9960d078884511d9c1c7e92909f22e614f3600a0fbbffee7c631",
+      "bytes": 19651
+    },
+    {
+      "path": "crates/engine/src/tools/interaction_tools.rs",
+      "state": "modified",
+      "sha256": "c20619c906b2e29124f230998c7e5d6fd20b4d1dad85687ea24f97c51220ed65",
+      "bytes": 85274
+    },
+    {
+      "path": "crates/mcp/src/bounded_policy_tests.rs",
+      "state": "added",
+      "sha256": "c7245f969929a8c653dafd6f773220156f372a28b3bc6abd08d0bd7ee3086958",
+      "bytes": 2449
+    },
+    {
+      "path": "crates/mcp/src/lib.rs",
+      "state": "modified",
+      "sha256": "e5ca9eecacdd673eca4a78c5ab635985352a8c5ebb1ce8eb6899de9336e80769",
+      "bytes": 41272
+    },
+    {
+      "path": "docs/accepted-research-adapter.md",
+      "state": "added",
+      "sha256": "fb8bfe942d12b737a4646d2c3c432d114baf1d044c586908a415b95da9077a37",
+      "bytes": 14779
+    },
+    {
+      "path": "policy-build-job.py",
+      "state": "added",
+      "sha256": "7194ee0ecc3446edb0cb7e89ff19cdf4f1cc9e1d057f1a56b71b13b8afa889fe",
+      "bytes": 1842
+    },
+    {
+      "path": "policy-export-patches.py",
+      "state": "added",
+      "sha256": "a0e32f7f0cb6809f5e0c7bfa80c003d2a14edadcb3e9551fcf5b0071a0f5f139",
+      "bytes": 5039
+    }
+  ],
+  "origin": {
+    "original_series_sha256": "0807fb2219751caec408aa1c89d2a5bc8a5cbee17062e7c0814fe125b929ab16",
+    "source_identity_sha256": "cc42936c940cf838eef1d9b07467453eb12f80254f4baaf751b0cb009e1b4b85",
+    "transformation": "omitted local replay path/log inventory; patches and source hashes unchanged"
+  }
+}

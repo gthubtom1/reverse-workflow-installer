@@ -1,0 +1,854 @@
+{
+  "schema_version": 1,
+  "role": "license-source collection worker",
+  "input_inventory": {
+    "path": "verification/craft-implementation-2026-11-09/packaging-report/pi-NOTICE-inventory.json",
+    "sha256": "2ad09b8d94a0a4293524fde87cc119fb562e82dd8784ff87f404ea8329b8f20a",
+    "target_count": 14
+  },
+  "scope": "Only original 14 missing/unrecognized packages; source evidence, not release approval. Original distribution and official sources untouched.",
+  "distribution_status": "blocked: proxy-agent-negotiate actual license grant unknown; registry integration and detector correction pending",
+  "summary": {
+    "resolved_sources": 13,
+    "including_detector_gap": 1,
+    "unknown": 1
+  },
+  "packages": [
+    {
+      "name": "@aws-sdk/credential-provider-http",
+      "version": "3.972.84",
+      "status": "resolved",
+      "declared_license": "Apache-2.0",
+      "license_id": "Apache-2.0",
+      "npm_metadata": "provenance/npm/aws-sdk--credential-provider-http-3.972.84.json",
+      "npm_url": "https://registry.npmjs.org/@aws-sdk%2fcredential-provider-http/3.972.84",
+      "integrity": "sha512-6xFe7tGPZedfak01TLUxuExU2Xhqw0VtoVvcS/+1OLjPB8If5vulTpCaR0TKTA/J6sAhTOjZHb6+4R1e1KRMKg==",
+      "repository": {
+        "url": "git+https://github.com/aws/aws-sdk-js-v3.git",
+        "type": "git",
+        "directory": "packages-internal/credential-provider-http"
+      },
+      "commit": "ea82eac3afd74c15510e427b91a9eff8292f178b",
+      "ref": "refs/tags/v3.1164.0",
+      "license_file": "aws-3.1164.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact versions all match publisher release tag v3.1164.0 commit and package.json (name/version/Apache-2.0); npm publish times 2026-11-06T20:13:54-58Z follow Publish v3.1164.0 commit 19:46:20Z. npm lacks gitHead/provenance: association is version/tag/time evidence, not cryptographic npm build attestation. nested-clients source is packages-internal/nested-clients although npm repository.directory is stale packages/nested-clients.",
+      "npm_metadata_sha256": "6593c5df17c4ff6f50ad291d3e9c4ec69bc01821c9bba1bc619f6d286c85d02e",
+      "association_evidence": [
+        "provenance/aws-v3.1164.0-ref.json",
+        "provenance/aws-v3.1164.0-tag.json",
+        "provenance/aws-publish-window-commit.json",
+        "provenance/aws-sdk--credential-provider-http-publish-window-package.github.json",
+        "provenance/npm/aws-sdk--credential-provider-http-packument.json"
+      ],
+      "license_sha256": "edea91454b811f127fbdea3d86f378f6719bd372ed440abf82b232f6fca06c3d",
+      "license_bytes": 11352,
+      "source_url": "https://github.com/aws/aws-sdk-js-v3/blob/ea82eac3afd74c15510e427b91a9eff8292f178b/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/aws/aws-sdk-js-v3/contents/LICENSE?ref=ea82eac3afd74c15510e427b91a9eff8292f178b"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-login",
+      "version": "3.972.89",
+      "status": "resolved",
+      "declared_license": "Apache-2.0",
+      "license_id": "Apache-2.0",
+      "npm_metadata": "provenance/npm/aws-sdk--credential-provider-login-3.972.89.json",
+      "npm_url": "https://registry.npmjs.org/@aws-sdk%2fcredential-provider-login/3.972.89",
+      "integrity": "sha512-5kcIZkMMs6eYvU6psqZkmeWsS3EGES53S6xUJFCC6eoJak3BQCCaF8yLU1bN6LTAOr2a9RWw+m1XBGen7Jcq+Q==",
+      "repository": {
+        "url": "git+https://github.com/aws/aws-sdk-js-v3.git",
+        "type": "git",
+        "directory": "packages-internal/credential-provider-login"
+      },
+      "commit": "ea82eac3afd74c15510e427b91a9eff8292f178b",
+      "ref": "refs/tags/v3.1164.0",
+      "license_file": "aws-3.1164.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact versions all match publisher release tag v3.1164.0 commit and package.json (name/version/Apache-2.0); npm publish times 2026-11-06T20:13:54-58Z follow Publish v3.1164.0 commit 19:46:20Z. npm lacks gitHead/provenance: association is version/tag/time evidence, not cryptographic npm build attestation. nested-clients source is packages-internal/nested-clients although npm repository.directory is stale packages/nested-clients.",
+      "npm_metadata_sha256": "f66681ca99c4b40f99913c56ffb956802b40859d37d7be7b3b64a4d25d2db840",
+      "association_evidence": [
+        "provenance/aws-v3.1164.0-ref.json",
+        "provenance/aws-v3.1164.0-tag.json",
+        "provenance/aws-publish-window-commit.json",
+        "provenance/aws-sdk--credential-provider-login-publish-window-package.github.json",
+        "provenance/npm/aws-sdk--credential-provider-login-packument.json"
+      ],
+      "license_sha256": "edea91454b811f127fbdea3d86f378f6719bd372ed440abf82b232f6fca06c3d",
+      "license_bytes": 11352,
+      "source_url": "https://github.com/aws/aws-sdk-js-v3/blob/ea82eac3afd74c15510e427b91a9eff8292f178b/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/aws/aws-sdk-js-v3/contents/LICENSE?ref=ea82eac3afd74c15510e427b91a9eff8292f178b"
+    },
+    {
+      "name": "@aws-sdk/nested-clients",
+      "version": "3.998.1",
+      "status": "resolved",
+      "declared_license": "Apache-2.0",
+      "license_id": "Apache-2.0",
+      "npm_metadata": "provenance/npm/aws-sdk--nested-clients-3.998.1.json",
+      "npm_url": "https://registry.npmjs.org/@aws-sdk%2fnested-clients/3.998.1",
+      "integrity": "sha512-KPw5W6LN3waUskfDCRXRcyBEHAev5PVlMOjMq74OIivFYbgPvq39QeFege7IOFPncO425/AQK0qxdfaoeGejYQ==",
+      "repository": {
+        "url": "git+https://github.com/aws/aws-sdk-js-v3.git",
+        "type": "git",
+        "directory": "packages/nested-clients"
+      },
+      "commit": "ea82eac3afd74c15510e427b91a9eff8292f178b",
+      "ref": "refs/tags/v3.1164.0",
+      "license_file": "aws-3.1164.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact versions all match publisher release tag v3.1164.0 commit and package.json (name/version/Apache-2.0); npm publish times 2026-11-06T20:13:54-58Z follow Publish v3.1164.0 commit 19:46:20Z. npm lacks gitHead/provenance: association is version/tag/time evidence, not cryptographic npm build attestation. nested-clients source is packages-internal/nested-clients although npm repository.directory is stale packages/nested-clients.",
+      "npm_metadata_sha256": "9ee9507d5700677f4d24130647de56d1e499c547c8a8dc1b0fecdc25bd84fc0d",
+      "association_evidence": [
+        "provenance/aws-v3.1164.0-ref.json",
+        "provenance/aws-v3.1164.0-tag.json",
+        "provenance/aws-publish-window-commit.json",
+        "provenance/aws-sdk--nested-clients-publish-window-package.github.json",
+        "provenance/npm/aws-sdk--nested-clients-packument.json"
+      ],
+      "license_sha256": "edea91454b811f127fbdea3d86f378f6719bd372ed440abf82b232f6fca06c3d",
+      "license_bytes": 11352,
+      "source_url": "https://github.com/aws/aws-sdk-js-v3/blob/ea82eac3afd74c15510e427b91a9eff8292f178b/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/aws/aws-sdk-js-v3/contents/LICENSE?ref=ea82eac3afd74c15510e427b91a9eff8292f178b"
+    },
+    {
+      "name": "@earendil-works/pi-agent-core",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-agent-core-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-agent-core/1.5.0",
+      "integrity": "sha512-FOj+jXj48DbzMycR/ghNa2KcsqWmvOln24e0FnQOVgnd8vn5H79g335WdHaZUVdRo+zCeogb40/qPPlCWFuvmA==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/agent"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "a0c212718671895a4af9cc01183a0b955a400ad5e35fa7d5ccd8cdc6296c8d15",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-agent-core-attestations.json",
+        "provenance/pi-agent-core-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-ai",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-ai-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-ai/1.5.0",
+      "integrity": "sha512-VeWxNqTHSqRCf8AcY/6kvNwh+neRL6MPxZPePVztIQy6qqK9MR/YoCSN/ZgDnIyCD3pqEXgRyQbzk4KV4uvjbg==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/ai"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "28979558418218638475f07cffb17b5daa5ca8d0d18c0ad62adf054b13c67c19",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-ai-attestations.json",
+        "provenance/pi-ai-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-codemode",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-codemode-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-codemode/1.5.0",
+      "integrity": "sha512-PLBJZ17AEWGzOlAAcFuOkw3PxkOti0JlFuZQyeF2GRTqbpuYo4k9t8YqUV2uOQVzrUnKdxahwaFUqc1eNS1WAg==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/codemode"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "54c9df3bf0592982b4f92025cb3982808e7884f882d3e2143350448a4dea47f7",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-codemode-attestations.json",
+        "provenance/pi-codemode-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-coding-agent",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-coding-agent-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-coding-agent/1.5.0",
+      "integrity": "sha512-xNDZ5kqowO6Z03FS2gwAkPEGk1ssxVcYKQ6qZId84mFEvwACvvyc2l0vAMOS+c5zvxLRMLBE9r4y44IGYkMJaQ==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/coding-agent"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "af5b02cd5fdcaee5e4f3be9a6d909047afb888c280a7f69a31ac1fda004a68cd",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-coding-agent-attestations.json",
+        "provenance/pi-coding-agent-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-mcp",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-mcp-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-mcp/1.5.0",
+      "integrity": "sha512-DURw3IwHCTMHV8CzUJWVp9css27NowsCWfXt4xg2r09IZ+P1O/Uq58hp0hb9WJO0dbkaKGXKBIkV4LVXcu2nlg==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/mcp"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "f3c54ed8fcff30bf644f48d728bc165be6ffedf86f8475de984f9ea49b7453c4",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-mcp-attestations.json",
+        "provenance/pi-mcp-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-schema",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-schema-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-schema/1.5.0",
+      "integrity": "sha512-RW0MbT2tR65OY6xMsgB/yVBb7m/RTNwA+9hurSN1vVXfHZRVmVnXbruBPrx/PzbrQnW5yLVlMRWxErGDQtF1Hg==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/schema"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "47daf2005edac87ae487fc21e75aac204a1c3361ec2ff85639a61883aef85c8d",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-schema-attestations.json",
+        "provenance/pi-schema-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-telemetry",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-telemetry-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-telemetry/1.5.0",
+      "integrity": "sha512-VW3tcVdnNfl/Vk8wHPTzZdKkxcsCOM12ppiO4DXnd9wMxUCmOfLt/wvUnWeKWbTVlVSRg0uqKtnnhE2UCsG2Bw==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/telemetry"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "f6ef56e2466deff2b1ecfaeb8b0bbbd0759e00f75c0f1c9f405a5a2aa3236f9f",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-telemetry-attestations.json",
+        "provenance/pi-telemetry-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "@earendil-works/pi-tui",
+      "version": "1.5.0",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/earendil-works--pi-tui-1.5.0.json",
+      "npm_url": "https://registry.npmjs.org/@earendil-works%2fpi-tui/1.5.0",
+      "integrity": "sha512-56KqrDVeLF18k+syppVbT35Ai1opbM44ot+sL7O3K40CaWwXCiwOpqEFugDBAILtAhseZh6uYIuYxPPOJHLFAA==",
+      "repository": {
+        "url": "git+https://github.com/earendil-works/pi.git",
+        "type": "git",
+        "directory": "packages/tui"
+      },
+      "commit": "f9a26365568127461c47a07a37dcb42c140a3ac5",
+      "ref": "refs/tags/v1.5.0",
+      "license_file": "pi-1.5.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "Exact npm provenance subject digest binds to lock integrity and v1.5.0 commit; same-commit package.json name/version/license verified.",
+      "npm_metadata_sha256": "444662cb2f2efe7ff349e99c5353618f94a4ee82f1ac28c1d18af354d739b087",
+      "association_evidence": [
+        "provenance/pi-v1.5.0-ref.json",
+        "provenance/earendil-works--pi-tui-attestations.json",
+        "provenance/pi-tui-source-package.json.github.json"
+      ],
+      "license_sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "license_bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/earendil-works/pi/contents/LICENSE?ref=f9a26365568127461c47a07a37dcb42c140a3ac5"
+    },
+    {
+      "name": "fast-sha256",
+      "version": "1.3.0",
+      "status": "resolved-detector-gap",
+      "declared_license": "Unlicense",
+      "license_id": "Unlicense",
+      "npm_metadata": "provenance/npm/fast-sha256-1.3.0.json",
+      "npm_url": "https://registry.npmjs.org/fast-sha256/1.3.0",
+      "integrity": "sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==",
+      "repository": {
+        "url": "git+https://github.com/dchest/fast-sha256-js.git",
+        "type": "git"
+      },
+      "commit": "2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529",
+      "ref": "2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529",
+      "license_file": "fast-sha256-1.3.0-LICENSE",
+      "source_path": "LICENSE",
+      "reason": "npm exact gitHead LICENSE equals installed LICENSE and inventoried SHA256; actual Unlicense grant is present but current grant regex lacks Unlicense.",
+      "npm_metadata_sha256": "fc997068d18a8cf95b58f90509ec60a8552b13579dfd66ce765696514e625cff",
+      "association_evidence": [
+        "provenance/npm/fast-sha256-1.3.0.json",
+        "provenance/fast-sha256-1.3.0-LICENSE.github.json"
+      ],
+      "detector_evidence": {
+        "installed_path": "node_modules/fast-sha256/LICENSE",
+        "installed_equals_source": true,
+        "license_grant_lines": [
+          1,
+          14
+        ],
+        "warranty_lines": [
+          16,
+          22
+        ],
+        "unlicense_reference_line": 24,
+        "current_regex_recognizes_grant": false,
+        "buildscript_sha256": "5d6142a65023e6a9a0eb9e77487ba287de2d8acee3205c52b8db1bac01d424b4"
+      },
+      "license_sha256": "88d9b4eb60579c191ec391ca04c16130572d7eedc4a86daa58bf28c6e14c9bcd",
+      "license_bytes": 1210,
+      "source_url": "https://github.com/dchest/fast-sha256-js/blob/2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/dchest/fast-sha256-js/contents/LICENSE?ref=2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529"
+    },
+    {
+      "name": "proxy-agent-negotiate",
+      "version": "1.1.0",
+      "status": "unknown",
+      "declared_license": "MIT",
+      "license_id": null,
+      "npm_metadata": "provenance/npm/proxy-agent-negotiate-1.1.0.json",
+      "npm_url": "https://registry.npmjs.org/proxy-agent-negotiate/1.1.0",
+      "integrity": "sha512-N8IBcM3UgCVzz2L2Lqv8DVntDnnC8/hiV4nEDUPkqq72TPUgYWjQc+bdZlBPZK9LzPAvOY//gAt0S0DApoOXWQ==",
+      "repository": {
+        "url": "git+https://github.com/TooTallNate/proxy-agents.git",
+        "type": "git",
+        "directory": "packages/negotiate"
+      },
+      "commit": "b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16",
+      "ref": null,
+      "license_file": null,
+      "source_path": null,
+      "reason": "Exact npm provenance and same-commit packages/negotiate/package.json confirmed. Package LICENSE HTTP404; root and package directory listings contain no license. Sibling package MIT must not be substituted.",
+      "npm_metadata_sha256": "41807d237c09eff6120e33932015c4ff9c230872c2df119010db48aa4ae0731e",
+      "association_evidence": [
+        "provenance/proxy-agent-negotiate-attestations.json",
+        "provenance/proxy-agent-negotiate-source-package.json.github.json",
+        "provenance/proxy-root-contents.json",
+        "provenance/proxy-negotiate-contents.json"
+      ],
+      "required_followup": "Obtain maintainer-provided actual license grant applicable to exact commit/package 1.1.0, or separately authorize and prove optional-module removal through dependency closure plus CLI imports. No removal or validation done by this worker."
+    },
+    {
+      "name": "standardwebhooks",
+      "version": "1.1.1",
+      "status": "resolved",
+      "declared_license": "MIT",
+      "license_id": "MIT",
+      "npm_metadata": "provenance/npm/standardwebhooks-1.1.1.json",
+      "npm_url": "https://registry.npmjs.org/standardwebhooks/1.1.1",
+      "integrity": "sha512-bCbX9ZEyFkWPsRz7Bl3NuQUJohmwGSev/yhr7vhaGPlc4AfIrspIRa6cPTBuI1ItmrTDJ4d/S2hCsfe4+vQGnQ==",
+      "repository": {
+        "url": "git+https://github.com/standard-webhooks/standard-webhooks.git",
+        "type": "git"
+      },
+      "commit": "b4d2c14fc5b4ccff3ff271e3b087dff812254c59",
+      "ref": "b4d2c14fc5b4ccff3ff271e3b087dff812254c59",
+      "license_file": "standardwebhooks-1.1.1-LICENSE",
+      "source_path": "libraries/LICENSE",
+      "reason": "Exact npm gitHead; libraries/javascript/package.json matches exact name/version/MIT; nearest ancestor libraries/LICENSE contains Svix MIT grant. Root LICENSE is Apache-2.0 and is retained only as excluded context.",
+      "npm_metadata_sha256": "99d04c194edcd30c91b31b8a10e983bed938f27d1becbf45af4a9eb3e84cc27c",
+      "association_evidence": [
+        "provenance/npm/standardwebhooks-1.1.1.json",
+        "provenance/standardwebhooks-source-package.json.github.json",
+        "provenance/standardwebhooks-libraries-LICENSE.github.json"
+      ],
+      "license_sha256": "5ec8c7b26b64d881a6706617bed25c049f97f2f35de034c756de8546fd6dbe27",
+      "license_bytes": 1088,
+      "source_url": "https://github.com/standard-webhooks/standard-webhooks/blob/b4d2c14fc5b4ccff3ff271e3b087dff812254c59/libraries/LICENSE",
+      "retrieval_url": "https://api.github.com/repos/standard-webhooks/standard-webhooks/contents/libraries/LICENSE?ref=b4d2c14fc5b4ccff3ff271e3b087dff812254c59"
+    }
+  ],
+  "artifact_hashes": {
+    "aws-3.1164.0-LICENSE": {
+      "sha256": "edea91454b811f127fbdea3d86f378f6719bd372ed440abf82b232f6fca06c3d",
+      "bytes": 11352
+    },
+    "fast-sha256-1.3.0-LICENSE": {
+      "sha256": "88d9b4eb60579c191ec391ca04c16130572d7eedc4a86daa58bf28c6e14c9bcd",
+      "bytes": 1210
+    },
+    "pi-1.5.0-LICENSE": {
+      "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "bytes": 1069
+    },
+    "standardwebhooks-1.1.1-LICENSE": {
+      "sha256": "5ec8c7b26b64d881a6706617bed25c049f97f2f35de034c756de8546fd6dbe27",
+      "bytes": 1088
+    },
+    "provenance/aws-3.1164.0-LICENSE.github.json": {
+      "sha256": "9574ff1c8ac42811c972a422c553d567ea85115cbecca99e636a7d4bd80f04b5",
+      "bytes": 16641
+    },
+    "provenance/aws-3.998.0-tag.json": {
+      "sha256": "ed9d1f58fee92a3ea10aa2f8f3ea804a0aedb02aa4048fb6f974634bfcf8ec8a",
+      "bytes": 765
+    },
+    "provenance/aws-http-commit-search.json": {
+      "sha256": "08c082fdf7ca87ba911a2aabb0f0cf2d3e482a6feeaac9713e4578c20b2600b2",
+      "bytes": 73
+    },
+    "provenance/aws-login-commit-search.json": {
+      "sha256": "08c082fdf7ca87ba911a2aabb0f0cf2d3e482a6feeaac9713e4578c20b2600b2",
+      "bytes": 73
+    },
+    "provenance/aws-publish-window-commit.json": {
+      "sha256": "c8dfafb90235ad4f99e7109a36702e7dff1c504346c23ff77d909635da423fdf",
+      "bytes": 1701
+    },
+    "provenance/aws-sdk--credential-provider-http-publish-window-package": {
+      "sha256": "a194dab482998da25a45151ea8f0ae023c6a3c272be45237ebb995f79fb36db0",
+      "bytes": 2430
+    },
+    "provenance/aws-sdk--credential-provider-http-publish-window-package.github.json": {
+      "sha256": "eb2ab4ac85a84a99326f536ab7e743820a46a7e39a40c35c1c6e00292e55de03",
+      "bytes": 4639
+    },
+    "provenance/aws-sdk--credential-provider-login-publish-window-package": {
+      "sha256": "3f4eed376ffc6e7ed326d905adbadd1540b50ab00788462cf271938b1a9f74bc",
+      "bytes": 2004
+    },
+    "provenance/aws-sdk--credential-provider-login-publish-window-package.github.json": {
+      "sha256": "55e279193f4f238bbfba15cfd4b9089c08360c9b078d4516c9e763c8e1694179",
+      "bytes": 4059
+    },
+    "provenance/aws-sdk--nested-clients-publish-window-package": {
+      "sha256": "1871daa00a64acae3e9781848063e0f601993cbc380443587e5c1e4270fa2e83",
+      "bytes": 4448
+    },
+    "provenance/aws-sdk--nested-clients-publish-window-package.github.json": {
+      "sha256": "5bc79217ad1c6da4eec370367ea63c66fa5abcdcbcaeb5fec829eb8bc4222b95",
+      "bytes": 7361
+    },
+    "provenance/aws-tags-3.998.json": {
+      "sha256": "0ffcdb4efa62dfc1dd4a4b85af48bca834fe1a075676e8d8ec8e762c575a3e29",
+      "bytes": 404
+    },
+    "provenance/aws-v3.1164.0-ref.json": {
+      "sha256": "8be412e242b6df76891d47f3d9f04e0f481aad6207a47363969917f421eba3aa",
+      "bytes": 386
+    },
+    "provenance/aws-v3.1164.0-tag.json": {
+      "sha256": "f7e92fb9e0e0525009046d2974657024fca3d0667a2312cefa9eca6931f902e3",
+      "bytes": 767
+    },
+    "provenance/earendil-works--pi-agent-core-attestations.json": {
+      "sha256": "f363cca656e2ed84b3c245b74ff037ecbc36b7c39bc9020ecd17d0812d4af672",
+      "bytes": 14493
+    },
+    "provenance/earendil-works--pi-ai-attestations.json": {
+      "sha256": "0cdb41e3229f674d2c2694c265c259e67c00bcd3cc57590f7f141d34a9c3dfaa",
+      "bytes": 14565
+    },
+    "provenance/earendil-works--pi-codemode-attestations.json": {
+      "sha256": "0368a2c15bdbb0b9efb5989128f45441ca4513a6174f9ba781dda3b2d56f73a2",
+      "bytes": 14449
+    },
+    "provenance/earendil-works--pi-coding-agent-attestations.json": {
+      "sha256": "7915ffc48f130bdcea94b753bca5fcdf5d3420e35f63b4610c4cade3c04974f7",
+      "bytes": 14885
+    },
+    "provenance/earendil-works--pi-mcp-attestations.json": {
+      "sha256": "ddb01dcc3fea4286a53446530bcfac208d79cb89d5d7e3c0102b3055809de085",
+      "bytes": 14809
+    },
+    "provenance/earendil-works--pi-schema-attestations.json": {
+      "sha256": "272e33d9d520c52cc2a3f25ab90a611b5159eac5d148453414043a616277911f",
+      "bytes": 14477
+    },
+    "provenance/earendil-works--pi-telemetry-attestations.json": {
+      "sha256": "f3b9d179c6242c8dba873af580db35f47aea260f9910b37baee492d5b83dbc5d",
+      "bytes": 14637
+    },
+    "provenance/earendil-works--pi-tui-attestations.json": {
+      "sha256": "a73a7334c008de16121768fc1592b8d131ae7360d7f16dab290abc2aaf963dee",
+      "bytes": 14569
+    },
+    "provenance/fast-sha256-1.3.0-LICENSE.github.json": {
+      "sha256": "592d30c6a1345082f5be53c75c37b7cf9df808b4775cfd322aceef4a232f5eeb",
+      "bytes": 2696
+    },
+    "provenance/pi-1.5.0-LICENSE.github.json": {
+      "sha256": "718c32d36c92493d3363cd6a57c094f75acd8fe779c325f66f69899027b5d848",
+      "bytes": 2474
+    },
+    "provenance/pi-agent-core-source-package.json": {
+      "sha256": "f602103f403398a90628258f4359099aa76ebc75b530fd5867c29c1d8ec791d0",
+      "bytes": 1081
+    },
+    "provenance/pi-agent-core-source-package.json.github.json": {
+      "sha256": "6109d79005444e038a52c3a0c9a18d4501fdae71309cc6767c3cf85711071dd1",
+      "bytes": 2617
+    },
+    "provenance/pi-ai-source-package.json": {
+      "sha256": "9bac9281776095c8cb1597b706e6cc43c1e082d77189c666b02d068d3c6b9aca",
+      "bytes": 2830
+    },
+    "provenance/pi-ai-source-package.json.github.json": {
+      "sha256": "7622f4fc17a6b2f78ce200990c3b37ccf058ea2a16cd9cbfcfb5d931b0c3f8f3",
+      "bytes": 5007
+    },
+    "provenance/pi-codemode-source-package.json": {
+      "sha256": "afcb00a94e443af214e383989af8cdebd72bfbcb3c777846d6b0afe40bd22eab",
+      "bytes": 1704
+    },
+    "provenance/pi-codemode-source-package.json.github.json": {
+      "sha256": "71aa30fa71e2d3f3674f4941503b64332de631c48b04913c63ea266962ef38ef",
+      "bytes": 3489
+    },
+    "provenance/pi-coding-agent-source-package.json": {
+      "sha256": "990aac3caff17b717294fa792b4e3f60b991d274d9f4ab6977d6aa42aa43c95e",
+      "bytes": 3935
+    },
+    "provenance/pi-coding-agent-source-package.json.github.json": {
+      "sha256": "1c15c7d315b36c943c3aa818f5551f84cac5b2028d4797fe505459537825da0d",
+      "bytes": 6589
+    },
+    "provenance/pi-mcp-source-package.json": {
+      "sha256": "f9e7beb2c5fa399a5fe350036ac4bb56e22fa8d41944d21fd5cc6bbaf0c612c7",
+      "bytes": 1330
+    },
+    "provenance/pi-mcp-source-package.json.github.json": {
+      "sha256": "54b253696346c3474b6a74270a58429eb34b77877142afd13176c0b310f7709c",
+      "bytes": 2947
+    },
+    "provenance/pi-schema-source-package.json": {
+      "sha256": "88f3e22dc6830ed0a7dc287ce82dfc63a0958483143031e6f0c462183ad6177c",
+      "bytes": 1381
+    },
+    "provenance/pi-schema-source-package.json.github.json": {
+      "sha256": "75126eb63c2dd0c74f5e16984fe02b1c1d6327734ccc0e54917de73a543dbe5b",
+      "bytes": 3035
+    },
+    "provenance/pi-telemetry-source-package.json": {
+      "sha256": "6e9dbd90ae345976c464f9b8b4540b117d4c05aa670202b53a732e06af737ef6",
+      "bytes": 1216
+    },
+    "provenance/pi-telemetry-source-package.json.github.json": {
+      "sha256": "9f5ce4885b78cafbb70faa3d340e93676416fd2d9f5c620b5b4bcbae5555b9b6",
+      "bytes": 2827
+    },
+    "provenance/pi-tui-source-package.json": {
+      "sha256": "396da9b4632e2f43a5cf17299298cbb7618c891c5c693a049df952ee9ccf03d7",
+      "bytes": 1659
+    },
+    "provenance/pi-tui-source-package.json.github.json": {
+      "sha256": "1419517d568999ee7027739bc4bfca825215c4eae5125af52fe8c3ea9ce53936",
+      "bytes": 3397
+    },
+    "provenance/pi-v1.5.0-ref.json": {
+      "sha256": "a9e76c88f8ada831d48a15b6480a63a2c665a00e3f3c178acf354a1bc4e8e596",
+      "bytes": 374
+    },
+    "provenance/proxy-agent-negotiate-attestations.json": {
+      "sha256": "e109fa690f2e23184f9a2cb0c00b0132a6339685ac9acceb26ef0d1d353af2a3",
+      "bytes": 14529
+    },
+    "provenance/proxy-agent-negotiate-source-package.json": {
+      "sha256": "22afa667fffb3ada1f7d56955ed59f396936f80c55ce09a229fe0afb3247c77a",
+      "bytes": 981
+    },
+    "provenance/proxy-agent-negotiate-source-package.json.github.json": {
+      "sha256": "20b32047ff5774dc98346ff5fbc7818e3dbb7cbf4229cf233d2758dafde4110c",
+      "bytes": 2547
+    },
+    "provenance/proxy-negotiate-contents.json": {
+      "sha256": "7160ff6af6b5f0cc91cc2b426991ec51d9f42130f575886b780e48111e5d9b1d",
+      "bytes": 4572
+    },
+    "provenance/proxy-root-contents.json": {
+      "sha256": "0f2f693b279cbd07926a77eea8439138da59286daa65d2f4e6322508107c5250",
+      "bytes": 16687
+    },
+    "provenance/standardwebhooks-1.1.1-LICENSE.github.json": {
+      "sha256": "beef58afff14bec9e271d5157acd5c6c97617d43936afed333d81ee7a23ac826",
+      "bytes": 16775
+    },
+    "provenance/standardwebhooks-1.1.1-repository-root-LICENSE": {
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "bytes": 11357
+    },
+    "provenance/standardwebhooks-libraries-LICENSE.github.json": {
+      "sha256": "30c827817eea3be0e0bb5cffa458e6f8c656b43dcda6dfd44bdf5ee92176a308",
+      "bytes": 2686
+    },
+    "provenance/standardwebhooks-root-contents.json": {
+      "sha256": "d9d98f82f78286761e93736db629404870a2d57463d409148c202b90f1f8eb85",
+      "bytes": 11871
+    },
+    "provenance/standardwebhooks-source-package.json": {
+      "sha256": "686397f0f0202e0b693cfd3f6241d7a8da3df326f9642867a484fbbd295690b6",
+      "bytes": 1033
+    },
+    "provenance/standardwebhooks-source-package.json.github.json": {
+      "sha256": "ef51f4d152506b340820b5f75d4e71625ff611093adf6979ec3932b9167baa44",
+      "bytes": 2711
+    },
+    "provenance/standardwebhooks-source-tree.json": {
+      "sha256": "94364d8d76bc5daeca3db9e3a5185049cc485a295c7e4e0fb2698b13fb831934",
+      "bytes": 55407
+    },
+    "provenance/npm/aws-sdk--credential-provider-http-3.972.84.json": {
+      "sha256": "6593c5df17c4ff6f50ad291d3e9c4ec69bc01821c9bba1bc619f6d286c85d02e",
+      "bytes": 3259
+    },
+    "provenance/npm/aws-sdk--credential-provider-http-packument.json": {
+      "sha256": "bace467ce6e63ff9e20f623bbca8e093c75cab9c2736f6d5fbf58304551e02d9",
+      "bytes": 694589
+    },
+    "provenance/npm/aws-sdk--credential-provider-login-3.972.89.json": {
+      "sha256": "f66681ca99c4b40f99913c56ffb956802b40859d37d7be7b3b64a4d25d2db840",
+      "bytes": 2875
+    },
+    "provenance/npm/aws-sdk--credential-provider-login-packument.json": {
+      "sha256": "a6100b001c9508e6461bdf4c90d72e1b57f318bee5f0fa5f1bbd1a67762005b6",
+      "bytes": 324067
+    },
+    "provenance/npm/aws-sdk--nested-clients-3.998.1.json": {
+      "sha256": "9ee9507d5700677f4d24130647de56d1e499c547c8a8dc1b0fecdc25bd84fc0d",
+      "bytes": 4743
+    },
+    "provenance/npm/aws-sdk--nested-clients-packument.json": {
+      "sha256": "0b0d16e847e5296d8a52ca37e96ee38cb30ee5bd70e93ab0130e7dafb8f2ae74",
+      "bytes": 1000073
+    },
+    "provenance/npm/earendil-works--pi-agent-core-1.5.0.json": {
+      "sha256": "a0c212718671895a4af9cc01183a0b955a400ad5e35fa7d5ccd8cdc6296c8d15",
+      "bytes": 2806
+    },
+    "provenance/npm/earendil-works--pi-ai-1.5.0.json": {
+      "sha256": "28979558418218638475f07cffb17b5daa5ca8d0d18c0ad62adf054b13c67c19",
+      "bytes": 4277
+    },
+    "provenance/npm/earendil-works--pi-codemode-1.5.0.json": {
+      "sha256": "54c9df3bf0592982b4f92025cb3982808e7884f882d3e2143350448a4dea47f7",
+      "bytes": 3306
+    },
+    "provenance/npm/earendil-works--pi-coding-agent-1.5.0.json": {
+      "sha256": "af5b02cd5fdcaee5e4f3be9a6d909047afb888c280a7f69a31ac1fda004a68cd",
+      "bytes": 5451
+    },
+    "provenance/npm/earendil-works--pi-mcp-1.5.0.json": {
+      "sha256": "f3c54ed8fcff30bf644f48d728bc165be6ffedf86f8475de984f9ea49b7453c4",
+      "bytes": 2936
+    },
+    "provenance/npm/earendil-works--pi-schema-1.5.0.json": {
+      "sha256": "47daf2005edac87ae487fc21e75aac204a1c3361ec2ff85639a61883aef85c8d",
+      "bytes": 3010
+    },
+    "provenance/npm/earendil-works--pi-telemetry-1.5.0.json": {
+      "sha256": "f6ef56e2466deff2b1ecfaeb8b0bbbd0759e00f75c0f1c9f405a5a2aa3236f9f",
+      "bytes": 2908
+    },
+    "provenance/npm/earendil-works--pi-tui-1.5.0.json": {
+      "sha256": "444662cb2f2efe7ff349e99c5353618f94a4ee82f1ac28c1d18af354d739b087",
+      "bytes": 2918
+    },
+    "provenance/npm/fast-sha256-1.3.0.json": {
+      "sha256": "fc997068d18a8cf95b58f90509ec60a8552b13579dfd66ce765696514e625cff",
+      "bytes": 2732
+    },
+    "provenance/npm/proxy-agent-negotiate-1.1.0.json": {
+      "sha256": "41807d237c09eff6120e33932015c4ff9c230872c2df119010db48aa4ae0731e",
+      "bytes": 2316
+    },
+    "provenance/npm/standardwebhooks-1.1.1.json": {
+      "sha256": "99d04c194edcd30c91b31b8a10e983bed938f27d1becbf45af4a9eb3e84cc27c",
+      "bytes": 2282
+    }
+  },
+  "network_failures": [
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/LICENSE",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/TooTallNate/proxy-agents/b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16/packages/negotiate/LICENSE",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/standard-webhooks/standard-webhooks/b4d2c14fc5b4ccff3ff271e3b087dff812254c59/LICENSE",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/dchest/fast-sha256-js/2cee3ccb977bd4b10e8eeb7fa95036b1d08f2529/LICENSE",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/agent/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/ai/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/codemode/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/coding-agent/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/mcp/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/schema/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/telemetry/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/tui/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/TooTallNate/proxy-agents/b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16/packages/negotiate/package.json",
+      "failure": "curl exit6 DNS resolution failed; changed to api.github.com Contents API, no repeated raw retry"
+    },
+    {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/@aws-sdk%2fcredential-provider-http@3.972.84",
+      "failure": "HTTP404; npm metadata does not advertise provenance"
+    },
+    {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/@aws-sdk%2fcredential-provider-login@3.972.89",
+      "failure": "HTTP404; npm metadata does not advertise provenance"
+    },
+    {
+      "url": "https://registry.npmjs.org/-/npm/v1/attestations/@aws-sdk%2fnested-clients@3.998.1",
+      "failure": "HTTP404; npm metadata does not advertise provenance"
+    },
+    {
+      "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/ref/tags/v3.998.1",
+      "failure": "HTTP404; package version is not monorepo release tag"
+    },
+    {
+      "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/contents/packages/nested-clients/package.json?ref=adb02cd5ccef10ff162faee76a159dba70626584",
+      "failure": "HTTP404; exact release source subsequently found at packages-internal/nested-clients"
+    },
+    {
+      "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/contents/packages/nested-clients/package.json?ref=ea82eac3afd74c15510e427b91a9eff8292f178b",
+      "failure": "HTTP404; exact release source subsequently found at packages-internal/nested-clients"
+    },
+    {
+      "url": "https://api.github.com/repos/TooTallNate/proxy-agents/contents/packages/negotiate/LICENSE?ref=b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16",
+      "failure": "HTTP404; exact package and repo root directory listings have no license file; remains unknown"
+    },
+    {
+      "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/contents/NOTICE?ref=ea82eac3afd74c15510e427b91a9eff8292f178b",
+      "failure": "HTTP404; root NOTICE absent; no NOTICE invented"
+    }
+  ],
+  "checks": {
+    "exact_14_metadata_installed_lock_identity_integrity": true,
+    "same_commit_source_package_name_version_license": 13,
+    "github_decoded_content_length_and_git_blob_sha1": true,
+    "provenance_subject_digest_matches_npm_integrity": 9,
+    "provenance_signatures_cryptographically_verified": false,
+    "full_package_source_code_comparison": false,
+    "dependency_closure_or_cli_execution_this_worker": false,
+    "original_inventory_unchanged": true
+  },
+  "limitations": [
+    "No full 123-package audit or 15369-file scan.",
+    "AWS tag/version/time association is not a cryptographic npm artifact-to-commit attestation.",
+    "fast-sha256 detector correction must be implemented and reviewed separately; no regex bypass applied.",
+    "Unknown actual grant remains blocked; SPDX metadata alone not used as license text."
+  ]
+}

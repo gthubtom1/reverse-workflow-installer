@@ -1,0 +1,12 @@
+[
+  {
+    "ref": "refs/tags/v3.998.0",
+    "node_id": "MDM6UmVmODcyMjgwOTA6cmVmcy90YWdzL3YzLjk5OC4w",
+    "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/refs/tags/v3.998.0",
+    "object": {
+      "sha": "f734f8d61d0f577406ab88b9d24b59fca850bb3a",
+      "type": "tag",
+      "url": "https://api.github.com/repos/aws/aws-sdk-js-v3/git/tags/f734f8d61d0f577406ab88b9d24b59fca850bb3a"
+    }
+  }
+]

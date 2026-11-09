@@ -1,0 +1,3 @@
+Cargo.toml -text
+Cargo.toml.orig -text
+.cargo_vcs_info.json -text
