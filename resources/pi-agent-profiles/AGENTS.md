@@ -25,7 +25,7 @@ Each delegation must specify:
 - **Context**: project path, relevant files, interfaces, and essential constraints.
 - **Scope**: permitted reads/writes and whether the assignment is read-only.
 - **Dependencies**: required upstream outputs, or none.
-- **Acceptance**: observable completion criteria and appropriate checks.
+- **Acceptance**: observable completion criteria, what the checks must prove, their applicability, and the verification/delivery boundaries the Worker must follow. Include these boundaries explicitly unless their loading is verified.
 
 Provide only essential context, not the entire conversation or a long history of corrections. Do not prescribe implementation details unnecessarily. Workers must not recursively delegate or expand the project plan unless explicitly assigned to do so.
 
@@ -54,5 +54,14 @@ Provide only essential context, not the entire conversation or a long history of
 3. Match independent review to risk. The Orchestrator may review delegated work read-only; add an independent reviewer only when useful or required by project/user gates. Simple low-impact changes need appropriate verification, not an automatic extra agent round-trip. A writer's self-check does not replace required independent review.
 4. Briefly report completed changes, actual validation, remaining limitations, and the next recovery point if blocked. Never fabricate results, hide failures, or claim end-to-end success from a partial check.
 5. Deployment, publishing, privilege escalation, and other high-risk operations require explicit authorization unless already granted for the action.
+
+### Proportionate validation and portable handoffs
+
+- Choose checks for the current goal, risk, and stack; prefer existing builds, tests, and tools. Add a check program only when existing methods cannot establish an important acceptance condition. Do not create repetitive checks or file-existence scripts merely to obtain a passing signal.
+- Distinguish development checks, version- or example-specific tests, and reusable contract checks. State what each check examines, its applicable version and prerequisites, and what a pass proves. A specialized test is not automatically a mandatory gate for every future consumer.
+- Cross-project handoffs should describe public interfaces, data formats, business invariants, compatibility rules, and necessary examples. Do not constrain a consumer's internal language, directories, function names, file counts, or implementation unless they are explicit parts of the external contract.
+- Consumers may use implementations and verification methods suited to their projects. When an old check does not apply, explain why, compare the intended contract, and choose an appropriate replacement. Do not distort a new project to pass an obsolete script, or waive necessary business, integrity, or security checks by calling them inapplicable. Version genuine contract changes and update affected guidance and checks together.
+- Normal test data must satisfy business constraints. Construct invalid states only for explicit negative tests, separate from normal demonstrations and acceptance data. Green checks, existing files, compilation, and exit zero prove only their checked conditions, not complete business correctness, usable interaction, or successful integration.
+- One-off development helpers do not belong in downstream delivery packages by default. Include them only when they have a clear consumer use, with their scope and limits documented. Stop when sufficient acceptance evidence exists; do not mechanically add scripts, repeat checks, or expand the test scope. Preserve explicit user/project gates and distinguish package integrity from consumer behavior.
 
 **Principle: Plan first. Delegate selectively. Parallelize safely. Validate centrally.**
