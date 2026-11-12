@@ -8,6 +8,7 @@
 |---|---|
 | reverse 行为规则 | `RULES.md`、`RULES_zh.md`、master skill、对应 ops 契约与实际 PRIMARY；不修改原始路由语义来迁就测试 |
 | 用户沟通方式 | Pi skill 与短 prompt、Claude/Codex 入口、quick-start、usage、playbook；阶段汇报不能被模板变成每步审批 |
+| Pi 用户级原则与 profiles | `resources/pi-agent-profiles/`、profile/skill 安装说明与目标用户入口；同时核对活动 adapter 的短 prompt/skill 来源。正文、frontmatter 与宿主开关分别核对，活动资源通过安装事务更新 |
 | 安装/更新/恢复 | 冻结 plan、上一事务的文件归属、receipt、verify、配置保留、组件子集与完整安装的离线反例测试 |
 | shell-guard 分发 | Pi 可选默认关闭；0.3.0 AST adapter 与精确文件清单、ISC vendor 来源、独立包 name/version/index/runtime/src、最终 commit/tree/hash、旧回执、准确迁移、CLI/GUI/自动启动配置保留、重复/hub 拒绝、漂移/回退反例和 shell-guard-install/README/quick-start/updates/compatibility/troubleshooting |
 | Craft bundle 分发 | Pi 显式可选，all 不扩大，依赖不静默补选；全量文件/hash/固定 base/有序 patch/OS/arch/contract/min_reader，显式 Pi Node/入口/version；隔离副本、按需 skill/instructions/entry、唯一注册、旧 receipt/未知 reader、失败重试/pending/用户后改/多事务条件恢复；正式资产按 [pin](../releases/windows-x64.json) 与独立 [获取 helper](craft-acquisition.md) 核身份，不预填未来资产；见 [指南](craft-install.md) |

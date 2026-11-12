@@ -1,6 +1,6 @@
 ---
 name: reverse-workflow
-description: 逆向、二进制、APK、前端签名、协议、API 安全、复刻、行为对比、版本追踪或知识维护任务的统一入口；从本机 receipt 定位 reverse-skill，并要求原生 router 选择 PRIMARY。
+description: 有明确逆向目标的二进制、APK、前端签名、协议与 API 安全分析，以及复刻、行为对比、版本追踪和知识维护入口；按活动回执接续 reverse-skill 原生工作流。
 ---
 
 这是成果项目中的统一入口。遇到上述专业任务时先进入本 skill，不要直接绕过它执行普通命令。
@@ -11,6 +11,8 @@ description: 逆向、二进制、APK、前端签名、协议、API 安全、复
 
 如该版本没有原生薄插件，读取原 `skills/MASTER-ROUTING.md` 与回执 `reverse.master`，使用原生 `skills/scripts/master-route` 决定 PRIMARY，再读取其原 SKILL。只按原 RULES 建立 scope 与 case；不要在此入口另行路由。
 
-只读请求使用原 router 的 `-DryRun` / `--dry-run`，不创建 case 或 route-scope。交互沿原 `skills/ops/guided-operator-contract.md`：真实目标/范围/交付取舍才给 GOAL-* / SCOPE-* / DELIVERY-* 卡和可复制别名；技术方法内部选择。按原 authorization-coverage 契约逐组件核回归，不能把一个补丁算成整体完成。行为模型和 Evidence handoff 足够后才进入 reconstruction/Spec Kit；原始 case 与 Evidence 仍是权威来源。
+只读请求使用原 router 的 `-DryRun` / `--dry-run`，保持目标和文件只读。沿用已有用户决定，在授权范围内自主选择方法与协作；重要目标、范围和交付取舍依据原 `skills/ops/guided-operator-contract.md` 与用户澄清。授权及功能门任务按原 `skills/ops/authorization-coverage.md` 核对本次范围内的证据，运行遵循原预算和资源清理要求。
+
+原始 case 与 Evidence 保持权威。分析、原件修改、接入和重新打包按实际交付接续；独立复刻在行为证据与成功标准充分后进入 reconstruction/Spec Kit。简洁说明结果、未知项和实际验证范围。
 
 REA 由官方 setup 在回执的 Codex 配置根注册，保留全部工具。Spec Kit 使用当前成果项目中官方 `--integration codex` 实际生成的原生技能。恢复、追版、知识维护均继续原 reverse 中立流程。报告回执中的未验证状态，不把安装视为任务通过。

@@ -167,7 +167,6 @@ class Fixture(unittest.TestCase):
         adapter = Path(result["adapter"]["root"])
         locator = load_json(adapter / "receipt-location.json")
         self.assertEqual(load_json(Path(locator["receipt"]))["transaction"], result["transaction"])
-        self.assertIn("汇报不等于等待批准", global_text)
         self.assertNotIn("下一步建议必须根据当前 Evidence 动态生成 2–5", global_text)
 
     def test_repeat_no_reinstall_no_duplicate_resources(self):

@@ -23,7 +23,7 @@ Craft 的后续入口：
 
 本仓库还提供两组简单的、可被 AI 安装代理读取的用户级资源：
 
-- [Pi profile templates](resources/pi-agent-profiles/README.md)：主 `AGENTS.md` 和三个 Pi profiles：`subagent`、`reverse-operator`、`reverse-reviewer`；按安装说明精确复制并清理已退役模板。
+- [Pi profile templates](resources/pi-agent-profiles/README.md)：简短工作原则与三个可选 profile：`subagent`、`reverse-operator`、`reverse-reviewer`；按任务选择直接工作或协作，按安装说明复制并清理已退役模板。
 - [Portable Pi development skills](resources/pi-agent-skills/README.md)：复制到当前用户的全局 skills 目录，通常是 `%USERPROFILE%\\.agents\\skills\\`。
 - [Impeccable 官方 Pi 设计技能](docs/impeccable.md)：固定来源原件、本地复制与换机安装交接；只有一个主技能，不默认开启 CLI、hooks 或浏览器能力。
 - [Profile 安装说明](docs/pi-agent-profiles.md) 和 [Skill 安装说明](docs/pi-agent-skills.md) 记录实际路径、冲突处理、reload 和新会话验收。

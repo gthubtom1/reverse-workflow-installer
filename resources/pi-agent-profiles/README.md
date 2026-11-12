@@ -1,6 +1,6 @@
 # Pi profile templates
 
-This directory contains portable user-level Pi templates. Copy them into the active Pi agent directory on a target machine.
+This directory contains optional portable Pi templates: short user-level working principles and three task profiles. The conversation chooses direct work or collaboration for the actual task; these templates do not prescribe a team or a fixed sequence. Preserve the target user’s existing profiles, built-in agent switches, model choices and tool configuration. Copy selected templates into the active Pi agent directory.
 
 - Copy AGENTS.md to <agent-dir>/AGENTS.md.
 - Copy only agents/subagent.md, agents/reverse-operator.md, and agents/reverse-reviewer.md to <agent-dir>/agents/.
