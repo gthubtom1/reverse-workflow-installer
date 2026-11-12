@@ -78,7 +78,7 @@ def validate_pin(pin):
     fields(asset, 'repository tag commit asset asset_id sha256 manifest_sha256')
     fields(reverse, 'repository tag commit archive_sha256 descriptor_sha256')
     fields(upstream, 'repository commit')
-    if asset['repository'] != OWN or asset['tag'] != 'craft-pi-v0.1.0' or reverse['repository'] != REVERSE or reverse['tag'] != 'v1.9.0' or upstream != {'repository': UPSTREAM, 'commit': craft.BASE_COMMIT}:
+    if asset['repository'] != OWN or not re.fullmatch(r'craft-pi-v\d+\.\d+\.\d+', asset['tag']) or reverse['repository'] != REVERSE or reverse['tag'] != 'v1.9.0' or upstream != {'repository': UPSTREAM, 'commit': craft.BASE_COMMIT}:
         raise InstallError('pin repository/tag/provenance mismatch')
     for value in (asset['commit'], reverse['commit']):
         hex_value(value, 40)
