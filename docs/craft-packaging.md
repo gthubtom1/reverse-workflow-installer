@@ -7,7 +7,7 @@ The offline packaging tests can run on other hosts; that does not qualify native
 
 ## Present evidence and blockers
 
-Core installer v0.7.0, native Craft-Pi v0.1.0 and reverse v1.9.0 are separately
+Core installer v0.7.0, native Craft-Pi v0.1.1 and reverse v1.9.0 are separately
 published. The [Windows x64 pin](../releases/windows-x64.json) is the authority for
 Craft/reverse release identities. Use the independent acquisition helper
 `craft-acquisition-v0.1.1` (or main containing that fix) via the
@@ -301,7 +301,7 @@ A successful native release preparation writes a ZIP with stable
 member ordering/timestamps, a real SHA256 sidecar, upload-plan JSON and release
 body Markdown. It performs no upload, tag creation, release or push. The upload
 plan deliberately has `published: false` and `release_url: null`: these describe
-the command's output, not the current public release status. Craft-Pi v0.1.0 is
+the command's output, not the current public release status. Craft-Pi v0.1.1 is
 already published and pinned. Any subsequent asset must be published by the
 approved owner, then its real repository/tag/commit/unique asset URL and digest
 resolved and reviewed before a new pin is accepted. Existing immutable tags and

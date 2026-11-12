@@ -28,7 +28,7 @@
 | 设计能力 | [Impeccable](impeccable.md)、下方 UI/UX Pro Max 与 unslop 官方来源 | 推荐用于含 UI 的开发环境；纯后端目标可省略；各技能按任务选择，不绑定全套必用 |
 | 访谈与领域建模 | 官方 grilling/domain-modeling，按需加 grill-me/grill-with-docs；Pi 使用[两个独立 wrappers](pi-grilling-wrappers.md) | 按[快速开始](quick-start.md#pi-grilling-伴随技能)安装官方输入再生成 wrappers，不修改官方正文，不作为每次任务审批门 |
 
-核心安装器按 `components.json` 和官方元数据解析版本：REA/Spec Kit 新 plan 默认解析官方稳定包，reverse 优先正式 release；需要固定 Spec 时见[版本指南](version-pins.md)。当前公开分发为 installer core **0.7.0**、reverse **1.9.0**，可选 native Craft-Pi **0.1.0**，获取 helper **0.1.1**；这些是分发身份，不是个人电脑快照。main 提供当前教程与资源，冻结资产仍依正式 pins 取得，不修改旧 tag 或伪造回执。
+核心安装器按 `components.json` 和官方元数据解析版本：REA/Spec Kit 新 plan 默认解析官方稳定包，reverse 优先正式 release；需要固定 Spec 时见[版本指南](version-pins.md)。当前公开分发为 installer core **0.7.0**、reverse **1.9.0**，可选 native Craft-Pi **0.1.1**，获取 helper **0.1.1**；这些是分发身份，不是个人电脑快照。main 提供当前教程与资源，冻结资产仍依正式 pins 取得，不修改旧 tag 或伪造回执。
 
 ## 按用途选择可选能力
 
