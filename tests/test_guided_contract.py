@@ -16,59 +16,31 @@ class GuidedDocumentationContract(unittest.TestCase):
             "DELIVERY-REPORT", "DELIVERY-CORE", "DELIVERY-COVERAGE", "DELIVERY-UNKNOWN",
         ):
             self.assertIn(card, PLAYBOOK)
-        self.assertIn("GOAL-*", ADAPTER)
-        self.assertIn("SCOPE-*", ADAPTER)
-        self.assertIn("DELIVERY-*", ADAPTER)
         self.assertNotIn("REA-GOAL", PLAYBOOK)
         self.assertNotIn("Ghidra-GOAL", PLAYBOOK)
 
     def test_technical_methods_are_explicitly_internal(self):
-        for text in (ADAPTER, PROMPT, PLAYBOOK):
-            self.assertRegex(text, r"不.*选择.*(?:工具|provider|Static/Dynamic|脱壳)")
+        self.assertRegex(PLAYBOOK, r"不.*选择.*(?:工具|provider|Static/Dynamic|脱壳)")
         self.assertIn("没有真正分叉时", PLAYBOOK)
-        self.assertIn("不能为阶段切换", PROMPT)
+        self.assertIn("skills/ops/guided-operator-contract.md", ADAPTER)
+        self.assertIn("skills/ops/beginner-operator-guidance.md", ADAPTER)
 
-    def test_phase_report_and_authorization_closure_are_present(self):
-        for phrase in ("本轮做了什么", "目前确认了什么", "目前还不知道什么", "当前阻碍"):
-            self.assertIn(phrase, PROMPT)
-            self.assertIn(phrase, PLAYBOOK)
+    def test_authorization_coverage_references_are_preserved(self):
         self.assertIn("已验证 1/7", PLAYBOOK)
-        self.assertIn("authorization-coverage", ADAPTER)
+        for text in (PLAYBOOK, ADAPTER):
+            self.assertIn("skills/ops/authorization-coverage.md", text)
 
-    def test_multi_agent_roles_handoffs_and_completion_states_are_explicit(self):
-        for phrase in (
-            "唯一的 route、scope、case、timeline、workitem 与 Evidence authority",
-            "reverse-operator/cre",
-            "bounded executor",
-            "reverse-reviewer",
-            "planner/scout",
-            "backend/UI implementation workers",
-            "行为 Evidence handoff",
-            "case_id",
-            "pre-case 只读规划/维护可为 `n/a` 并说明原因",
-            "carry_forward_refs",
-            "目标 identity/hash",
-            "一个 Evidence question",
-            "allowed actions",
-            "write scope",
-            "budget",
-            "cleanup",
-            "acceptance",
-            "先取消并验证 cleanup 已完成",
-            "cleanup 未验证成功时不得启动替代 provider",
-            "verified",
-            "partial",
-            "blocked",
-            "unknown",
-            "不是执行沙箱",
-        ):
-            self.assertIn(phrase, PROMPT)
+    def test_adapter_routes_to_native_workflow_without_a_role_protocol(self):
+        for reference in ("receipt-location.json", "RULES.md", "skills/MASTER-ROUTING.md", "reverse.master"):
+            self.assertIn(reference, ADAPTER)
+        self.assertIn("reverse-workflow skill", PROMPT)
+        for obsolete in ("planner/scout", "backend/UI implementation workers", "carry_forward_refs", "每次 worker handoff"):
+            self.assertNotIn(obsolete, ADAPTER + PROMPT)
 
     def test_installer_points_to_reverse_closure_instead_of_implementing_it(self):
         self.assertIn("skills/ops/authorization-coverage.md", ADAPTER)
-        self.assertIn("回归失败重开", ADAPTER)
-        self.assertIn("模型自述", ADAPTER)
-        self.assertIn("不是执行沙箱", ADAPTER)
+        self.assertIn("原 case", ADAPTER)
+        self.assertIn("原契约", ADAPTER)
 
 
 if __name__ == "__main__":

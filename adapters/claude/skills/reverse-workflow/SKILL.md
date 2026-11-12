@@ -1,23 +1,12 @@
 ---
 name: reverse-workflow
-description: 逆向、二进制、APK、前端签名、协议、API 安全、复刻、行为对比、版本追踪或知识维护任务的统一入口；读取 receipt 后进入原 reverse-skill router。
+description: 有明确逆向目标的二进制、APK、前端签名、协议与 API 安全分析，以及复刻、行为对比、版本追踪和知识维护入口；按活动回执接续 reverse-skill 原生工作流。
 ---
 
-这是 Claude 宿主中的 reverse-workflow 薄入口。它不创建第二套路由，也不替代 reverse-skill。
+读取本机回执 `{{RECEIPT}}`，确认 `installed: true`；从 reverse.root 读取原 RULES.md、skills/MASTER-ROUTING.md 和 reverse.master，使用原生 master-route 选择 PRIMARY。
 
-执行顺序：
+恢复已有目标、case、scope、用户决定与适用 Evidence。只读请求使用原 router 的 `-DryRun` / `--dry-run`，保持文件和目标状态只读；执行按已有授权进行。REA 是专业工作流的分析后端，运行活动遵循原范围、预算和资源清理要求。
 
-1. 读取本机 receipt，确认 installed=true；
-2. 从 receipt.reverse.root 读取原 RULES.md、skills/SKILL.md 和原生 router；
-3. 运行原生 master-route 选择 PRIMARY；只读请求用 `-DryRun` / `--dry-run`；
-4. 执行模式创建或恢复当前成果项目的 case/scope；只读模式不创建产物；
-5. 只有 PRIMARY 委派后调用官方 REA MCP；
-6. 每个重要阶段用大白话汇报进度，已授权范围和预算内的常规工作自动继续，不把汇报当审批；
-7. 只有需要用户取舍结果、补充授权或独有材料时才提问；技术方法和工具选择由 agent 负责，编号选项仅用于真实决策；
-8. 仅当目标尚未确定或新证据推翻原目标、且 Evidence 足够时，才生成多个动态目标候选和可复制 GOAL 文本；已确定的目标沿用；
-9. 使用单重型 provider、资源预算和进程 cleanup 规则；
-10. 不把字符串或静态线索写成已经确认的行为。
+根据任务自主选择方法、工具和协作。重要目标、范围及交付取舍按原 `skills/ops/guided-operator-contract.md` 与用户澄清，已有回答继续有效。授权及功能门任务按原 `skills/ops/authorization-coverage.md` 核对本次范围内的证据。
 
-交互按原 `skills/ops/guided-operator-contract.md`，目标/范围/交付分开使用 GOAL-* / SCOPE-* / DELIVERY-*，A/B/C 或数字只作当前选项别名，ID 不授予无限权限。多组件任务按原 authorization-coverage 契约核 Evidence、回归与回滚；一个功能通过不等于整体完成。行为 Evidence handoff 足够后才进入 reconstruction 和 Spec Kit。
-
-当前 receipt：{{RECEIPT}}
+分析、原件修改、接入和重新打包按实际交付接续；独立复刻在行为证据与成功标准充分后进入 reconstruction/Spec Kit。原 case 与 Evidence 保持权威，简洁报告结果、未知项与实际验证范围。

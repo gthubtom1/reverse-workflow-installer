@@ -1,6 +1,6 @@
 # Pi profile templates 安装说明
 
-这组模板用于恢复主代理规则和 3 个 user-level Pi profiles：`subagent`、`reverse-operator`、`reverse-reviewer`。它不是 Pi Web 的程序本体，也不会安装模型账号、凭据、技能包或 MCP 服务。
+这组可选模板提供简短的用户级工作原则，以及 `subagent`、`reverse-operator`、`reverse-reviewer` 三个 profile。主对话按任务选择直接处理或协作，模板不规定团队组成或固定阶段。Pi Web 的内置代理和用户已有代理保持可用；本包不安装模型账号、凭据、技能包或 MCP 服务。
 
 ## 目标目录
 
@@ -31,9 +31,9 @@
 
 load_skills: true 表示允许 profile 使用当前可发现的技能；它不是某个固定技能名称的绑定。技能是否实际使用由任务和技能描述决定。
 
-`subagent` 按任务承担通用执行、调查、规划、UI 或后端工作，并动态选择适用技能；UI 设计能力由可用设计技能提供，无需额外 UI profile。`reverse-operator` 负责有边界的逆向执行，`reverse-reviewer` 负责独立逆向审查；普通独立审查由主代理只读检查或另一个明确只读的全新 `subagent` 承担。
+`subagent` 用于通用分派任务，两个 reverse profile 分别提供逆向执行和只读审查能力。根据任务及宿主实际暴露的能力选择代理和技能；普通工作可由主对话直接完成。模型、工具权限和既有开关由目标用户决定，模板正文精简不等于更改这些配置。
 
-逆向 profile 会优先考虑当前可用的 reverse-workflow、原生 reverse-skill router 和 REA MCP，但适用性由任务决定，不会为了形式强制调用。原生 PRIMARY、planner/scout、implementation-worker 等是路由与工作职责，不要求注册同名 Pi profile；原有 Evidence、Spec implement/converge 和独立验收流程继续适用。
+reverse-workflow 是专业任务入口，原生 PRIMARY、scope 和 Evidence 仍按原契约管理。原件修改、接入、重新打包与独立复刻按实际交付接续；Spec implement/converge 用于适用的独立实现流程。宿主按需要承担原生职责，不要求注册同名角色。
 
 ## 验收边界
 
