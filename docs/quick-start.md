@@ -22,7 +22,7 @@
 
 `grilling` 适合你明确要求质询或目标取舍尚未确定时使用，也可以在开工时澄清目标；它不是每个结论、每次修改前的必经审批。纯报告核查先由 reverse/REA 取证，已经确定的决策不用重问。进入访谈后遵守官方共识规则。
 
-需要保留现有官方 Spec Kit 版本时，生成 plan 可用 `--spec-kit-version`，详见 [固定官方版本](version-pins.md)。上游更新不会让旧安装被冒充成新版通过。
+需要保留现有官方 Spec Kit 版本时，生成 plan 可用 `--spec-kit-version`；已有安装更新默认沿用 receipt 版本，需要主动升级才使用 `--upgrade-components`，详见 [固定官方版本](version-pins.md)。上游更新不会让旧安装被冒充成新版通过。
 
 ### Pi Craft 可选执行后端
 

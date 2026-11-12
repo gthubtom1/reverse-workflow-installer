@@ -35,8 +35,8 @@ def stable(version):
 COMPONENTS = ("rea", "spec_kit", "reverse", "shell_guard", "craft")
 
 
-def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
-    """Resolve requested components, optionally pinning Spec Kit to a stable release."""
+def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None, rea_version=None):
+    """Resolve requested components; existing installs may reuse receipt pins unless upgraded explicitly."""
     requested = [key for key in COMPONENTS if key not in ("shell_guard", "craft")] if components is None else [str(key) for key in components]
     for key in requested:
         if key not in COMPONENTS:
@@ -46,14 +46,24 @@ def resolve(manifest, fetch=http_json, components=None, spec_kit_version=None):
             raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
         if not isinstance(spec_kit_version, str) or not stable(spec_kit_version):
             raise InstallError("--spec-kit-version 必须是精确稳定版本（例如 1.3.1）")
+    if rea_version is not None:
+        if "rea" not in requested:
+            raise InstallError("--rea-version 需要选择 rea 组件")
+        if not isinstance(rea_version, str) or not stable(rea_version):
+            raise InstallError("REA 版本必须是精确稳定版本")
     if "craft" in requested:
         raise InstallError("Craft remote artifacts unsupported until compatible verified release assets are published; use --craft-bundle")
     result = {}
     if "rea" in requested:
-        rea = fetch(manifest["rea"]["metadata"])
+        metadata_url = manifest["rea"]["metadata"]
+        if rea_version is not None:
+            metadata_url = metadata_url.rsplit("/", 1)[0] + "/" + rea_version
+        rea = fetch(metadata_url)
         version = rea.get("version", "")
+        if rea_version is not None and version != rea_version:
+            raise InstallError("REA 元数据版本与冻结版本不一致")
         if rea.get("name") != "rea-agents" or not stable(version):
-            raise InstallError("rea-agents latest 未指向可识别的稳定版；拒绝回退或安装预发布版")
+            raise InstallError("rea-agents 元数据未指向可识别的稳定版；拒绝回退或安装预发布版")
         if not rea.get("dist", {}).get("integrity") or not rea.get("engines", {}).get("node"):
             raise InstallError("REA 元数据缺 dist.integrity 或 engines.node")
         result["rea"] = {"version": version, "integrity": rea["dist"]["integrity"], "node_engine": rea["engines"]["node"], "repository": manifest["rea"]["repository"]}

@@ -334,7 +334,7 @@ def update_record(previous, current):
             "old": {k: old[k] for k in ("sha256", "manifest")} if old else None,
             "candidate": {k: current[k] for k in ("sha256", "manifest")},
             "source_ref": current["root"], "stage": "isolated-version-directory",
-            "runtime_qualification": "unverified", "publication": "blocked: compatible release artifacts not published"}
+            "runtime_qualification": "unverified", "publication": "candidate artifact; publication status must be checked from the current release pin"}
 
 
 def pinned_release(record, fetch):
@@ -365,7 +365,14 @@ def pi_runtime(selected, component, run):
 
 def resource_files(repo, receipt_path):
     root = Path(repo) / "adapters/craft-pi"
-    result = {name: (root / name).read_bytes() for name in inventory(root)}
+    # Runtime execution resources are deliberately kept separate from the
+    # build/source archive under adapters/craft-pi/runtime. The installed
+    # resource package needs the entry, instructions, references, skills and
+    # generated reader only; build/debug/qualification helpers belong to the
+    # bundle source manifest, not the every-run resource inventory.
+    result = {name: (root / name).read_bytes()
+              for name in inventory(root)
+              if name != "runtime" and not name.startswith("runtime/")}
     if any(name == "receipt-location.json" or name.startswith("lib/") for name in result):
         raise InstallError("Craft adapter source collides with generated reader/pointer resources")
     for name in ("craft.py", "configuration.py", "versions.py"):

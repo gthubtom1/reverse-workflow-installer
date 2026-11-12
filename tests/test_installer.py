@@ -300,6 +300,7 @@ class Fixture(unittest.TestCase):
             if "npmjs" in url:
                 result["version"] = "6.9.0"
             return result
+        self.args.upgrade_components = True
         next_plan = w.make_plan(self.args, next_metadata)
         second = w.install(next_plan, self.args)
         self.assertNotEqual(first["paths"]["rea_prefix"], second["paths"]["rea_prefix"])
@@ -317,6 +318,7 @@ class Fixture(unittest.TestCase):
             if "npmjs" in url:
                 result["version"] = "6.9.0"
             return result
+        self.args.upgrade_components = True
         self.failure = "--yes"
         with self.assertRaises(InstallError):
             w.install(w.make_plan(self.args, next_metadata), self.args)

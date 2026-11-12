@@ -46,7 +46,7 @@ fn dispatch(args: &[String]) -> Result<Option<Value>, ToolError> {
             prepare::run(&PathBuf::from(file), mode == "--prepare").map(Some)
         }
         [mode, file] if mode == "--run" => {
-            execution::execute(ExecutionConfig::load(&PathBuf::from(file))?).map(Some)
+            execution::execute(ExecutionConfig::load_prepared(&PathBuf::from(file))?).map(Some)
         }
         [mode, rest @ ..] if mode == "mcp" => {
             serve_mcp(rest)?;
@@ -54,7 +54,7 @@ fn dispatch(args: &[String]) -> Result<Option<Value>, ToolError> {
         }
         _ => Err(refusal(
             "arguments",
-            "Usage: craft-pi-executor --version | --inspect | --run <absolute accepted config> | --prepare <absolute handoff> | --validate <absolute handoff>",
+            "Usage: craft-pi-executor --version | --inspect | --run <absolute prepared execution JSON> | --prepare <absolute handoff> | --validate <absolute handoff>",
         )),
     }
 }

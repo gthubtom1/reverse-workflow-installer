@@ -37,7 +37,8 @@ def parser():
     result.add_argument("--craft-pi-version", help="Exact Pi version expected by this verified bundle")
     result.add_argument("--node", help="旁置 Node 可执行文件；npm 必须来自同一分发包")
     result.add_argument("--rea-prefix", help="显式只读复用已有 npm prefix，须恰为冻结版本")
-    result.add_argument("--spec-kit-version", help="显式选择 PyPI 已发布且未撤回的稳定版本（例如 1.3.1）；省略时选择最新稳定版，选择冻结在 plan")
+    result.add_argument("--spec-kit-version", help="显式选择 PyPI 已发布且未撤回的稳定版本（例如 1.3.1）；省略时沿用活动 receipt 版本，首次安装才选择最新稳定版")
+    result.add_argument("--upgrade-components", action="store_true", help="已有安装更新时重新解析官方稳定版本；默认沿用活动 receipt 的组件身份")
     result.add_argument("--spec-kit-tools", help="显式只读复用 UV_TOOL_DIR；与 --spec-kit-bin 配对")
     result.add_argument("--spec-kit-bin", help="显式只读复用 UV_TOOL_BIN_DIR；含 specify 可执行文件")
     result.add_argument("--output", help="plan JSON 的显式输出文件；避免 shell 重定向产生 BOM")
@@ -60,6 +61,10 @@ def main(argv=None):
             raise InstallError("--output 只适用于 plan")
         if arguments.spec_kit_version is not None and arguments.command not in ("plan", "install", "update"):
             raise InstallError("--spec-kit-version 只适用于 plan/install/update")
+        if arguments.upgrade_components and arguments.command not in ("plan", "install", "update"):
+            raise InstallError("--upgrade-components 只适用于 plan/install/update")
+        if arguments.upgrade_components and arguments.plan_file:
+            raise InstallError("--upgrade-components 不能与已冻结 --plan-file 同时使用")
         if (arguments.with_shell_guard or arguments.shell_guard_root or arguments.replace_shell_guard_root or arguments.everything_es or arguments.everything_gui or arguments.everything_autostart) and arguments.command not in ("plan", "install", "update"):
             raise InstallError("shell-guard 选择参数只适用于 plan/install/update")
         if (arguments.with_craft or arguments.craft_bundle or arguments.craft_pi_node or arguments.craft_pi_entry or arguments.craft_pi_distribution or arguments.craft_pi_version) and arguments.command not in ("plan", "install", "update"):
