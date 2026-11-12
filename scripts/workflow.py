@@ -142,6 +142,8 @@ def scope(args):
     if previous.get("installed") and "shell_guard" in receipt_components(previous) and "shell_guard" not in components:
         components.append("shell_guard")
     spec_pin = getattr(args, "spec_kit_version", None)
+    if spec_pin is None and "spec_kit" in components and previous.get("installed") and not getattr(args, "upgrade_components", False):
+        spec_pin = ((previous.get("components") or {}).get("spec_kit") or {}).get("version")
     if spec_pin is not None:
         if "spec_kit" not in components:
             raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
@@ -416,8 +418,12 @@ def make_plan(args, fetch=None):
     # Resolve only selected components; explicit local working copies need no upstream lookup.
     local_keys = {"reverse": "reverse_root", "shell_guard": "shell_guard_root"}
     keys = [key for key in selected["components"] if key != "craft" and not selected.get(local_keys.get(key, ""))]
+    previous = load_json(Path(selected["root"]) / ".installer/receipt.json", {})
+    reuse_receipt_versions = bool(previous.get("installed")) and not getattr(args, "upgrade_components", False)
+    rea_version = ((previous.get("components") or {}).get("rea") or {}).get("version") if reuse_receipt_versions else None
     components = resolve(manifest, **({"fetch": fetch} if fetch else {}), components=keys,
-                         **({"spec_kit_version": selected["spec_kit_version"]} if "spec_kit_version" in selected else {}))
+                         **({"spec_kit_version": selected["spec_kit_version"]} if "spec_kit_version" in selected else {}),
+                         **({"rea_version": rea_version} if rea_version and "rea" in keys else {}))
     if "reverse" in selected["components"]:
         if selected["reverse_root"]:
             identity = reverse_identity(selected["reverse_root"])

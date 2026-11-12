@@ -87,7 +87,7 @@ Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--c
 
 最后两项成对指定，分别对应 `UV_TOOL_DIR` 和 `UV_TOOL_BIN_DIR`。Linux 的 `--node` 指向实际 node 可执行文件。没有这些复用参数时，安装器用官方 npm `--prefix` 和 uv 隔离目录自行安装到 `root/versions/<冻结身份>/`。它不会把目录存在等同于安装就绪；版本不符或原包漂移会停止。
 
-REA/Spec Kit 每次新 plan 解析官方最新稳定包；reverse 使用指定增强仓库的正式 release，尚无 release 时解析 main 的确切 commit。不会静默装预发布版，也不会用旧兼容版本冒充最新。未来官方 CLI 或包布局变化导致检查不匹配时停止并报告缺口。
+REA/Spec Kit 首次新 plan 解析官方稳定包；已有 installed receipt 的 update 默认沿用 receipt 中的组件版本，避免 adapter/配置维护意外升级依赖。需要升级时显式使用 `--upgrade-components`，并重新核接口与组合兼容性；Spec Kit 也可用 `--spec-kit-version` 固定版本。reverse 使用指定增强仓库的正式 release，尚无 release 时解析 main 的确切 commit。不会静默装预发布版，也不会用旧兼容版本冒充最新。未来官方 CLI 或包布局变化导致检查不匹配时停止并报告缺口。
 
 ## 配置和项目里会发生什么
 
@@ -110,7 +110,7 @@ python scripts/install.py restore --root ../workflow
 python scripts/install.py restore --root ../workflow --apply
 ```
 
-带 `--plan-file` 可保证展示与应用使用同一版本。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。旧 receipt 中若仍有 project-continuity，更新会按 receipt 识别唯一注册并移除；缺少唯一身份、出现重复或 hub 注册时停止。已经选中的 shell-guard 在 update 中继续保留，本地包复用路径也会沿用；旧 receipt 不会因此自动启用它。shell-guard 的 Everything 配置只合并明确提供且由 receipt 管理的 `esPath`、`guiPath` 和 `autostart` 字段，保留用户其他配置。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
+带 `--plan-file` 可保证展示与应用使用同一版本。已有 installed receipt 的直接 update 默认复用 receipt 中的 REA/Spec Kit 版本；只有显式增加 `--upgrade-components` 才重新解析官方稳定版本，升级前应核对兼容性。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。旧 receipt 中若仍有 project-continuity，更新会按 receipt 识别唯一注册并移除；缺少唯一身份、出现重复或 hub 注册时停止。已经选中的 shell-guard 在 update 中继续保留，本地包复用路径也会沿用；旧 receipt 不会因此自动启用它。shell-guard 的 Everything 配置只合并明确提供且由 receipt 管理的 `esPath`、`guiPath` 和 `autostart` 字段，保留用户其他配置。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
 
 本机回执、精确 paths/版本、配置 diff 摘要及完整恢复备份位于 `root/.installer/`。备份可能包含你原配置中的秘密，属于本地私有数据，禁止发布。`installed: true` **只表示包与指定配置事务已完成**。`verify` 核包、运行时、reverse 和注册身份，不启动宿主/MCP；它返回的 `validation` 保留加载、握手/schema、真实任务等未验证项。失败事务不会写成功回执，已有活动安装会回退保留。
 

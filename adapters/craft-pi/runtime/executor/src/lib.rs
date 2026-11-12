@@ -94,6 +94,16 @@ impl ExecutionConfig {
     pub fn validate_resources(&self) -> Result<(), ToolError> {
         self.validate_policy_resources(self.policy()?, None)
     }
+    pub fn load_prepared(path: &Path) -> Result<Self, ToolError> {
+        let config = Self::load(path)?;
+        if config.handoff_context.is_none() {
+            return Err(refusal(
+                "missing-handoff-context",
+                "Production --run requires execution.json produced by --prepare with the original handoff context.",
+            ));
+        }
+        Ok(config)
+    }
     /// Prepare validates the identical contract against the approved source before copying.
     /// Destination layout/ownership is independently checked by the assembler.
     pub(crate) fn validate_policy_resources(

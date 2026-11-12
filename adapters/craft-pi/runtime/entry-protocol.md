@@ -11,7 +11,7 @@ Minimum installer0.7.0; Craft contract/min_reader1; adapter protocol0.2.0. Nativ
   "commands": {
     "inspect": ["--inspect"],
     "version": ["--version"],
-    "execute": ["--run", "ABSOLUTE_ACCEPTED_CONFIG_JSON"],
+    "execute": ["--run", "ABSOLUTE_PREPARED_EXECUTION_JSON"],
     "validate": ["--validate", "ABSOLUTE_HANDOFF_JSON"],
     "prepare": ["--prepare", "ABSOLUTE_HANDOFF_JSON"]
   },
@@ -21,7 +21,7 @@ Minimum installer0.7.0; Craft contract/min_reader1; adapter protocol0.2.0. Nativ
   "required_environment": ["CRAFT_PI_NODE", "CRAFT_PI_ENTRY"],
   "provider": "ExecutionConfig.provider_manifest is one reviewed target-model JSON reference plus SHA256. apiKey must be ${ENV_NAME}; values are never execution-config fields. credential_env_keys declares names only.",
   "policy": "Hashed AcceptedResearch policy version 1; patched Craft RebuildRun, injected PolicyRuntime and public pi AgentAdapter",
-  "handoff": "Typed deny-unknown v1; original authority/lead-decision/task-selection HashedRefs; read-only admission before new owner artifacts or official Workspace; zero model calls during prepare/validate.",
+  "handoff": "Typed deny-unknown v1; original authority/lead-decision/task-selection HashedRefs; read-only admission before new owner artifacts or official Workspace; zero model calls during prepare/validate. Production --run rejects missing prepared context.",
   "return_summary": "Typed disposition + affected_tasks + check reason codes + original source refs + original-primary/spec-runner/lead; no diagnostic/source body. Check report v2 required. Cleanup unknown remains blocked-cleanup and preserves return cause.",
   "resume": "within-run exact verified session only; cross-run reuse unsupported",
   "stop": "accepted execution config stop_marker; owner writes driver cancellation identity before hard stop",

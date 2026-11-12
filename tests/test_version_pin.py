@@ -94,6 +94,23 @@ class VersionPinTests(unittest.TestCase):
             w.install(plan, self.f.args)
         self.assertFalse((self.f.root / ".installer/receipt.json").exists())
 
+    def test_existing_installed_versions_are_reused_without_upgrade_flag(self):
+        pinned = self.plan("1.3.1")
+        original = self.f.fake_run
+        def run(argv, **kwargs):
+            if "version" in argv:
+                self.f.calls.append([str(a) for a in argv])
+                return '{"cli_version":"1.3.1"}'
+            return original(argv, **kwargs)
+        with patch.object(w, "run", run):
+            w.install(pinned, self.f.args)
+        self.f.args.spec_kit_version = None
+        self.f.args.upgrade_components = False
+        self.f.calls.clear()
+        reused = w.make_plan(self.f.args, metadata)
+        self.assertEqual(reused["components"]["rea"]["version"], "6.8.0")
+        self.assertEqual(reused["components"]["spec_kit"]["version"], "1.3.1")
+
     def test_matching_pinned_install_retains_exact_receipt_identity(self):
         plan = self.plan("1.3.1")
         original = self.f.fake_run

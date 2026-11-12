@@ -139,6 +139,7 @@ class CraftTests(unittest.TestCase):
         self.assertEqual(checked.returncode, 0, checked.stderr)
         self.assertIn(str(copied / "bin/owner.py"), json.loads(checked.stdout)["command"])
         self.assertFalse(list(Path(receipt["craft"]["resources"]).rglob("__pycache__")))
+        self.assertFalse((Path(receipt["craft"]["resources"]) / "runtime").exists())
         self.assertFalse(any(Path(arg).name in {"npm", "npm.cmd", "npm.exe", "npm-cli.js"}
                              for command in self.calls for arg in command[:2]), self.calls)
         self.assertEqual(len(cr.registration(load_json(self.agent / "settings.json"), self.agent, (receipt["craft"]["resources"],))), 1)
