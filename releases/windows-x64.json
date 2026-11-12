@@ -2,12 +2,12 @@
   "schema_version": 1,
   "craft": {
     "repository": "https://github.com/gthubtom1/reverse-workflow-installer",
-    "tag": "craft-pi-v0.1.0",
-    "commit": "010e2e323f912806f3fc3f2b17b1f9f06c29c944",
-    "asset": "craft-pi-windows-x64-0.1.0.zip",
-    "asset_id": 726614154,
-    "sha256": "3f354290ffc8d9e14e2bb917254c8fe28ed3c610ced614a8ffa75194579ad841",
-    "manifest_sha256": "2017d81af0b982edb5b6d11de736ac35a4d565f9485a37b31fd03bfc891c41e7"
+    "tag": "craft-pi-v0.1.1",
+    "commit": "9ab07822abdc5980299f703ff8c259c48fed7b6a",
+    "asset": "craft-pi-windows-x64-0.1.1.zip",
+    "asset_id": 740968401,
+    "sha256": "8e15d9f909bcbc42f6dfaba3a4281dede6673a8f9501875b91eb975333eb22b7",
+    "manifest_sha256": "78de897250d46027a4ab870e13980b4ada8ea806c986b9371ab4aa0f2923a5cb"
   },
   "reverse": {
     "repository": "https://github.com/gthubtom1/reverse-skill",

@@ -27,7 +27,7 @@
 
 旧 project-continuity receipt 的退役兼容只在 installer 中处理：新计划不解析或加载该组件；更新时冻结唯一注册并通过事务移除，无法识别则停止。插件仓库和其他 agent-plugins 目录不在本仓任务范围内。shell-guard 0.3.0 使用 pi-trash 风格 AST/Node-helper 适配及随包 ISC `unbash` 文件，不安装目标 npm 依赖；发布前主流程需核对最终文件清单并设置最终 commit pin，再核 tag 身份、完整文件与运行验收。Everything 接线及安装事务/配置规则保持不变。
 
-Craft 当前正式身份为 core v0.7.0、native Craft-Pi v0.1.0、reverse v1.9.0；独立获取 helper 为 `craft-acquisition-v0.1.1`，不是核心版本升级。以 [正式 pin](../releases/windows-x64.json) 核 tag/commit/资产摘要，按 [获取指南](craft-acquisition.md) 实际下载并校验 Craft/reverse；核心 installer 仍只消费本地 bundle，没有直接 fetch flag。新版本须重新 freeze/build、核全量 hash/许可与兼容/升级/回退，并走受保护 PR/发布门，不移动 immutable 旧 tag。资产存在不证明本机 Pi/provider、宿主加载或业务接受；fresh 网络最后一次匿名 API 403、无 complete 的边界保留，不能把 GET/hash 检查写成完整换机通过。旧 0.6.1 verify 忽略新组件，不认证 Craft，新入口必须使用能力 gate。
+Craft 当前正式身份为 core v0.7.0、native Craft-Pi v0.1.1、reverse v1.9.0；独立获取 helper 为 `craft-acquisition-v0.1.1`，不是核心版本升级。以 [正式 pin](../releases/windows-x64.json) 核 tag/commit/资产摘要，按 [获取指南](craft-acquisition.md) 实际下载并校验 Craft/reverse；核心 installer 仍只消费本地 bundle，没有直接 fetch flag。新版本须重新 freeze/build、核全量 hash/许可与兼容/升级/回退，并走受保护 PR/发布门，不移动 immutable 旧 tag。资产存在不证明本机 Pi/provider、宿主加载或业务接受；fresh 网络最后一次匿名 API 403、无 complete 的边界保留，不能把 GET/hash 检查写成完整换机通过。旧 0.6.1 verify 忽略新组件，不认证 Craft，新入口必须使用能力 gate。
 
 `verify` 通过表示静态安装一致，`accept` 表示本机工具基本运行通过。只有真实目标的证据和测试才能说明功能正确；尚无证据时保持 unknown。
 

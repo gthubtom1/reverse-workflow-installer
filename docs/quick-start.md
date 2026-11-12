@@ -26,7 +26,7 @@
 
 ### Pi Craft 可选执行后端
 
-Craft 默认关闭，`all` 不会选择。普通 implementation-worker 仍是默认；只有原 R46/Spec implement runner 为依赖已满足的明确批次选择 Craft 且本机资格满足时才使用。正式 core v0.7.0、native Craft-Pi v0.1.0、reverse v1.9.0 分开发布，下载 helper 独立为 0.1.1：先按 [精确 pin 获取指南](craft-acquisition.md) 获取真实 bundle/reverse，再按 [本地 bundle 指南](craft-install.md) 提供独立 Pi Node/CLI/分发根和精确版本。核心 installer 只消费本地已核 bundle，没有直接 fetch flag。资产和 pin 存在不证明本机 provider、宿主加载或业务接受；新电脑全自动 fresh 网络最后记录为匿名 API 403、无 complete，已核 GET/hash 不等于完整换机实测。它不新增控制 profile，不接管原路由或独立验收。
+Craft 默认关闭，`all` 不会选择。普通 implementation-worker 仍是默认；只有原 R46/Spec implement runner 为依赖已满足的明确批次选择 Craft 且本机资格满足时才使用。正式 core v0.7.0、native Craft-Pi v0.1.1、reverse v1.9.0 分开发布，下载 helper 独立为 0.1.1：先按 [精确 pin 获取指南](craft-acquisition.md) 获取真实 bundle/reverse，再按 [本地 bundle 指南](craft-install.md) 提供独立 Pi Node/CLI/分发根和精确版本。核心 installer 只消费本地已核 bundle，没有直接 fetch flag。资产和 pin 存在不证明本机 provider、宿主加载或业务接受；新电脑全自动 fresh 网络最后记录为匿名 API 403、无 complete，已核 GET/hash 不等于完整换机实测。它不新增控制 profile，不接管原路由或独立验收。
 
 ### Pi shell-guard 可选插件
 

@@ -2,11 +2,11 @@
 
 `acquire_craft.py` 是换机下载准备入口，不是 installer、通用 updater 或自动选择 latest 的注册中心。它将我方 Craft 原生 bundle 与有新 R46 合同的 reverse 源准备到显式全新目录，再生成已有 installer 的 `--craft-bundle` / `--reverse-root` 参数。Pi/Node 继续通过现有官方 acquire-pi 流程获取，不重写 npm 安装或复制个人 profile。
 
-正式 [Windows x64 pin](../releases/windows-x64.json) 已固定真实 [Craft-Pi v0.1.0](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-pi-v0.1.0) 资产和 [reverse v1.9.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.9.0) 源码身份。它位于仓库根 `releases/`，不进入已冻结 adapter/runtime 资源。旧 `adapters/craft-pi/releases/windows-x64.json.example` 是历史结构模板，不是当前下载 pin；保留原字节以维持 native 资源来源证明。公共获取仅认证本次实际下载的包/源码身份，不替代 Pi/provider、安装或业务接受。
+正式 [Windows x64 pin](../releases/windows-x64.json) 已固定真实 [Craft-Pi v0.1.1](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-pi-v0.1.1) 资产和 [reverse v1.9.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.9.0) 源码身份。它位于仓库根 `releases/`，不进入已冻结 adapter/runtime 资源。旧 `adapters/craft-pi/releases/windows-x64.json.example` 是历史结构模板，不是当前下载 pin；保留原字节以维持 native 资源来源证明。公共获取仅认证本次实际下载的包/源码身份，不替代 Pi/provider、安装或业务接受。
 
 ## 获取辅助工具维护版本
 
-本页对应获取辅助工具 **0.1.1**，其独立源码发行身份为 [`craft-acquisition-v0.1.1`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-acquisition-v0.1.1)，实际 tag→commit 以 GitHub 为准。使用该 tag 或包含此修复的 main 运行下载辅助脚本；安装器核心正式身份仍为 **v0.7.0 / `70cf9c779ec0198eb725b864af868ee88bcfbce9`**，native Craft-Pi 为 **0.1.0**，reverse 固定 **1.9.0**。此辅助维护发行不移动 installer tag、不改 release pin、受管资源或 native ZIP。
+本页对应获取辅助工具 **0.1.1**，其独立源码发行身份为 [`craft-acquisition-v0.1.1`](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-acquisition-v0.1.1)，实际 tag→commit 以 GitHub 为准。使用该 tag 或包含此修复的 main 运行下载辅助脚本；安装器核心正式身份仍为 **v0.7.0 / `70cf9c779ec0198eb725b864af868ee88bcfbce9`**，native Craft-Pi 为 **0.1.1**，reverse 固定 **1.9.0**。此辅助维护发行不移动 installer tag、不改 release pin、受管资源或 native ZIP。
 
 原 v0.7.0 获取 CLI 的长 stage 与默认 Git 传输失败记录不能写成完整获取通过；修复辅助工具源码 A 的实际短 stage 全流程结果须另行记录，不能借用原源码 I 的成功身份。
 
@@ -45,7 +45,7 @@ python scripts/install.py install --root ../workflow --plan-file .local/plan.jso
 
 | 对象 | 必需字段与来源 |
 |---|---|
-| craft | repository 固定 `https://github.com/gthubtom1/reverse-workflow-installer`；tag 固定 `craft-pi-v0.1.0`；实际 release commit（40位小写hex）、asset 文件名、GitHub asset_id（正整数）、发布ZIP SHA256、包根 craft-bundle.json 原始字节 manifest_sha256 |
+| craft | repository 固定 `https://github.com/gthubtom1/reverse-workflow-installer`；tag 固定 `craft-pi-v0.1.1`；实际 release commit（40位小写hex）、asset 文件名、GitHub asset_id（正整数）、发布ZIP SHA256、包根 craft-bundle.json 原始字节 manifest_sha256 |
 | reverse | repository 固定 `https://github.com/gthubtom1/reverse-skill`；tag 固定 `v1.9.0`；实际 commit、当场取得的该 commit codeload ZIP archive_sha256、最终 R46 descriptor_sha256 |
 | upstream | repository 固定 `https://github.com/storytold/craft-anything`，commit 固定 `0326b4de8051f85a0f3139cd82f88f76911e6a35`；这是 Craft 来源证明，不是我方修改版资产所在仓库 |
 
