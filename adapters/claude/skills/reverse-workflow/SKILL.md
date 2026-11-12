@@ -1,6 +1,6 @@
 ---
 name: reverse-workflow
-description: 有明确逆向目标的二进制、APK、前端签名、协议与 API 安全分析，以及复刻、行为对比、版本追踪和知识维护入口；按活动回执接续 reverse-skill 原生工作流。
+description: 针对明确逆向或安全分析目标的二进制、APK、前端签名、协议与 API 安全分析，以及复刻、行为对比、版本追踪和知识维护入口；按活动回执接续 reverse-skill 原生工作流。
 ---
 
 读取本机回执 `{{RECEIPT}}`，确认 `installed: true`；从 reverse.root 读取原 RULES.md、skills/MASTER-ROUTING.md 和 reverse.master，使用原生 master-route 选择 PRIMARY。
