@@ -62,7 +62,32 @@ Register REA through the official setup/registration path and preserve all unrel
 
 Use the explicit `claude_desktop_config.json` and the project `CLAUDE.md`/Skills layout described by the official integration. Merge only the selected REA MCP entry and preserve unrelated JSON fields. Use the Claude project entry to point to the receipt, enhanced reverse router, and native workflow. Do not register Pi packages or Craft-Pi resources.
 
+## 3. Keep the combined workflow chain intact
+
+The combined environment has one authority chain. Host adapters change where resources are installed; they do not create a second router or a second project workflow:
+
+```text
+user task
+  -> reverse-workflow entry
+  -> enhanced reverse native router / PRIMARY
+  -> REA bounded analysis and Evidence
+  -> lead accepts the behavior facts and unknowns
+  -> Spec Kit feature/spec/plan/tasks when an independent project is needed
+  -> default implementation Worker, or an explicitly selected Craft backend
+  -> bounded Build / Check / Refine for the fixed batch
+  -> original runner receives the candidate
+  -> original chain performs independent acceptance
+```
+
+REA is the analysis and Evidence backend after PRIMARY selection. Spec Kit holds the independent project's intent and task contract. Craft is an optional bounded execution backend for a selected implementation batch; it does not own the original scope, Evidence, research authority, Spec tasks, or final acceptance. The Pi `craft-pi` bundle is our Pi-specific implementation of that backend contract. Upstream Craft Anything's Codex MCP setup is a host integration for the upstream product; it must not be recorded as the same component identity as `craft-pi`.
+
+A host installation may therefore skip Craft while still providing the complete reverse/REA/Spec workflow. It may select upstream Craft's Codex MCP route without installing the Pi bundle. It may select the Pi `craft-pi` backend only when the Pi host, the frozen reverse contract, the explicit bundle, and the standalone Pi runtime are all present. A Craft candidate, Ready state, successful process exit, or installer receipt does not close the original case or prove business acceptance.
+
 ## 4. Plan, apply, and verify on the real machine
+
+The first verification pass is static and local. Confirm the host evidence, official route, selected component identities, resolved paths, resource ownership, plan schema, configuration merge, source hashes, and unsupported-component boundaries before any live host check. Do not run a real provider, model, target, or business scenario merely to prove that the installation document is internally consistent.
+
+A later host or task check is a separate claim. If it has not been run, record it as `unverified`; do not turn that limit into an installation failure and do not call the static pass a live end-to-end acceptance.
 
 The AI must produce a readable plan before the first side effect. The plan must contain:
 
