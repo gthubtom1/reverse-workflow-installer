@@ -89,7 +89,9 @@ These Codex surfaces share the Codex host configuration for the selected `CODEX_
 - repository Skills: `.agents/skills/` from the current directory up to the repository root;
 - project-scoped MCP: trusted project `.codex/config.toml` when the user selects that scope.
 
-For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge and the global Skill. This is the selected Codex host scope; the bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. An existing global file with user-owned content or a different installer receipt causes a conflict instead of an overwrite.
+For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge and the global Skill. The bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. An existing global file with user-owned content or a different installer receipt causes a conflict instead of an overwrite.
+
+For Codex reverse-only installation, `config.toml` is not created unless REA is selected. When REA is selected, the official setup is staged and only the managed `mcp_servers.rea` table is merged into the actual `CODEX_HOME/config.toml`; all other Codex entries and comments remain user-owned.
 
 Install the Codex reverse-workflow Skill in `CODEX_HOME/skills` or an explicitly selected Codex Skills root. The reverse Codex plugin is optional; its presence does not replace the global Skill, MCP registration, or the enhanced reverse repository.
 

@@ -49,7 +49,7 @@ python scripts/install.py install --root ../workflow --plan-file .local/plan.jso
 | reverse | repository 固定 `https://github.com/gthubtom1/reverse-skill`；tag 固定 `v1.9.0`；实际 commit、当场取得的该 commit codeload ZIP archive_sha256、最终 R46 descriptor_sha256 |
 | upstream | repository 固定 `https://github.com/storytold/craft-anything`，commit 固定 `0326b4de8051f85a0f3139cd82f88f76911e6a35`；这是 Craft 来源证明，不是我方修改版资产所在仓库 |
 
-包版本号不等于 installer 0.7.0。不把我方资产定位到 upstream Craft release，也不拿公共 reverse 1.8.2 顶替新合同。正式 pin 的 Craft 资产 ID 为 `726614154`，ZIP SHA256 为 `3f354290ffc8d9e14e2bb917254c8fe28ed3c610ced614a8ffa75194579ad841`，来源 commit `010e2e323f912806f3fc3f2b17b1f9f06c29c944`；reverse commit `7cc3109bf14a570c9c852dc76cce05fff424e88c`，实际 archive SHA256 `763757fef2a934481b63959e2e96eeef0f1e0dfa90ffedf2c55ac178c9ec7842`，descriptor `47ee133eb10c0f53e7ca3be91413baa115f01282057d30c0c3e969b4b2b223f2`。模板里的旧 descriptor 不代表此正式 pin；发布后身份变化必须重新审查，不能自动刷新来掩盖漂移。
+包版本号不等于 installer 0.7.0。不把我方资产定位到 upstream Craft release，也不拿公共 reverse 1.8.2 顶替新合同。当前正式 pin 的 Craft 资产 ID 为 `740968401`，ZIP SHA256 为 `8e15d9f909bcbc42f6dfaba3a4281dede6673a8f9501875b91eb975333eb22b7`，来源 commit 为 `9ab07822abdc5980299f703ff8c259c48fed7b6a`；reverse commit `7cc3109bf14a570c9c852dc76cce05fff424e88c`，实际 archive SHA256 `763757fef2a934481b63959e2e96eeef0f1e0dfa90ffedf2c55ac178c9ec7842`，descriptor `47ee133eb10c0f53e7ca3be91413baa115f01282057d30c0c3e969b4b2b223f2`。模板里的旧 descriptor 不代表此正式 pin；发布后身份变化必须重新审查，不能自动刷新来掩盖漂移。
 
 GitHub 生成的 source ZIP 不承诺永久字节不变。本 pin 记录发布现场取得的精确 ZIP 摘要；将来 GitHub 重生成导致摘要变化时应拒绝并由发布维护者重新核验记录，不能默默接受或宣称该 archive 本来就是永久 immutable asset。
 

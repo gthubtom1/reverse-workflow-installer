@@ -26,6 +26,12 @@ REVERSE = 'https://github.com/gthubtom1/reverse-skill'
 UPSTREAM = 'https://github.com/storytold/craft-anything'
 LIMIT = 2 * 1024**3
 STAGE_ROOT_UNITS = 64  # Current pinned releases; actual ZIP members are checked too.
+HELPER_VERSION = "0.1.1"
+
+
+def helper_identity():
+    source = Path(__file__).resolve()
+    return {"version": HELPER_VERSION, "path": str(source), "sha256": digest(source.read_bytes())}
 
 
 def validate_win32_stage(stage, pin, *, archive=None, kind=None):
@@ -343,7 +349,7 @@ def acquire(pin, stage, *, fetch=None, download=transfer, checkout=git_checkout)
     # All potentially large identity reads remain inside the owned total deadline.
     if craft.bundle(bundle_root) != bundle or craft.reverse_contract(reverse) != contract or canonical_files(reverse, pin['reverse']['commit']) != canonical:
         raise InstallError('acquired files changed before result')
-    result = {'schema_version': 1, 'pin': pin, 'resolved': resolved, 'bundle_sha256': bundle['sha256'],
+    result = {'schema_version': 1, 'helper': helper_identity(), 'pin': pin, 'resolved': resolved, 'bundle_sha256': bundle['sha256'],
               'reverse_contract': contract, 'reverse_files': checkout_files(reverse), 'reverse_canonical_files': canonical,
               'reverse_archive_files': exported,
               'reverse_identity_algorithms': {'reverse_files': 'checkout-raw-file-sha256', 'reverse_canonical_files': 'git-commit-blob-sha256', 'reverse_archive_files': 'git-archive-export-file-sha256'}, 'installer_options': options,

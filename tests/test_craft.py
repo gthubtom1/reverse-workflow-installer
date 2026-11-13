@@ -39,6 +39,9 @@ def toy_bundle(root, version="0.1.0"):
 def toy_reverse_contract(root):
     for name in cr.REVERSE_FILES:
         atomic(root / name, ("offline R46 fixture: " + name + "\n").encode())
+    for name in ("RULES.md", "skills/config/routing.json", "skills/SKILL.md", "skills/MASTER-ROUTING.md", "skills/ops/scope-contract.md", "skills/ops/evidence-finding-path.md", "skills/scripts/master-route.sh"):
+        if not (root / name).exists():
+            atomic(root / name, ("offline native fixture: " + name + "\n").encode())
     atomic(root / "VERSION", b"1.9.0\n")
     descriptor = {"schema_version": 1, "contract_id": "reverse.r46.execution-backend", "contract_version": 1,
                   "min_reverse_version": "1.9.0", "capabilities": list(cr.REVERSE_CAPABILITIES),

@@ -30,7 +30,7 @@ def make_git_reverse(base):
     repo.mkdir()
     git(["init", "-q"], repo)
     atomic(repo / ".gitignore", b"work/\ntool-index.json\n")
-    for name in ("RULES.md", "skills/SKILL.md", "skills/config/routing.json", "skills/scripts/master-route.sh"):
+    for name in ("RULES.md", "skills/SKILL.md", "skills/MASTER-ROUTING.md", "skills/config/routing.json", "skills/ops/scope-contract.md", "skills/ops/evidence-finding-path.md", "skills/scripts/master-route.sh"):
         atomic(repo / name, b"native source\n")
     git(["add", "-A"], repo)
     return repo
@@ -62,7 +62,7 @@ class Fixture(unittest.TestCase):
         self.repo_patch.start()
         self.root, self.agent, self.project = [self.base / name for name in ("stack", "agent with spaces 中文", "project")]
         self.reverse = self.base / "reverse"
-        for name in ("RULES.md", "skills/SKILL.md", "skills/config/routing.json", "skills/scripts/master-route.sh"):
+        for name in ("RULES.md", "skills/SKILL.md", "skills/MASTER-ROUTING.md", "skills/config/routing.json", "skills/ops/scope-contract.md", "skills/ops/evidence-finding-path.md", "skills/scripts/master-route.sh"):
             atomic(self.reverse / name, b"native-fixture\n")
         self.node = self.base / "node/node.exe"
         atomic(self.node, b"node-fixture")

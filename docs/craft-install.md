@@ -2,7 +2,7 @@
 
 此指南说明 installer 自己的 **Craft-Pi bounded execution backend** 的本地分发、更新、静态验证和条件恢复机制。它不是上游 Craft Anything 的全部宿主适配。上游 Craft 的 Codex/MCP 接入应按官方 `craft-anything-cli setup --client codex --yes` 与 `doctor --client codex` 路线处理；本指南中的 native bundle、Pi RPC driver、独立 Pi/Node 分发和 R46/Spec 合同只适用于 Pi。可复现构建、canonical owned source、独立官方 Pi 分发及许可边界见 [portable packaging](craft-packaging.md)。Craft-Pi 默认关闭，`all` 仍只有 REA、Spec Kit、reverse。显式 `--with-craft` 或 `--components reverse,spec-kit,craft` 才选择 Craft-Pi；只支持 Pi，必须显式选择 reverse 与 Spec Kit，不自动补选依赖。
 
-**发布与资格分开核验：installer/Pi 入口包 v0.7.0、native Craft-Pi v0.1.1、reverse v1.9.0 已分别正式发布；获取 helper 独立发布为 `craft-acquisition-v0.1.1`，不是 core v0.7.1。** [正式 Windows x64 pin](../releases/windows-x64.json) 记录 Craft/reverse 的 tag、commit、资产与摘要；按 [公开获取指南](craft-acquisition.md) 使用 `acquire_craft.py` 获取已核 bundle/reverse，再交给核心 installer 的本地参数。pin 和包存在不证明当前机器的 Pi/provider、宿主加载、取消清理或业务接受。早期离线机制测试使用 toy Python 工件，不能代替真实产品运行验收。
+发布与资格分开核验：installer/Pi 入口包 v0.7.0、native Craft-Pi v0.1.1、reverse v1.9.0 已分别正式发布；获取 helper 独立发布为 `craft-acquisition-v0.1.1`，不是 core v0.7.1。正式 bundle 以根级 pin 和 bundle manifest 的最终文件/notice inventory 为准；runtime source tree 内的 candidate packaging notice 记录构建阶段的许可证缺口和限制，不能单独当作正式 bundle 的发布资格。[正式 Windows x64 pin](../releases/windows-x64.json) 记录 Craft/reverse 的 tag、commit、资产与摘要；按 [公开获取指南](craft-acquisition.md) 使用 `acquire_craft.py` 获取已核 bundle/reverse，再交给核心 installer 的本地参数。pin 和包存在不证明当前机器的 Pi/provider、宿主加载、取消清理或业务接受。早期离线机制测试使用 toy Python 工件，不能代替真实产品运行验收。
 
 新电脑全自动 fresh 网络获取的最后一次记录在匿名 GitHub API 403 处停止，未产生 complete；已核 GET/hash 不能写成完整换机实测，也不表示产品在所有网络必然失败。当前 native 发布限定 Windows x64；每机资格与网络边界见获取指南。
 

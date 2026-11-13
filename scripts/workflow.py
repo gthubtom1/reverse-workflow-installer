@@ -271,7 +271,16 @@ def reverse_identity(path):
     dirty = bool(run(["git", "-C", path, "status", "--porcelain", "--untracked-files=normal"], cwd=path))
     source = source_tree_hash(path)
     algorithm = "git-ls-files" if source is not None else "tree-walk"
-    return {"root": str(path.resolve()), "commit": commit, "dirty": dirty, "entry_hashes": {name: digest((path / name).read_bytes()) for name in required + routers}, "working_tree_sha256": source if source is not None else tree_hash(path, exclude_git=True), "source_hash_algorithm": algorithm, "routers": routers, "master": master, "codex_plugin": str(path / "plugins/reverse-skill") if (path / "plugins/reverse-skill/.codex-plugin/plugin.json").is_file() else None}
+    plugin_root = path / "plugins/reverse-skill"
+    plugin_manifest = plugin_root / ".codex-plugin/plugin.json"
+    plugin_skill = plugin_root / "skills/reverse-skill-router/SKILL.md"
+    plugin_files = []
+    codex_plugin = None
+    if plugin_manifest.is_file() and plugin_skill.is_file():
+        codex_plugin = str(plugin_root)
+        plugin_files = [str(plugin_manifest.relative_to(path)), str(plugin_skill.relative_to(path))]
+    entry_names = required + routers + plugin_files
+    return {"root": str(path.resolve()), "commit": commit, "dirty": dirty, "entry_hashes": {name: digest((path / name).read_bytes()) for name in entry_names}, "working_tree_sha256": source if source is not None else tree_hash(path, exclude_git=True), "source_hash_algorithm": algorithm, "routers": routers, "master": master, "codex_plugin": codex_plugin}
 
 
 def reverse_identity_matches(stored, current):
@@ -434,6 +443,21 @@ def _craft_target_path_preflight(selected, components, resources):
                            "(24-unit basename budget; retry suffix reserved)")
 
 
+def installer_identity():
+    """Identify the installer checkout used to produce a plan/receipt."""
+    source = source_tree_hash(REPO)
+    commit = None
+    dirty = None
+    if (REPO / ".git").exists():
+        try:
+            commit = run(["git", "-C", REPO, "rev-parse", "HEAD"], cwd=REPO)
+            dirty = bool(run(["git", "-C", REPO, "status", "--porcelain", "--untracked-files=normal"], cwd=REPO))
+        except InstallError:
+            commit = None
+            dirty = None
+    return {"root": str(REPO.resolve()), "commit": commit, "branch": None, "dirty": dirty, "working_tree_sha256": source if source is not None else tree_hash(REPO, exclude_git=True), "source_hash_algorithm": "git-ls-files" if source is not None else "tree-walk"}
+
+
 def make_plan(args, fetch=None):
     selected = scope(args)
     manifest = load_json(REPO / "components.json")
@@ -497,7 +521,7 @@ def make_plan(args, fetch=None):
     commands = []
     if "rea" in selected["components"]:
         if selected["client"] == "claude":
-            commands.append("手动合并 Claude Desktop JSON MCP 配置；不调用 REA setup（Claude Desktop 原生注册由安装器管理）")
+            commands.append("事务内自动合并 Claude Desktop JSON 的 mcpServers.rea；不调用 REA setup，保留其他字段")
         else:
             commands.append(("核验只读复用 REA prefix: " + selected["rea_prefix"] + " @" + components["rea"]["version"]) if selected["rea_prefix"] else ("npm install --prefix <root>/versions/<frozen-id>/rea --registry https://registry.npmjs.org rea-agents@" + components["rea"]["version"]))
             commands.extend([f"rea setup --client {selected['client']} --skill=false --dry-run --json", f"rea setup --client {selected['client']} --skill=false --yes --json"])
@@ -514,7 +538,7 @@ def make_plan(args, fetch=None):
         commands.append("仅注册 shell-guard 独立子目录；Everything 只合并明确提供的 esPath/guiPath/autostart；迁移按冻结旧注册/hash 条件替换")
     if "craft" in selected["components"]:
         commands.append("Verify explicit Pi node/entry/version and exact local Craft bundle; copy to isolated version; journal execution resources and unique package registration")
-    return {"craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
+    return {"installer_source": installer_identity(), "craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
 
 
 PI_RECEIPT_LINE = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
@@ -546,6 +570,8 @@ def validate_plan(plan):
     _craft_target_path_preflight(selected, plan.get("components") or {}, plan.get("craft_resources") or {})
     if "project_continuity" in selected.get("components", []):
         raise InstallError("冻结计划仍选择已移除的 project-continuity；请重新 plan")
+    if plan.get("installer_source") != installer_identity():
+        raise InstallError("安装器源码在 plan 后发生漂移；重新从当前 main 生成计划")
     checked = scope(SimpleNamespace(**{**selected, **plan["resource_selection"], "components": ",".join(selected["components"]), "node": selected.get("node"), "uv": selected.get("uv"), "git": selected.get("git")}))
     for key in ("components", "root", "client", "agent_dir", "codex_skills_root", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
         if checked.get(key) != selected.get(key):
@@ -1031,7 +1057,7 @@ def _install(plan, args):
                 write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", pi_global_skill_text(receipt_path).encode(), client="Pi", legacy=legacy_skill, owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "codex":
             skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
-            agents = (REPO / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
+            agents = (REPO / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).replace("{{CODEX_SKILL_ENTRY}}", str(codex_skill_root / "reverse-workflow/SKILL.md")).encode()
             codex_skill_root = Path(selected["codex_skills_root"])
             write_host_file(journal, ownership, agent / "AGENTS.md", agents, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
             write_host_file(journal, ownership, codex_skill_root / "reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
@@ -1200,6 +1226,7 @@ def _install(plan, args):
             "runtime": {"node": node, "node_version": node_version, "node_sha256": digest(Path(node).read_bytes()) if node else None, "specify": str(specify) if specify else None},
             "reverse": reverse,
             "craft": craft_data,
+            "installer_source": plan.get("installer_source"),
             "craft_reverse_contract": plan.get("craft_reverse_contract"),
             "craft_contract": copy.deepcopy(cr.CONTRACT) if craft_data else None,
             "craft_source": {key: selected[key] for key in ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version")} if craft_data else None,
