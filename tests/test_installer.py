@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -14,7 +15,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 import install as cli
 import workflow as w
-from configuration import Journal, atomic, codex_merge, digest, encode_json, load_json, restore_journal
+from configuration import Journal, atomic, codex_merge, digest, encode_json, load_json, restore_journal, managed_section, toml_parts
 from versions import InstallError, resolve
 
 
@@ -74,7 +75,7 @@ class Fixture(unittest.TestCase):
         self.which = patch.object(w.shutil, "which", lambda name: str(self.base / name))
         self.which.start()
         self.args = cli.parser().parse_args(["install", "--root", str(self.root), "--agent-dir", str(self.agent), "--client", "pi", "--project", str(self.project), "--reverse-root", str(self.reverse), "--node", str(self.node), "--apply"])
-        self.args.codex_skills_root = str(self.base / "codex-skills")
+        self.args.codex_skills_root = None
         self.before = {"defaultModel": "keep-me", "packages": ["user-package"], "skills": ["user-skill"]}
         atomic(self.agent / "settings.json", encode_json(self.before))
         atomic(self.agent / "mcp.json", encode_json({"mcpServers": {"user": {"command": "user-owned"}}, "future": 7}))
@@ -284,7 +285,9 @@ class Fixture(unittest.TestCase):
 
     def test_codex_official_setup_integration_and_thin_reference(self):
         self.args.client = "codex"
+        self.args.codex_skills_root = str(self.base / "codex-skills")
         atomic(self.agent / "config.toml", b'model = "keep"\n[mcp_servers.user]\ncommand = "user"\n')
+
         result = self.install()
         self.assertTrue(w.verify(self.root)["ok"])
         text = (Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md").read_text(encoding="utf-8")
@@ -294,6 +297,201 @@ class Fixture(unittest.TestCase):
         self.assertEqual(result["scope"]["client"], "codex")
         self.assertTrue(any("--integration" in c and "codex" in c for c in self.calls))
         self.assertFalse(any("plugin" in c for c in self.calls))
+
+    def test_codex_agents_user_prose_update_and_restore(self):
+        self.args.components = "reverse"
+        self.args.client = "codex"
+        self.args.project = None
+        agents = self.agent / "AGENTS.md"
+        user = b"# My instructions\r\nKeep my user rules.\r\n"
+        atomic(agents, user)
+        first = self.install()
+        installed = agents.read_bytes()
+        self.assertTrue(installed.startswith(user))
+        self.assertEqual(managed_section(installed)[0], str((self.root / ".installer/receipt.json").resolve()))
+        # Later user prose does not invalidate the section or block its upgrade.
+        later = b"\r\n# Later user instructions\r\nPreserve this too.\r\n"
+        atomic(agents, installed + later)
+        self.assertTrue(w.verify(self.root)["ok"])
+        template = self.source / "adapters/codex/AGENTS.md"
+        atomic(template, template.read_bytes() + b"\nUpdated bridge.\n")
+        self.install()
+        self.assertIn(b"Updated bridge.", agents.read_bytes())
+        result = w.restore(self.root, apply=True)
+        self.assertFalse(any(f["conflicts"] for f in result["files"]))
+        self.assertEqual(agents.read_bytes(), installed + later)
+        self.assertEqual(load_json(self.root / ".installer/receipt.json")["transaction"], first["transaction"])
+        result = w.restore(self.root, apply=True)
+        self.assertFalse(any(f["conflicts"] for f in result["files"]))
+        self.assertEqual(agents.read_bytes(), user + later)
+
+    def test_codex_plan_preflights_conflicts_and_freezes_both_entries(self):
+        self.args.components = "reverse"
+        self.args.client = "codex"
+        self.args.project = None
+        agents = self.agent / "AGENTS.md"
+        skill = self.agent / "skills/reverse-workflow/SKILL.md"
+        atomic(agents, b"User rules\n")
+        for target in (agents, skill):
+            plan = self.plan()
+            original = target.read_bytes() if target.exists() else None
+            atomic(target, (original or b"") + b"later edit\n")
+            self.calls.clear()
+            with self.assertRaisesRegex(InstallError, "漂移"):
+                w.install(plan, self.args)
+            self.assertFalse(self.calls)
+            if original is None:
+                target.unlink()
+            else:
+                atomic(target, original)
+        atomic(skill, b"User-owned skill\n")
+        with self.assertRaisesRegex(InstallError, "已被用户修改"):
+            self.plan()
+        skill.unlink()
+        self.install()
+        installed = agents.read_bytes()
+        atomic(agents, installed.replace(b"reverse-workflow installer begin", b"reverse-workflow installer broken"))
+        with self.assertRaisesRegex(InstallError, "标识"):
+            self.plan()
+        atomic(agents, installed)
+        self.args.root = str(self.base / "other-stack")
+        with self.assertRaisesRegex(InstallError, "另一安装根"):
+            self.plan()
+        self.args.root = str(self.root)
+        atomic(agents, installed.replace(b" -->\n", b" -->\nUser section edit\n", 1))
+        self.assertFalse(w.verify(self.root)["ok"])
+        with self.assertRaisesRegex(InstallError, "已被用户修改"):
+            self.plan()
+        result = w.restore(self.root, apply=True)
+        self.assertTrue(any("managed-section-modified" in f["conflicts"] for f in result["files"]))
+        self.assertIn(b"User section edit", agents.read_bytes())
+        self.assertTrue((self.root / ".installer/receipt.json").exists())
+
+    def test_codex_legacy_other_root_is_not_merged_as_user_prose(self):
+        self.args.components = "reverse"
+        self.args.client = "codex"
+        self.args.project = None
+        self.args.codex_skills_root = str(self.base / "empty-custom-skills")
+        agents = self.agent / "AGENTS.md"
+        other_receipt = self.base / "other stack with spaces" / ".installer/receipt.json"
+        legacy = f"# Codex reverse workflow\nRead the installed receipt at `{other_receipt}`, then follow its reverse.root.\n".encode()
+        atomic(agents, legacy)
+        self.calls.clear()
+        with self.assertRaisesRegex(InstallError, "旧入口属于另一安装根"):
+            self.plan()
+        self.assertEqual(self.calls, [])
+        self.assertEqual(agents.read_bytes(), legacy)
+        self.assertFalse(Path(self.args.codex_skills_root).exists())
+
+    def test_codex_legacy_receipt_and_whole_agents_migration(self):
+        self.args.client = "codex"
+        self.args.project = None
+        first = self.install()
+        receipt_path = self.root / ".installer/receipt.json"
+        agents = self.agent / "AGENTS.md"
+        # Recreate the historic whole-file ownership and missing scope fields.
+        legacy_body = (self.source / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).replace("{{CODEX_SKILL_ENTRY}}", str(self.agent / "skills/reverse-workflow/SKILL.md")).encode()
+        atomic(agents, legacy_body)
+        first["scope"].pop("components")
+        first["scope"].pop("codex_skills_root")
+        first.pop("managed_agents")
+        first["entry_hashes"][str(agents.resolve())] = digest(legacy_body)
+        atomic(receipt_path, encode_json(first))
+        self.assertTrue(w.verify(self.root)["ok"])
+        self.install()
+        self.assertEqual(managed_section(agents.read_bytes())[0], str(receipt_path.resolve()))
+        atomic(agents, agents.read_bytes() + b"Later user note\n")
+        result = w.restore(self.root, apply=True)
+        self.assertFalse(any(f["conflicts"] for f in result["files"]))
+        self.assertEqual(agents.read_bytes(), legacy_body + b"Later user note\n")
+
+    def test_codex_rea_expansion_establishes_skills_root_once(self):
+        self.args.client = "codex"
+        self.args.components = "rea"
+        self.args.project = None
+        self.args.reverse_root = None
+        self.install()
+        self.args.components = "rea,reverse"
+        self.args.reverse_root = str(self.reverse)
+        self.args.codex_skills_root = str(self.base / "custom-skills")
+        expanded = self.install()
+        self.assertEqual(expanded["scope"]["codex_skills_root"], str((self.base / "custom-skills").resolve()))
+        self.assertTrue(w.verify(self.root)["ok"])
+        self.args.codex_skills_root = str(self.base / "moved-skills")
+        with self.assertRaisesRegex(InstallError, "另一客户端"):
+            self.install()
+
+    def test_auto_reverse_only_uses_settings_evidence_and_rejects_generic_mcp(self):
+        self.args.components = "reverse"
+        self.args.client = "auto"
+        self.args.project = None
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(InstallError, "没有明确宿主"):
+                self.plan()
+            atomic(self.agent / "config.toml", b'[mcp_servers.user]\ncommand="generic"\n')
+            with self.assertRaisesRegex(InstallError, "没有明确宿主"):
+                self.plan()
+            settings = {"$schema": "https://pi.dev/schemas/settings.schema.json"}
+            atomic(self.agent / "settings.json", encode_json(settings))
+            self.assertEqual(self.plan()["scope"]["client"], "pi")
+            # An explicit MCP input still permits sibling Pi settings evidence.
+            self.args.client_config = str(self.agent / "mcp.json")
+            self.assertEqual(self.plan()["scope"]["client"], "pi")
+            atomic(self.agent / "config.toml", b'approval_policy="on-request"\n')
+            with self.assertRaisesRegex(InstallError, "证据冲突"):
+                self.plan()
+
+    def test_source_identity_excludes_only_installer_root_outputs(self):
+        original = w.installer_identity()
+        atomic(self.source / ".local/plan.json", encode_json(original))
+        self.assertEqual(w.installer_identity(), original)
+        self.assertIsNone(original["branch"])
+        # A source mutation within this fixture must invalidate its own plan.
+        plan = self.plan()
+        source = self.source / "adapters/codex/AGENTS.md"
+        atomic(source, source.read_bytes() + b"\nchanged source\n")
+        self.assertNotEqual(w.installer_identity(), original)
+        with self.assertRaisesRegex(InstallError, "安装器源码"):
+            w.validate_plan(plan)
+        atomic(source, source.read_bytes().removesuffix(b"\nchanged source\n"))
+        self.assertEqual(w.installer_identity(), original)
+        atomic(self.source / "nested/.local/source.txt", b"source, not root output")
+        self.assertNotEqual(w.installer_identity(), original)
+        reverse_hash = w.tree_hash(self.reverse, exclude_git=True)
+        atomic(self.reverse / ".local/source.txt", b"reverse source must count")
+        self.assertNotEqual(w.tree_hash(self.reverse, exclude_git=True), reverse_hash)
+        atomic(self.source / ".git", b"synthetic git marker\n")
+        with patch.object(w, "source_tree_hash", return_value="synthetic-source"):
+            with patch.object(w, "run", side_effect=["a" * 40, "", "feature/actual-branch"]):
+                self.assertEqual(w.installer_identity()["branch"], "feature/actual-branch")
+            with patch.object(w, "run", side_effect=["a" * 40, "", InstallError("detached HEAD")]):
+                detached = w.installer_identity()
+                self.assertIsNone(detached["branch"])
+                self.assertEqual(detached["commit"], "a" * 40)
+
+    def test_codex_toml_restore_preserves_multiline_and_indented_later_table(self):
+        config = self.agent / "config.toml"
+        before = b'# user root comment\ntext = """\n[mcp_servers.rea]\nThis is string content.\n"""\n  [mcp_servers.rea] # retain this comment\ncommand="old" # old command note\n  [mcp_servers.user]\ncommand="user"\n'
+        staged = before.replace(b'command="old"', b'command="new"')
+        atomic(config, before)
+        journal = Journal(self.base / "toml-recovery")
+        journal.write(config, codex_merge(before, staged), "toml")
+        later = b'\n  [mcp_servers.later] # later table\ntext = \'\'\'\n[mcp_servers.rea.fake]\n# inside literal string\n\'\'\'\n'
+        atomic(config, config.read_bytes() + later)
+        current = tomllib.loads(config.read_text(encoding="utf-8"))
+        result = restore_journal(journal.path, apply=True)
+        self.assertFalse(any(f["conflicts"] for f in result))
+        parsed = tomllib.loads(config.read_text(encoding="utf-8"))
+        self.assertEqual(parsed["mcp_servers"]["rea"]["command"], "old")
+        self.assertEqual(parsed["text"], current["text"])
+        self.assertEqual(parsed["mcp_servers"]["later"], current["mcp_servers"]["later"])
+        self.assertIn(b"# retain this comment", config.read_bytes())
+        self.assertIn(b"# old command note", config.read_bytes())
+        self.assertIn(later, config.read_bytes())
+        atomic(config, b"invalid = [\n")
+        result = restore_journal(journal.path, apply=True)
+        self.assertTrue(any(f["conflicts"] for f in result))
+        self.assertEqual(config.read_bytes(), b"invalid = [\n")
 
     def test_real_version_change_is_parallel_and_restore_returns_previous_receipt(self):
         first = self.install()
@@ -341,7 +539,9 @@ class Fixture(unittest.TestCase):
 
     def test_codex_restore_preserves_later_unrelated_tables(self):
         self.args.client = "codex"
+        self.args.codex_skills_root = str(self.base / "codex-skills")
         atomic(self.agent / "config.toml", b'model = "keep"\n')
+
         self.install()
         config = self.agent / "config.toml"
         atomic(config, config.read_bytes() + b'\n[mcp_servers.later]\ncommand="keep-later"\n')
@@ -486,10 +686,20 @@ class Fixture(unittest.TestCase):
         legacy["scope"].pop("components")
         legacy.pop("resource_selection")
         legacy.pop("entry_hashes")
+        # The compatibility inventory is reverse.entry_hashes, not the separate
+        # top-level map of installer-owned host files.
+        legacy["reverse"]["entry_hashes"] = dict(list(legacy["reverse"]["entry_hashes"].items())[:1])
         legacy["hashes"].pop("reverse_sha256", None)
         legacy["adapter"].pop("key", None)
         atomic(path, encode_json(legacy))
         self.assertTrue(w.verify(self.root)["ok"])
+        entry = next(iter(legacy["reverse"]["entry_hashes"]))
+        legacy["reverse"]["entry_hashes"][entry] = "0" * 64
+        atomic(path, encode_json(legacy))
+        self.assertIn("reverse working copy drift", w.verify(self.root)["failures"])
+        legacy["reverse"]["entry_hashes"] = {"missing-old-entry.md": "0" * 64}
+        atomic(path, encode_json(legacy))
+        self.assertFalse(w.verify(self.root)["ok"])
 
     def test_legacy_receipt_without_components_blocks_silent_shrink(self):
         self.install()
@@ -682,6 +892,7 @@ class Fixture(unittest.TestCase):
     def test_codex_reverse_only_receipt_can_expand_to_spec_kit(self):
         self.args.components = "reverse"
         self.args.client = "codex"
+        self.args.codex_skills_root = str(self.base / "codex-skills")
         self.install()
         entry = Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md"
         self.assertTrue(entry.is_file())
@@ -888,7 +1099,9 @@ class VersionsAndIdentity(unittest.TestCase):
             if url.endswith("releases/latest"):
                 return {"tag_name": "v1.1.0", "target_commitish": "main"}
             return metadata(url)
-        result = resolve(load_json(REPO / "components.json"), fetch)
+        manifest = load_json(REPO / "components.json")
+        manifest["reverse"]["policy"] = "latest-release-or-main-resolved-commit"
+        result = resolve(manifest, fetch)
         self.assertEqual(result["reverse"]["ref"], "v1.1.0")
         self.assertTrue(any(u.endswith("commits/v1.1.0") for u in calls))
 
@@ -897,8 +1110,24 @@ class VersionsAndIdentity(unittest.TestCase):
             if "releases/latest" in url:
                 raise InstallError("HTTP 403")
             return metadata(url)
+        manifest = load_json(REPO / "components.json")
+        manifest["reverse"]["policy"] = "latest-release-or-main-resolved-commit"
         with self.assertRaisesRegex(InstallError, "403"):
-            resolve(load_json(REPO / "components.json"), fetch)
+            resolve(manifest, fetch)
+
+    def test_reverse_main_policy_never_queries_old_release_or_falls_back(self):
+        manifest = load_json(REPO / "components.json")
+        calls = []
+        def fetch(url):
+            calls.append(url)
+            self.assertTrue(url.endswith("/commits/main"))
+            return {"sha": "b" * 40}
+        result = resolve(manifest, fetch, components=["reverse"])
+        self.assertEqual(result["reverse"]["ref"], "main")
+        self.assertEqual(result["reverse"]["commit"], "b" * 40)
+        self.assertEqual(len(calls), 1)
+        with self.assertRaisesRegex(InstallError, "403"):
+            resolve(manifest, lambda url: (_ for _ in ()).throw(InstallError("HTTP 403")), components=["reverse"])
 
     def test_npm_prerelease_rejected(self):
         def fetch(url):
@@ -939,6 +1168,58 @@ class VersionsAndIdentity(unittest.TestCase):
             with patch("urllib.request.urlopen", side_effect=fake_urlopen):
                 self.assertEqual(http_json("https://api.github.com/repos/example/project/commits/main")["sha"], "fixture")
         self.assertEqual(observed["authorization"], "Bearer fixture-secret")
+
+    def test_codex_merge_preserves_indented_user_table(self):
+        original = b'model = "keep"\n[mcp_servers.rea]\ncommand = "old"\n  [mcp_servers.user]\ncommand = "user"\n'
+        staged = b'model = "keep"\n[mcp_servers.rea]\ncommand = "new"\n[mcp_servers.user]\ncommand = "user"\n'
+        result = codex_merge(original, staged)
+        parsed = tomllib.loads(result.decode("utf-8"))
+        self.assertEqual(parsed["mcp_servers"]["user"]["command"], "user")
+
+    def test_codex_multiline_headers_and_comments_are_not_tables(self):
+        for quote in (b'"""', b"'''"):
+            with self.subTest(quote=quote):
+                original = b'# root comment\ntext = ' + quote + b'\n[mcp_servers.rea]\n# string, not comment\n  [mcp_servers.user]\n' + quote + b'\n[mcp_servers.rea] # rea header note\ncommand="old" # launcher note\n  [mcp_servers.user]\ncommand="keep" # user note\n'
+                staged = original.replace(b'command="old"', b'command="new"').replace(b" # rea header note", b"").replace(b" # launcher note", b"")
+                result = codex_merge(original, staged)
+                expected = tomllib.loads(staged.decode())
+                self.assertEqual(tomllib.loads(result.decode()), expected)
+                for comment in (b"# root comment", b"# rea header note", b"# launcher note", b"# user note"):
+                    self.assertIn(comment, result)
+                self.assertEqual(toml_parts(result)[0], expected)
+        # Arrays, escaped quotes and Unicode in comments cannot create headers.
+        prefixes = (
+            b'items = [\n[1, 2],\n]\n',
+            b'text = """escaped \\"\n[mcp_servers.rea]\n"""\n',
+            '# comment\u2028[mcp_servers.rea]\nstill_root="keep"\n'.encode(),
+            b'text = """four quotes at the end: """"\n',
+        )
+        for prefix in prefixes:
+            original = prefix + b'[mcp_servers.rea] # repeat\n# repeat\ncommand="old"\n'
+            staged = prefix + b'[mcp_servers.rea]\ncommand="new"\n'
+            result = codex_merge(original, staged)
+            self.assertEqual(tomllib.loads(result.decode()), tomllib.loads(staged.decode()))
+            self.assertEqual(result.count(b"# repeat"), 2)
+        # Empty REA tables with unsupported quoted spelling must also fail closed.
+        for original in (b'[mcp_servers."rea"]\n', b'mcp_servers.rea.command="inline"\n'):
+            with self.assertRaises(InstallError):
+                codex_merge(original, original)
+
+    def test_reverse_subset_keeps_source_hash_and_recorded_entries_strict(self):
+        current = {"commit": "a" * 40, "entry_hashes": {"old": "x", "new": "y"}, "working_tree_sha256": "source", "source_hash_algorithm": "tree-walk"}
+        old = copy.deepcopy(current)
+        old["entry_hashes"].pop("new")
+        self.assertTrue(w.reverse_identity_matches(old, current))
+        for change in ({"entry_hashes": {"old": "changed"}}, {"entry_hashes": {"missing": "x"}}, {"working_tree_sha256": "changed"}, {"commit": "b" * 40}):
+            self.assertFalse(w.reverse_identity_matches({**old, **change}, current))
+        identity = {"root": str(REPO / ".local/root"), "client": "codex", "agent_dir": str(REPO / ".local/agent"), "client_config": str(REPO / ".local/agent/config.toml")}
+        historic = w.normalized_identity(identity)
+        self.assertEqual(historic["codex_skills_root"], str((REPO / ".local/agent/skills").resolve()))
+        selected = {**identity, "components": ["rea", "reverse"], "codex_skills_root": str(REPO / ".local/custom-skills")}
+        self.assertTrue(w.identity_compatible(identity, ["rea"], selected))
+        self.assertFalse(w.identity_compatible(identity, ["rea", "reverse"], selected))
+        self.assertFalse(w.identity_compatible({**identity, "codex_skills_root": historic["codex_skills_root"]}, ["rea"], selected))
+        self.assertFalse(w.identity_compatible(identity, ["rea"], {**selected, "agent_dir": str(REPO / ".local/moved-agent")}))
 
     def test_codex_merge_retains_unrelated_format_and_rejects_unrelated_mutation(self):
         original = b'# user comment\nmodel = "keep"\n'

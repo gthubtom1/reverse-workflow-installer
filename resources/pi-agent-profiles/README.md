@@ -1,6 +1,8 @@
-# Pi profile templates
+# Pi Web profile templates
 
-This directory contains optional portable Pi templates: short user-level working principles and three task profiles. The conversation chooses direct work or collaboration for the actual task; these templates do not prescribe a team or a fixed sequence. Preserve the target user’s existing profiles, built-in agent switches, model choices and tool configuration. Copy selected templates into the active Pi agent directory.
+This directory contains optional Pi Web agent profile templates: short user-level working principles and three task profiles. They use Pi Web's agent-profile loader; another Pi host needs equivalent profile support. The conversation chooses direct work or collaboration for the actual task; these templates do not prescribe a team or a fixed sequence. Preserve the target user’s existing profiles, built-in agent switches, model choices and tool configuration. Copy selected templates into the active Pi agent directory.
+
+The explicit `load_skills` and `load_extensions` fields are boolean loading switches. Pi Web 0.15.0 also accepts boolean `skills` and `extensions` as compatibility switches; explicit `load_*` values take precedence. Resource-name strings/lists in `skills` and `extensions` can also select resources; these templates use boolean values. The existing redundant boolean compatibility fields in the reverse profiles are preserved; they are not resource names or an additional runtime schema. Check the target host's loader when using a different version.
 
 - Copy AGENTS.md to <agent-dir>/AGENTS.md.
 - Copy only agents/subagent.md, agents/reverse-operator.md, and agents/reverse-reviewer.md to <agent-dir>/agents/.

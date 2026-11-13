@@ -24,6 +24,8 @@ Do not select a host from the presence of a command in `PATH`, a model name, a d
 
 Resolve paths on the target computer. Do not copy paths from this repository, an old receipt, an example, or another computer. The installer root, agent/config root, project root, package cache, runtime, and official source checkout must be separate where the selected contract requires separation. Preserve existing files and report same-path content conflicts before changing them.
 
+Choose a stable per-user tool root before planning: on Windows prefer the actual user's `LOCALAPPDATA/reverse-workflow`; on Linux use `XDG_DATA_HOME/reverse-workflow` or the actual user's `~/.local/share/reverse-workflow`; on macOS use the actual user's `~/Library/Application Support/reverse-workflow`. These are selection defaults, not literal paths to copy: inspect ownership, existing installations, free space and any selected Craft path budget, reuse a valid independent root, and choose a shorter user-owned tool path when required. Do not place it under the installer checkout, a temporary directory, or the current business project. A new project reuses the global installation and receipt instead of creating another Reverse installation.
+
 ## 2. Use the official upstream entry for each component
 
 ### The enhanced reverse-skill is the core workflow component
@@ -83,19 +85,21 @@ The native Craft-Pi bundle and shell-guard are Pi-only selections. Keep their pa
 
 ### Codex CLI, Codex desktop, and Codex IDE
 
+A global install with no `--project` records `project_init: not-selected` and leaves business-project artifacts untouched. When a real project is selected later, read the installed receipt's `runtime.specify` path and run the official CLI from outside the installer/reverse roots, for example `specify init <project> --integration codex --script py --non-interactive --ignore-agent-tools`. That creates only the project's `.specify`, constitution/spec/plan/tasks and native Codex resources; it does not reinstall or relocate the global reverse entry. Follow the generated project resources for the subsequent feature workflow and keep reverse's global router, scope, case and Evidence authority.
+
 These Codex surfaces share the Codex host configuration for the selected `CODEX_HOME`. Use the actual `CODEX_HOME/config.toml` for MCP and the Codex `AGENTS.md` discovery chain for concise host guidance. Use the official Codex skill locations:
 
 - user Skills: `CODEX_HOME/skills/` (resolved from the target computer's actual Codex home; use `--codex-skills-root` only for an explicit custom root);
 - repository Skills: `.agents/skills/` from the current directory up to the repository root;
 - project-scoped MCP: trusted project `.codex/config.toml` when the user selects that scope.
 
-For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge and the global Skill. The bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. An existing global file with user-owned content or a different installer receipt causes a conflict instead of an overwrite.
+For an explicit Codex reverse installation, append one short managed section to global `CODEX_HOME/AGENTS.md` and install the global Skill. The section has begin/end markers and the owning receipt path; user instructions outside it remain intact. Updates replace only the unchanged managed section, and restore preserves later user edits outside it. An unchanged legacy installer-owned whole file can migrate to this section. A section owned by another receipt, duplicate/broken markers, a modified managed section, or a different user-owned same-name Skill is a conflict detected during plan; do not delete or move the user's AGENTS file to resolve it. The bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex.
 
-For Codex reverse-only installation, `config.toml` is not created unless REA is selected. When REA is selected, the official setup is staged and only the managed `mcp_servers.rea` table is merged into the actual `CODEX_HOME/config.toml`; all other Codex entries and comments remain user-owned.
+For Codex reverse-only installation, `config.toml` is not created unless REA is selected. When REA is selected, the official setup is staged and only the managed `mcp_servers.rea` table is merged into the actual `CODEX_HOME/config.toml`; unrelated Codex values are checked again after assembly and user comments are retained. REA comments may move out of that table during setup. A conditional restore after unrelated user edits can retain a moved comment and restore its original copy; this cosmetic duplication does not imply lost or changed configuration values, and the installer does not promise byte-for-byte TOML formatting.
 
 Install the Codex reverse-workflow Skill in `CODEX_HOME/skills` or an explicitly selected Codex Skills root. The reverse Codex plugin is optional; its presence does not replace the global Skill, MCP registration, or the enhanced reverse repository.
 
-Register REA through the official setup/registration path and preserve all unrelated Codex MCP tables. Install Spec Kit with the official Codex integration. If the user selects upstream Craft Anything for Codex, use its official Codex setup and doctor flow; preserve the `rebuild_start` approval and Craft consent boundaries. Do not install Pi profiles, shell-guard, or Craft-Pi native resources into Codex.
+Register REA through the official setup/registration path and preserve all unrelated Codex MCP tables. Install Spec Kit with the official Codex integration. If the user selects upstream Craft Anything for Codex, use its official Codex setup and doctor flow and record the exact upstream version/commit. The standalone `setup` entry runs `craft-anything-cli mcp` without an app inbox: `rebuild_start` returns `consent_required` and does not start a build. App-started builds obtain consent through the app. Adding `--allow-run` is a separate explicit user choice that permits code-running tools; installation must not add it silently or enable blanket tool approval. Setup/doctor establishes upstream host integration only; this repository has not qualified that Codex route against the full R46 bounded execution contract. Use the default Worker until the original runner has an actually qualified backend and an accepted batch handoff. Do not install Pi profiles, shell-guard, or Craft-Pi native resources into Codex.
 
 ### Claude Desktop
 

@@ -33,13 +33,13 @@
 | 设计能力 | [Impeccable](impeccable.md)、下方 UI/UX Pro Max 与 unslop 官方来源 | 推荐用于含 UI 的开发环境；纯后端目标可省略；各技能按任务选择，不绑定全套必用 |
 | 访谈与领域建模 | 官方 grilling/domain-modeling，按需加 grill-me/grill-with-docs；Pi 使用[两个独立 wrappers](pi-grilling-wrappers.md) | 按[快速开始](quick-start.md#pi-grilling-伴随技能)安装官方输入再生成 wrappers，不修改官方正文，不作为每次任务审批门 |
 
-核心安装器按 `components.json` 和官方元数据解析版本：REA/Spec Kit 新 plan 默认解析官方稳定包，reverse 优先正式 release；需要固定 Spec 时见[版本指南](version-pins.md)。当前公开分发为 installer core **0.7.0**、reverse **1.9.0**，可选 native Craft-Pi **0.1.1**，获取 helper **0.1.1**；这些是分发身份，不是个人电脑快照。main 提供当前教程与资源，冻结资产仍依正式 pins 取得，不修改旧 tag 或伪造回执。
+核心安装器按 `components.json` 和官方元数据解析版本：REA/Spec Kit 新 plan 默认解析官方稳定包，reverse 默认冻结增强仓库 main 的确切 commit，不回退旧 release；可选 Craft-Pi 获取继续使用独立正式 pin；需要固定 Spec 时见[版本指南](version-pins.md)。当前公开分发为 installer core **0.7.0**、reverse **1.9.0**，可选 native Craft-Pi **0.1.1**，获取 helper **0.1.1**；这些是分发身份，不是个人电脑快照。main 提供当前教程与资源，冻结资产仍依正式 pins 取得，不修改旧 tag 或伪造回执。
 
 ## 按用途选择可选能力
 
 | 能力 | 公开来源 / 安装路线 | 什么时候选择 |
 |---|---|---|
-| Craft 能力 | 上游 Craft Anything Codex/MCP 路线；我们的 `craft-pi` bounded execution backend | Codex 使用上游官方 `craft-anything-cli setup --client codex --yes` 与 `doctor --client codex`，保留 Codex approval/Craft consent；Pi 才可选择我们自己的 `craft-pi` bundle。两者必须分开记录，不能把 Craft-Pi receipt 当作上游 Craft Codex 支持 |
+| Craft 能力 | 上游 Craft Anything Codex/MCP 路线；我们的 `craft-pi` bounded execution backend | Codex 可按上游官方 setup/doctor 准备 MCP；standalone setup 的 `rebuild_start` 默认返回 `consent_required`，须从 app 同意，或由用户另行明确选择 `--allow-run`（安装器不静默增加）。该 Codex 路线尚未取得我们的完整 R46 bounded backend 资格，默认实现继续 Worker。Pi 才可选择 `craft-pi`；分别记录身份与资格 |
 | shell-guard 与 Everything | [shell-guard 指南](shell-guard-install.md)，固定 `shell-guard-v0.3.0`；[Everything GUI](https://www.voidtools.com/downloads/) 与独立 [es CLI](https://www.voidtools.com/support/everything/command_line_interface/) | Pi 需要命令检查时显式选；`all` 不包含。Everything 按 Windows 支持范围准备实际 CLI/GUI 路径和索引，安装器不安装 Everything |
 | 专业分析引擎 | REA 官方文档及对应分析工具指南；按实际任务准备 Java、Ghidra、JADX 所需引擎等 | 工具 schema 存在不代表引擎已安装；缺某引擎不阻塞其他适用工作流 |
 | 桌面操作 / 网页搜索 | [pi-computer-use](https://github.com/injaneity/pi-computer-use)、[pi-web-access](https://github.com/nicobailon/pi-web-access) | Pi 需要桌面或网络能力时安装；按目标 OS/helper/权限和所选包版本准备，搜索 provider 按需配置 |

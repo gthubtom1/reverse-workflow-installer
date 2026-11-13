@@ -14,7 +14,7 @@ import uuid
 from types import SimpleNamespace
 from datetime import datetime, timezone
 
-from configuration import Journal, atomic, codex_merge, digest, encode_json, load_json, restore_journal, toml_parts
+from configuration import Journal, atomic, codex_merge, digest, encode_json, load_json, restore_journal, toml_parts, managed_section, section_block
 from versions import COMPONENTS, InstallError, resolve, stable
 import package_utils as pu
 import shell_guard as sg
@@ -102,21 +102,23 @@ def detect_client(client, config=None, env=None, agent_dir=None):
     configs = []
     if config and config.exists():
         configs.append(config)
-    elif agent_dir:
+    if agent_dir:
         agent_dir = Path(agent_dir)
-        configs.extend(path for path in (agent_dir / "config.toml", agent_dir / "mcp.json", agent_dir / "claude_desktop_config.json") if path.exists())
+        configs.extend(path for path in (agent_dir / "config.toml", agent_dir / "settings.json", agent_dir / "mcp.json", agent_dir / "claude_desktop_config.json") if path.exists() and path not in configs)
     for candidate in configs:
         if candidate.suffix == ".json":
             value = load_json(candidate, {})
-            if str(value.get("$schema", "")).startswith("https://pi.dev/schemas/") or (candidate.name == "mcp.json" and isinstance(value.get("mcpServers"), dict)):
+            if not isinstance(value, dict):
+                raise InstallError(f"宿主配置必须是 JSON 对象: {candidate}")
+            if str(value.get("$schema", "")).startswith("https://pi.dev/schemas/"):
                 evidence.add("pi")
-                names.append("Pi configuration schema/name and mcpServers")
+                names.append("Pi configuration schema")
             elif candidate.name == "claude_desktop_config.json" and isinstance(value.get("mcpServers"), dict):
                 evidence.add("claude")
                 names.append("Claude Desktop configuration name and mcpServers")
         elif candidate.name == "config.toml":
             value, _, _ = toml_parts(candidate.read_bytes())
-            if any(k in value for k in ("approval_policy", "sandbox_mode", "model_reasoning_effort")) or isinstance(value.get("mcp_servers"), dict):
+            if any(k in value for k in ("approval_policy", "sandbox_mode", "model_reasoning_effort")):
                 evidence.add("codex")
                 names.append("Codex config.toml and Codex configuration tables")
     if len(evidence) != 1:
@@ -179,7 +181,7 @@ def scope(args):
         raise InstallError("shell-guard 路径/配置参数需要 --with-shell-guard 或显式 shell-guard 组件")
     explicit = abs_path(args.client_config) if args.client_config else None
     agent_hint = abs_path(args.agent_dir) if args.agent_dir else (explicit.parent if explicit else None)
-    if needs_host(components):
+    if needs_host(components) or (args.client == "auto" and (agent_hint or explicit)):
         if args.client == "none":
             raise InstallError("所选组件需要宿主；请指定 --client pi 或 --client codex")
         client, evidence = detect_client(args.client, explicit, agent_dir=agent_hint)
@@ -284,11 +286,23 @@ def reverse_identity(path):
 
 
 def reverse_identity_matches(stored, current):
-    """Compare stored identity fields; legacy receipts without the source-hash marker keep commit/dirty evidence."""
+    """Compare stored identity fields while retaining compatibility with older receipts."""
     if not isinstance(stored, dict) or not isinstance(current, dict):
         return False
     for key, value in stored.items():
         if key == "working_tree_sha256" and not stored.get("source_hash_algorithm"):
+            # Legacy receipts recorded commit/dirty state but did not define the
+            # algorithm used for a full source hash.
+            continue
+        if key == "entry_hashes":
+            # Entry inventories are append-only compatibility evidence. Older
+            # receipts can contain a strict subset when a newer adapter adds
+            # optional router/plugin entries; every recorded byte must still
+            # match the current source.
+            if not isinstance(value, dict) or not isinstance(current.get(key), dict):
+                return False
+            if any(current[key].get(name) != digest_value for name, digest_value in value.items()):
+                return False
             continue
         if current.get(key) != value:
             return False
@@ -334,7 +348,7 @@ def source_tree_hash(path):
     return hasher.hexdigest()
 
 
-def tree_hash(path, exclude_git=False):
+def tree_hash(path, exclude_git=False, *, installer_outputs=False):
     """Hash stable files without writing bytecode; Git roots use source-only hashing, others a plain walk."""
     directory = Path(path)
     if exclude_git:
@@ -346,7 +360,10 @@ def tree_hash(path, exclude_git=False):
         relative = item.relative_to(directory)
         if "__pycache__" in relative.parts or item.suffix == ".pyc":
             continue
-        if exclude_git and (".git" in relative.parts or "__pycache__" in relative.parts):
+        if exclude_git and ".git" in relative.parts:
+            continue
+        if installer_outputs and relative.parts[0] == ".local":
+            # Only the installer's root output directory is outside its source.
             continue
         if item.is_symlink():
             hasher.update(relative.as_posix().encode() + b"\0link\0" + os.readlink(item).encode())
@@ -448,6 +465,7 @@ def installer_identity():
     source = source_tree_hash(REPO)
     commit = None
     dirty = None
+    branch = None
     if (REPO / ".git").exists():
         try:
             commit = run(["git", "-C", REPO, "rev-parse", "HEAD"], cwd=REPO)
@@ -455,11 +473,16 @@ def installer_identity():
         except InstallError:
             commit = None
             dirty = None
-    return {"root": str(REPO.resolve()), "commit": commit, "branch": None, "dirty": dirty, "working_tree_sha256": source if source is not None else tree_hash(REPO, exclude_git=True), "source_hash_algorithm": "git-ls-files" if source is not None else "tree-walk"}
+        try:
+            branch = run(["git", "-C", REPO, "symbolic-ref", "--quiet", "--short", "HEAD"], cwd=REPO) or None
+        except InstallError:
+            pass  # Detached/unavailable branch is unknown, never assumed main.
+    return {"root": str(REPO.resolve()), "commit": commit, "branch": branch, "dirty": dirty, "working_tree_sha256": source if source is not None else tree_hash(REPO, exclude_git=True, installer_outputs=True), "source_hash_algorithm": "git-ls-files" if source is not None else "tree-walk"}
 
 
 def make_plan(args, fetch=None):
     selected = scope(args)
+    codex_entry_preflight(selected)
     manifest = load_json(REPO / "components.json")
     craft_local = craft_inputs = None
     if "craft" in selected["components"]:
@@ -517,6 +540,11 @@ def make_plan(args, fetch=None):
     config = Path(selected["client_config"]) if selected["client_config"] else None
     settings = Path(selected["agent_dir"]) / "settings.json" if selected["agent_dir"] and selected["client"] == "pi" else None
     input_paths = [p for p in (config, settings) if p is not None]
+    if selected["client"] == "codex" and "reverse" in selected["components"] and selected.get("agent_dir"):
+        input_paths.extend([
+            Path(selected["agent_dir"]) / "AGENTS.md",
+            Path(selected["codex_skills_root"]) / "reverse-workflow/SKILL.md",
+        ])
     inputs = {str(p): digest(p.read_bytes()) if p.exists() else None for p in input_paths}
     commands = []
     if "rea" in selected["components"]:
@@ -585,6 +613,11 @@ def validate_plan(plan):
         expected_configs.append(Path(selected["client_config"]))
     if selected["client"] == "pi" and selected["agent_dir"]:
         expected_configs.append(Path(selected["agent_dir"]) / "settings.json")
+    if selected["client"] == "codex" and "reverse" in selected["components"] and selected.get("agent_dir"):
+        expected_configs.extend([
+            Path(selected["agent_dir"]) / "AGENTS.md",
+            Path(selected["codex_skills_root"]) / "reverse-workflow/SKILL.md",
+        ])
     if set(plan["config_inputs"]) != {str(p) for p in expected_configs}:
         raise InstallError("冻结计划的配置输入范围不一致")
     manifest = load_json(REPO / "components.json")
@@ -615,6 +648,7 @@ def validate_plan(plan):
         p = Path(name)
         if (digest(p.read_bytes()) if p.exists() else None) != expected:
             raise InstallError(f"配置自 plan 后发生漂移，拒绝应用: {p}；重新生成计划")
+    codex_entry_preflight(selected)
 
 
 @contextlib.contextmanager
@@ -714,12 +748,15 @@ IDENTITY_KEYS = ("root", "client", "agent_dir", "codex_skills_root", "client_con
 ALL_COMPONENTS = list(COMPONENTS)
 
 
-def normalized_identity(scope_value):
+def normalized_identity(scope_value, components=None):
     value = scope_value if isinstance(scope_value, dict) else {}
+    recorded_components = list(components) if components is not None else value.get("components")
+    if not recorded_components:
+        recorded_components = ["rea", "spec_kit", "reverse"]
     identity = {}
     for key in IDENTITY_KEYS:
         raw = value.get(key)
-        if key == "codex_skills_root" and not raw and value.get("client") == "codex" and "reverse" in (value.get("components") or []):
+        if key == "codex_skills_root" and not raw and value.get("client") == "codex" and "reverse" in recorded_components:
             # Legacy Codex receipts predate the explicit user Skills root.
             raw = Path(value.get("agent_dir")) / "skills" if value.get("agent_dir") else (Path.home() / ".codex" / "skills")
         if key == "client":
@@ -727,6 +764,27 @@ def normalized_identity(scope_value):
         else:
             identity[key] = str(abs_path(raw)) if raw else None
     return identity
+
+
+def identity_compatible(previous_scope, previous_components, selected_scope):
+    previous_identity = normalized_identity(previous_scope, previous_components)
+    selected_identity = normalized_identity(selected_scope, selected_scope.get("components"))
+    if previous_identity == selected_identity:
+        return True
+    # Adding reverse to an existing Codex package-only root establishes the
+    # user Skills location for the first time; it does not move that root.
+    if (
+        previous_identity.get("client") == selected_identity.get("client") == "codex"
+        and "reverse" not in previous_components
+        and "reverse" in (selected_scope.get("components") or [])
+        and not (previous_scope or {}).get("codex_skills_root")
+    ):
+        previous_without_skills = dict(previous_identity)
+        selected_without_skills = dict(selected_identity)
+        previous_without_skills["codex_skills_root"] = None
+        selected_without_skills["codex_skills_root"] = None
+        return previous_without_skills == selected_without_skills
+    return False
 
 
 def receipt_components(receipt):
@@ -811,9 +869,11 @@ def owned_project_file(path, ownership):
     return digest(data) in ownership.get(ownership_key(path), ())
 
 
-def write_host_file(journal, ownership, path, data, *, client, legacy=(), owner_receipt=None, entries=None):
-    """Allow current==desired or bytes this installer recorded; reject user edits and other roots."""
+def check_host_file(ownership, path, data, *, client, legacy=(), owner_receipt=None):
+    """Read-only check shared by plan and activation."""
     path = Path(path)
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise InstallError(f"{client} 宿主文件路径不是普通文件: {path}")
     current = path.read_bytes() if path.exists() else None
     if current is not None and current != data:
         allowed = set(ownership.get(ownership_key(path), ())) | set(legacy)
@@ -821,10 +881,61 @@ def write_host_file(journal, ownership, path, data, *, client, legacy=(), owner_
             other = re.search(r"([A-Za-z]:[\\/][^\s`\"']*?|/[^\s`\"']*?)[\\/]\.installer[\\/]receipt\.json", current.decode("utf-8", "replace"))
             if other and owner_receipt is not None and abs_path(Path(other.group(1)) / ".installer/receipt.json") != abs_path(owner_receipt):
                 raise InstallError(f"{client} 宿主文件属于另一安装根 {other.group(1)}，拒绝覆盖: {path}；同一 agent/项目只能由一个安装根管理，请先 restore 并清理旧 root，或改用独立的 --agent-dir/--project")
-            raise InstallError(f"{client} 宿主文件已被用户修改，拒绝覆盖: {path}；请先备份/移走该文件，或 restore 后再更新")
+            raise InstallError(f"{client} 宿主文件已被用户修改，拒绝覆盖: {path}；请审阅受管入口冲突")
+
+
+def write_host_file(journal, ownership, path, data, *, client, legacy=(), owner_receipt=None, entries=None):
+    check_host_file(ownership, path, data, client=client, legacy=legacy, owner_receipt=owner_receipt)
     journal.write(path, data)
     if entries is not None:
-        entries[str(path.resolve())] = digest(data)
+        entries[str(Path(path).resolve())] = digest(data)
+
+
+def codex_agents_merge(path, body, receipt_path, previous, ownership):
+    path = Path(path)
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise InstallError(f"Codex AGENTS.md 路径不是普通文件: {path}")
+    current = path.read_bytes() if path.exists() else b""
+    block = section_block(body, receipt_path)
+    section = managed_section(current)
+    if section:
+        owner, start, end, existing = section
+        if ownership_key(owner) != ownership_key(receipt_path):
+            raise InstallError(f"Codex AGENTS.md section 属于另一安装根，拒绝覆盖: {path}")
+        recorded = previous.get("managed_agents") or {}
+        if existing != block and digest(existing) != recorded.get("sha256"):
+            raise InstallError(f"Codex AGENTS.md 受管 section 已被用户修改，拒绝覆盖: {path}")
+        return current[:start] + block + current[end:], block
+    if current and digest(current) in ownership.get(ownership_key(path), ()):
+        # Migrate an unchanged legacy installer-owned whole file.
+        return block, block
+    # An unmarked legacy bridge still owns its receipt. Do not combine two
+    # installations merely because the new Skills directory happens to be empty.
+    text = current.decode("utf-8", "replace")
+    receipt_refs = re.findall(r'''[`"']((?:[A-Za-z]:[\\/]|/)[^`\r\n"']*[\\/]\.installer[\\/]receipt\.json)[`"']''', text)
+    receipt_refs.extend(re.findall(r'''(?:^|\s)((?:[A-Za-z]:[\\/]|/)[^\s`"']*[\\/]\.installer[\\/]receipt\.json)''', text))
+    if receipt_refs:
+        if any(ownership_key(ref) != ownership_key(receipt_path) for ref in receipt_refs):
+            raise InstallError(f"Codex AGENTS.md 旧入口属于另一安装根，拒绝追加第二入口: {path}")
+        raise InstallError(f"Codex AGENTS.md 旧受管入口没有匹配的所有权记录或已被用户修改；请审阅冲突: {path}")
+    # Existing user instructions remain byte-for-byte before the managed bridge.
+    separator = b"\n" if current and not current.endswith(b"\n") else b""
+    return current + separator + block, block
+
+
+def codex_entry_preflight(selected):
+    if selected.get("client") != "codex" or "reverse" not in selected.get("components", []):
+        return None
+    receipt_path = Path(selected["root"]) / ".installer/receipt.json"
+    previous = load_json(receipt_path, {})
+    ownership = ownership_index(selected["root"], previous)
+    skill_path = Path(selected["codex_skills_root"]) / "reverse-workflow/SKILL.md"
+    skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
+    body = (REPO / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).replace("{{CODEX_SKILL_ENTRY}}", str(skill_path)).encode()
+    agents_path = Path(selected["agent_dir"]) / "AGENTS.md"
+    agents, block = codex_agents_merge(agents_path, body, receipt_path, previous, ownership)
+    check_host_file(ownership, skill_path, skill, client="Codex", owner_receipt=receipt_path)
+    return agents_path, agents, block, skill_path, skill
 
 
 def _install(plan, args):
@@ -842,9 +953,10 @@ def _install(plan, args):
     previous_selection = receipt_components(previous) if installed else []
     if installed:
         previous_scope = previous.get("scope") or {}
-        if previous_scope.get("client") == "codex" and previous_scope.get("project") and not selected.get("project") and "reverse" in previous_selection:
+        previous_components = receipt_components(previous)
+        if previous_scope.get("client") == "codex" and previous_scope.get("project") and not selected.get("project") and "reverse" in previous_components:
             raise InstallError("旧 Codex receipt 仍管理项目范围；全局化迁移不会静默删除项目入口。使用同一 project 完成保守更新，或选择新的安装 root 重新建立 CODEX_HOME 全局安装")
-        if normalized_identity(previous.get("scope")) != normalized_identity(selected):
+        if not identity_compatible(previous_scope, previous_components, selected):
             raise InstallError("安装根已属于另一客户端/agent/项目范围；请选新 root，或 restore 后安装")
         removed = set(previous_selection) - set(selection)
         if removed and (removed != {"project_continuity"} or not plan.get("retired_project_continuity")):
@@ -1035,6 +1147,7 @@ def _install(plan, args):
         adapter_key = adapter_identity_key() if client == "pi" else None
         adapter = None
         entry_hashes = {}
+        managed_agents = None
         if client == "pi" and ("reverse" in selection or resources["rea_manual"]):
             adapter = root / "adapters" / adapter_key / "pi"
             if "reverse" in selection:
@@ -1056,11 +1169,10 @@ def _install(plan, args):
             if "reverse" in selection:
                 write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", pi_global_skill_text(receipt_path).encode(), client="Pi", legacy=legacy_skill, owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "codex":
-            codex_skill_root = Path(selected["codex_skills_root"])
-            skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
-            agents = (REPO / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).replace("{{CODEX_SKILL_ENTRY}}", str(codex_skill_root / "reverse-workflow/SKILL.md")).encode()
-            write_host_file(journal, ownership, agent / "AGENTS.md", agents, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
-            write_host_file(journal, ownership, codex_skill_root / "reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
+            agents_path, agents, block, skill_path, skill = codex_entry_preflight(selected)
+            journal.write(agents_path, agents, "section")
+            managed_agents = {"path": str(agents_path.resolve()), "owner": str(receipt_path.resolve()), "sha256": digest(block)}
+            write_host_file(journal, ownership, skill_path, skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "claude":
             skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
             write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
@@ -1237,6 +1349,7 @@ def _install(plan, args):
             "resource_selection": resources,
             "entry_hashes": entry_hashes,
             "managed_rea_config": managed_rea,
+            "managed_agents": managed_agents,
             "hashes": complete,
             "checks": checks,
             "validation": limits(),
@@ -1343,9 +1456,17 @@ def verify(root):
         global_agents = agent / "AGENTS.md"
         if not global_agents.is_file() or str(root / ".installer/receipt.json") not in global_agents.read_text(encoding="utf-8"):
             failures.append("Codex AGENTS.md missing or receipt path drift")
-        global_skill = Path(scope.get("codex_skills_root") or ((Path(scope["agent_dir"]) / "skills") if scope.get("agent_dir") else (Path.home() / ".codex" / "skills"))) / "reverse-workflow/SKILL.md"
+        global_skill = Path(normalized_identity(scope, selection)["codex_skills_root"]) / "reverse-workflow/SKILL.md"
         if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
             failures.append("Codex global Skill missing or receipt path drift")
+        managed_agents = receipt.get("managed_agents")
+        if managed_agents:
+            try:
+                section = managed_section(global_agents.read_bytes())
+                if not section or ownership_key(section[0]) != ownership_key(root / ".installer/receipt.json") or digest(section[3]) != managed_agents.get("sha256"):
+                    failures.append("Codex AGENTS.md managed section drift")
+            except (InstallError, OSError):
+                failures.append("Codex AGENTS.md managed section unreadable")
     elif client == "claude" and "reverse" in selection:
         global_skill = agent / "skills/reverse-workflow/SKILL.md"
         if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):

@@ -5,7 +5,7 @@ Impeccable 是官方设计技能。只有一个主技能 `impeccable`；`critiqu
 - 来源：<https://github.com/pbakaus/impeccable>
 - 固定 commit：`cf7ea4a8fe56f3e186e9ffaca3124937e36e6430`
 - 上游目录：[.pi/skills/impeccable/](https://github.com/pbakaus/impeccable/tree/cf7ea4a8fe56f3e186e9ffaca3124937e36e6430/.pi/skills/impeccable)
-- 本仓复制源：`resources/external-skills/impeccable/`，58 个官方技能文件及同一 commit 的原始 LICENSE、NOTICE.md。来源说明见 [external-skills README](../resources/external-skills/README.md)。
+- 本仓复制源：`resources/external-skills/impeccable/`，58 个官方技能文件及同一 commit 的原始 LICENSE；NOTICE.md 调整本地引用路径并补充分发来源说明，另附 platform-design-skills 的 MIT 原文。复制时保留整个目录，包括 `THIRD_PARTY_LICENSES/`。许可证查验 ref 不证明派生内容使用的上游版本。来源说明见 [external-skills README](../resources/external-skills/README.md)。
 
 ## 安装操作
 

@@ -17,7 +17,7 @@
   "reverse": {
     "repository": "https://github.com/gthubtom1/reverse-skill",
     "api": "https://api.github.com/repos/gthubtom1/reverse-skill",
-    "policy": "latest-release-or-main-resolved-commit"
+    "policy": "main-resolved-commit"
   },
   "craft": {
     "repository": "https://github.com/storytold/craft-anything",
