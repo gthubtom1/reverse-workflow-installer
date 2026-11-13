@@ -75,7 +75,9 @@ def needs_host(components):
 
 
 def needs_project(components):
-    return "spec_kit" in components
+    # Spec Kit's CLI can be installed globally; its project templates are
+    # generated only when the user explicitly supplies a project scope.
+    return False
 
 
 def needs_agent(components, client):
@@ -490,8 +492,9 @@ def make_plan(args, fetch=None):
             commands.extend([f"rea setup --client {selected['client']} --skill=false --dry-run --json", f"rea setup --client {selected['client']} --skill=false --yes --json"])
     if "spec_kit" in selected["components"]:
         commands.append(("核验只读复用 Spec Kit tools/bin: " + selected["spec_kit_tools"] + " / " + selected["spec_kit_bin"] + " @" + components["spec_kit"]["version"]) if selected["spec_kit_tools"] else ("uv --no-config tool install --default-index https://pypi.org/simple specify-cli==" + components["spec_kit"]["version"]))
-        init_preview = specify_init_args("<specify>", "<staging-project>", selected["client"])
-        commands.append(" ".join(init_preview))
+        if selected.get("project"):
+            init_preview = specify_init_args("<specify>", "<staging-project>", selected["client"])
+            commands.append(" ".join(init_preview))
     if retirement:
         commands.append("移除旧 receipt 中可唯一识别的 project-continuity Pi 包注册；旧包目录保留在历史版本目录")
     if "shell_guard" in selected["components"]:
@@ -968,7 +971,7 @@ def _install(plan, args):
         generated = tx / "project"
         generated_files = []
         ownership = ownership_index(root, previous)
-        init_project = "spec_kit" in selection and "spec_kit" not in previous_selection
+        init_project = "spec_kit" in selection and "spec_kit" not in previous_selection and project is not None
         if init_project:
             foreign = [] if not project.exists() else [p for p in project.rglob("*") if (p.is_file() or p.is_symlink()) and not owned_project_file(p, ownership)]
             if foreign:
@@ -1018,8 +1021,6 @@ def _install(plan, args):
             codex_skill_root = Path(selected["codex_skills_root"])
             write_host_file(journal, ownership, agent / "AGENTS.md", agents, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
             write_host_file(journal, ownership, codex_skill_root / "reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
-            if project:
-                write_host_file(journal, ownership, project / ".agents/skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "claude":
             skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
             write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
@@ -1297,9 +1298,7 @@ def verify(root):
             failures.append("Codex AGENTS.md missing or receipt path drift")
         global_skill = Path(scope.get("codex_skills_root") or ((Path(scope["agent_dir"]) / "skills") if scope.get("agent_dir") else (Path.home() / ".codex" / "skills"))) / "reverse-workflow/SKILL.md"
         if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
-            failures.append("Codex user Skill missing or receipt path drift")
-        if project and not (project / ".agents/skills/reverse-workflow/SKILL.md").is_file():
-            failures.append("Codex project entry missing")
+            failures.append("Codex global Skill missing or receipt path drift")
     elif client == "claude" and "reverse" in selection:
         global_skill = agent / "skills/reverse-workflow/SKILL.md"
         if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
@@ -1376,11 +1375,12 @@ def accept(root):
             version = object_output(run([specify, "version", "--json"], cwd=root), "specify version")
             expected = receipt["components"]["spec_kit"]["version"]
             check("spec_kit_version", version.get("cli_version") == expected, {"expected": expected, "observed": version.get("cli_version")})
-            with tempfile.TemporaryDirectory(prefix="speckit-acceptance-") as temp:
-                project = Path(temp) / "project"
-                init_args = specify_init_args(specify, project, receipt["scope"]["client"])
-                completed = subprocess.run(init_args, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
-                check("spec_kit_init", completed.returncode == 0 and (project / ".specify").is_dir(), {"returncode": completed.returncode, "native": str(project / ".specify") if (project / ".specify").is_dir() else None})
+            if receipt["scope"].get("project"):
+                with tempfile.TemporaryDirectory(prefix="speckit-acceptance-") as temp:
+                    project = Path(temp) / "project"
+                    init_args = specify_init_args(specify, project, receipt["scope"]["client"])
+                    completed = subprocess.run(init_args, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+                    check("spec_kit_init", completed.returncode == 0 and (project / ".specify").is_dir(), {"returncode": completed.returncode, "native": str(project / ".specify") if (project / ".specify").is_dir() else None})
         except (InstallError, OSError, subprocess.TimeoutExpired) as exc:
             check("spec_kit", False, str(exc))
     result["note"] = "accept 只使用临时验收目录和官方诊断；不会修改活动宿主配置、REA/Spec Kit 包或用户成果项目"

@@ -43,7 +43,7 @@ The host entry points are thin adapters to this same reverse source:
 | Host | Reverse entry | What remains authoritative |
 |---|---|---|
 | Pi / Pi Web | Pi package `reverse-workflow` Skill and receipt pointer | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
-| Codex | `CODEX_HOME/AGENTS.md` + `CODEX_HOME/skills/reverse-workflow`; optional project `.agents/skills/reverse-workflow` when a project is selected | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
+| Codex | `CODEX_HOME/AGENTS.md` + `CODEX_HOME/skills/reverse-workflow` | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
 | Claude Desktop / supported Claude route | project Skill and `CLAUDE.md` bridge | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
 
 The reverse entry is the first professional workflow step. The route is:
@@ -62,7 +62,7 @@ The combined installer owns selection, isolation, version identity, transaction 
 | Component | Official upstream route | Combined-installer boundary |
 |---|---|---|
 | REA | `npx rea-agents setup`; review the proposed host changes, approve them, and restart the host. Official setup adds the REA MCP server and matching workflow instructions. | Resolve the official `rea-agents` package and Node engine, run the selected official setup in an isolated transaction, merge only the selected host entry, preserve other configuration, record exact identity, then verify MCP handshake and tools separately. |
-| Spec Kit | `specify init <project> --integration <pi|codex|claude>`; for an existing project use the official integration install command. | Invoke the selected official integration, keep the project outside the tool repository, preserve existing project files, and record the generated native skills/prompts. Do not generate a second Spec Kit workflow. |
+| Spec Kit | `specify init <project> --integration <pi|codex|claude>` when a project is explicitly selected; otherwise install the official `specify` tool without creating project files. | Keep the official CLI/tool environment in the global installer root. Generate project constitution/spec/skills only for the selected project; do not make those project files the global reverse entry. |
 | enhanced reverse-skill | The public enhanced repository's `RULES.md`, native router, `skills/config/routing.json`, and selected PRIMARY skill. | Record the exact release/main commit or an explicitly supplied read-only local source. Do not copy the router into the installer or create a second case/Evidence authority. |
 | Craft Anything upstream | Use the upstream CLI/setup for the selected host. For Codex, the official route is `craft-anything-cli setup --client codex --yes`, followed by `craft-anything-cli doctor --client codex`; it writes the upstream Craft MCP entry and its Codex approval shape. | Treat this as an upstream Craft host integration. Preserve its approval/consent semantics and backup behavior. Do not represent it as the native Craft-Pi execution backend. |
 | Craft-Pi execution backend | The combined installer's `craft-pi` bundle, entry contract, Pi RPC driver, and separate official Pi/Node distribution. | This is our optional Pi-specific bounded execution backend. It requires the explicit reverse/Spec contract, local verified bundle, standalone Pi/Node identity, owner/cleanup gates, and independent acceptance. It is not a generic Craft host adapter. |
@@ -86,9 +86,9 @@ These Codex surfaces share the Codex host configuration for the selected `CODEX_
 - repository Skills: `.agents/skills/` from the current directory up to the repository root;
 - project-scoped MCP: trusted project `.codex/config.toml` when the user selects that scope.
 
-For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge and the user Skill. This is the selected Codex host scope; the bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. If a project is selected, also write its `.agents/skills/reverse-workflow` bridge for portability. If an existing global file has user-owned content or a different installer receipt, stop and report the conflict rather than overwriting it.
+For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge and the global Skill. This is the selected Codex host scope; the bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. An existing global file with user-owned content or a different installer receipt causes a conflict instead of an overwrite.
 
-Install the Codex reverse-workflow Skill in `CODEX_HOME/skills` or an explicitly selected Codex Skills root. The project `.agents/skills/reverse-workflow` entry is optional and only provides a portable project bridge; it is not the global source of the workflow. The reverse Codex plugin is optional; its presence does not replace the global Skill, MCP registration, or the enhanced reverse repository.
+Install the Codex reverse-workflow Skill in `CODEX_HOME/skills` or an explicitly selected Codex Skills root. The reverse Codex plugin is optional; its presence does not replace the global Skill, MCP registration, or the enhanced reverse repository.
 
 Register REA through the official setup/registration path and preserve all unrelated Codex MCP tables. Install Spec Kit with the official Codex integration. If the user selects upstream Craft Anything for Codex, use its official Codex setup and doctor flow; preserve the `rebuild_start` approval and Craft consent boundaries. Do not install Pi profiles, shell-guard, or Craft-Pi native resources into Codex.
 

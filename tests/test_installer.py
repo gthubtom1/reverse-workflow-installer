@@ -287,8 +287,10 @@ class Fixture(unittest.TestCase):
         atomic(self.agent / "config.toml", b'model = "keep"\n[mcp_servers.user]\ncommand = "user"\n')
         result = self.install()
         self.assertTrue(w.verify(self.root)["ok"])
-        text = (self.project / ".agents/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8")
+        text = (Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md").read_text(encoding="utf-8")
         self.assertIn(str(self.root / ".installer/receipt.json"), text)
+        self.assertIn(str(self.root / ".installer/receipt.json"), (self.agent / "AGENTS.md").read_text(encoding="utf-8"))
+        self.assertFalse((self.project / ".agents/skills/reverse-workflow/SKILL.md").exists())
         self.assertEqual(result["scope"]["client"], "codex")
         self.assertTrue(any("--integration" in c and "codex" in c for c in self.calls))
         self.assertFalse(any("plugin" in c for c in self.calls))
@@ -526,11 +528,12 @@ class Fixture(unittest.TestCase):
     def test_codex_subset_writes_global_and_project_entries(self):
         self.args.components = "reverse"
         self.args.client = "codex"
+        self.args.project = None
         receipt = self.install()
         self.assertTrue((self.agent / "AGENTS.md").is_file())
         self.assertTrue((Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md").is_file())
-        self.assertTrue((self.project / ".agents/skills/reverse-workflow/SKILL.md").is_file())
-        self.assertIn(str(self.root / ".installer/receipt.json"), (self.agent / "AGENTS.md").read_text(encoding="utf-8"))
+        self.assertFalse((self.project / ".agents/skills/reverse-workflow/SKILL.md").exists())
+        self.assertIsNone(receipt["scope"]["project"])
         self.assertEqual(receipt["scope"]["components"], ["reverse"])
         self.assertTrue(w.verify(self.root)["ok"])
 
@@ -679,7 +682,7 @@ class Fixture(unittest.TestCase):
         self.args.components = "reverse"
         self.args.client = "codex"
         self.install()
-        entry = self.project / ".agents/skills/reverse-workflow/SKILL.md"
+        entry = Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md"
         self.assertTrue(entry.is_file())
         self.args.components = "reverse,spec-kit"
         receipt = self.install()

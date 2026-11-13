@@ -66,7 +66,7 @@ python scripts/install.py install --root ../workflow --plan-file .local/plan.jso
 python scripts/install.py verify --root ../workflow
 ```
 
-Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--client codex --agent-dir ../workflow/codex-home`。启动宿主时，Pi 使用 `PI_CODING_AGENT_DIR` 指向同一 agent 目录，Codex 使用 `CODEX_HOME` 指向同一目录，并从成果项目工作。Codex reverse 安装的主入口是实际 `CODEX_HOME/AGENTS.md`、`CODEX_HOME/config.toml` 和 `CODEX_HOME/skills/reverse-workflow`；如果同时选择成果项目，再额外写入项目 `.agents/skills/reverse-workflow` 作为便携桥接。若目标电脑使用自定义 Codex Skills 根，显式增加 `--codex-skills-root <实际路径>`。不要把项目级入口当成全局入口。环境变量仅对该进程设置；无需修改系统设置。Pi Web/SDK 必须核对实际启动配置，不能把 CLI 示例当作 Web 已加载的证据。
+Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--client codex --agent-dir ../workflow/codex-home`。启动宿主时，Pi 使用 `PI_CODING_AGENT_DIR` 指向同一 agent 目录，Codex 使用 `CODEX_HOME` 指向同一目录，并从成果项目工作。Codex reverse 安装的主入口是实际 `CODEX_HOME/AGENTS.md`、`CODEX_HOME/config.toml` 和 `CODEX_HOME/skills/reverse-workflow`。若目标电脑使用自定义 Codex Skills 根，显式增加 `--codex-skills-root <实际路径>`；项目目录不是 Reverse 全局安装的前提。环境变量仅对该进程设置；无需修改系统设置。Pi Web/SDK 必须核对实际启动配置，不能把 CLI 示例当作 Web 已加载的证据。
 
 `plan` 输出完整 JSON：范围、来源、精确版本、Node 要求、命令摘要、现有配置摘要、缺少依赖和未验证项。`--output` 将 UTF-8 无 BOM 计划保存到指定文件。**install/update/restore 不带 `--apply` 都只预览**；plan 可以查询网络和读取 Git，不运行包管理器。冻结计划应用前检测配置和 reverse 工作副本漂移，变化后重新 plan。shell-guard 还冻结独立包身份与内容、远程 commit/Git tree、显式 Everything CLI 的文件摘要，以及开发注册迁移源的旧 hash。`--shell-guard-root` 只读复用精确 0.3.0 包；`--everything-es` 接受现存 CLI 的绝对路径；`--everything-gui` 接受现存 Everything GUI 的绝对路径，`--everything-autostart` 仅在 CLI 报告 IPC/服务不可用时允许插件启动该 GUI 并重试一次；`--replace-shell-guard-root` 只迁移准确的单个开发包注册。重复注册、hub 碰撞或漂移会拒绝。
 
@@ -95,7 +95,7 @@ REA 先在事务暂存配置副本内执行官方 `setup --client <实际client>
 
 Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。显式选中 shell-guard 时，另注册其独立插件子目录；shell-guard 使用 AST 分类部分 Bash 命令并通过 `allow`、`trash`、`block` API 表达处理结果，不是操作系统沙箱。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
 
-Codex 使用官方 setup 与 Spec Kit Codex integration，并在 `CODEX_HOME/skills/reverse-workflow/SKILL.md` 写入全局入口；选择成果项目时再生成薄 `.agents/skills/reverse-workflow/SKILL.md` 便携桥接，通过本机回执指向现有 reverse 插件入口。不假定某个插件注册命令存在；插件缺失时仍交原 RULES、原 router 和 PRIMARY。
+Codex 使用官方 setup 与 Spec Kit Codex integration，并在 `CODEX_HOME/skills/reverse-workflow/SKILL.md` 写入全局入口。Spec Kit 只有在用户明确提供成果项目时才生成官方项目模板；它不改变全局 Reverse 入口。不假定某个插件注册命令存在；插件缺失时仍交原 RULES、原 router 和 PRIMARY。
 
 Claude Desktop 使用显式的 `claude_desktop_config.json` JSON 配置。安装器只合并 `mcpServers.rea`，保留其他字段；并在成果项目生成 `CLAUDE.md`，把当前回执、reverse 原生 router、bounded REA work item 和零基础动态选项规则交给 Claude。Claude Desktop 不需要 Claude CLI 在 PATH；宿主真实加载仍需重启 Claude 后用新对话验证。
 Spec Kit 用官方 `specify init --integration <实际client> --script py --non-interactive` 在暂存项目生成随包原生资源，检查后写入你的新成果项目。首次必须是空目录；不在工具源码仓库里 init。更新工具保留项目的 constitution、规格、代码和已有模板；已有项目模板迁移尚未自动化。
