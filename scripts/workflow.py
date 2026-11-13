@@ -183,7 +183,7 @@ def scope(args):
     agent = abs_path(args.agent_dir) if args.agent_dir else (explicit.parent if explicit else None)
     codex_skills = None
     if client == "codex" and "reverse" in components:
-        codex_skills = abs_path(getattr(args, "codex_skills_root", None)) if getattr(args, "codex_skills_root", None) else (Path.home() / ".agents" / "skills").resolve()
+        codex_skills = abs_path(getattr(args, "codex_skills_root", None)) if getattr(args, "codex_skills_root", None) else (agent / "skills" if agent else (Path.home() / ".codex" / "skills").resolve())
     if needs_agent(components, client) and agent is None:
         raise InstallError("所选组件需要 --agent-dir 或 --client-config；不会默认写用户 profile")
     config_name = {"pi": "mcp.json", "codex": "config.toml", "claude": "claude_desktop_config.json"}.get(client)
@@ -193,8 +193,8 @@ def scope(args):
     project = abs_path(args.project) if args.project else None
     if needs_project(components) and project is None:
         raise InstallError("所选 Spec Kit 组件需要 --project 指定独立成果项目")
-    if client in ("codex", "claude") and "reverse" in components and project is None:
-        raise InstallError(f"{client} 使用 reverse 入口需要 --project 写入项目入口")
+    if client == "claude" and "reverse" in components and project is None:
+        raise InstallError("claude 使用 reverse 入口需要 --project 写入项目入口")
     reverse = abs_path(args.reverse_root) if args.reverse_root else None
     if "shell_guard" in components and client != "pi":
         raise InstallError("shell-guard 插件仅适用于 Pi")
@@ -681,7 +681,7 @@ def normalized_identity(scope_value):
         raw = value.get(key)
         if key == "codex_skills_root" and not raw and value.get("client") == "codex" and "reverse" in (value.get("components") or []):
             # Legacy Codex receipts predate the explicit user Skills root.
-            raw = Path.home() / ".agents" / "skills"
+            raw = Path(value.get("agent_dir")) / "skills" if value.get("agent_dir") else (Path.home() / ".codex" / "skills")
         if key == "client":
             identity[key] = str(raw) if raw else None
         else:
@@ -1018,7 +1018,8 @@ def _install(plan, args):
             codex_skill_root = Path(selected["codex_skills_root"])
             write_host_file(journal, ownership, agent / "AGENTS.md", agents, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
             write_host_file(journal, ownership, codex_skill_root / "reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
-            write_host_file(journal, ownership, project / ".agents/skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
+            if project:
+                write_host_file(journal, ownership, project / ".agents/skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "claude":
             skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
             write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
@@ -1294,10 +1295,10 @@ def verify(root):
         global_agents = agent / "AGENTS.md"
         if not global_agents.is_file() or str(root / ".installer/receipt.json") not in global_agents.read_text(encoding="utf-8"):
             failures.append("Codex AGENTS.md missing or receipt path drift")
-        global_skill = Path(scope.get("codex_skills_root") or (Path.home() / ".agents" / "skills")) / "reverse-workflow/SKILL.md"
+        global_skill = Path(scope.get("codex_skills_root") or ((Path(scope["agent_dir"]) / "skills") if scope.get("agent_dir") else (Path.home() / ".codex" / "skills"))) / "reverse-workflow/SKILL.md"
         if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
             failures.append("Codex user Skill missing or receipt path drift")
-        if not project or not (project / ".agents/skills/reverse-workflow/SKILL.md").is_file():
+        if project and not (project / ".agents/skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex project entry missing")
     elif client == "claude" and "reverse" in selection:
         global_skill = agent / "skills/reverse-workflow/SKILL.md"

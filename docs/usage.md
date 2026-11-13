@@ -26,7 +26,7 @@
 - “只验证这次实现和原版是否一致，保留失败输出和未执行项。”
 - “到网上补充完善知识库，先定位 reverse 的原生维护说明，按已授权模块逐批复核来源。”
 
-Pi 未自动读取入口时可用 `/skill:reverse-workflow` 或短 `/reverse-workflow` prompt。新对话与只读检查模板见 [安装后快速开始](quick-start.md)；独立实现使用同页的 [完整复刻复制模板](quick-start.md#需要独立复刻项目时)。纯分析可在报告结束；实现则走原生 Spec 全流程，默认普通 Worker，只有原 runner 为合格批次选择 Craft 才切后端。缺证回原 PRIMARY、代码缺陷预算内 refine、规格/范围回 runner/lead，接收后继续原 tasks/converge 与独立验收；短分支图见 [工作流手册](reverse-workflow-playbook.md#独立实现与源码恢复)。Codex 在成果项目发现 `.agents/skills/reverse-workflow`，通过其 receipt 指向现有 reverse 插件入口；不必把工作目录改成工具仓库。
+Pi 未自动读取入口时可用 `/skill:reverse-workflow` 或短 `/reverse-workflow` prompt。新对话与只读检查模板见 [安装后快速开始](quick-start.md)；独立实现使用同页的 [完整复刻复制模板](quick-start.md#需要独立复刻项目时)。纯分析可在报告结束；实现则走原生 Spec 全流程，默认普通 Worker，只有原 runner 为合格批次选择 Craft 才切后端。缺证回原 PRIMARY、代码缺陷预算内 refine、规格/范围回 runner/lead，接收后继续原 tasks/converge 与独立验收；短分支图见 [工作流手册](reverse-workflow-playbook.md#独立实现与源码恢复)。Codex 在 `CODEX_HOME/skills/reverse-workflow` 发现全局入口；选择成果项目时也可使用项目 `.agents/skills/reverse-workflow` 便携桥接，通过 receipt 指向现有 reverse 插件入口；不必把工作目录改成工具仓库。
 
 追随产品 1.0→1.1 时说：
 

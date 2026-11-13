@@ -20,7 +20,7 @@ def parser():
     result.add_argument("--components", default="all", help="组件范围：all（默认）或逗号分隔的 rea,reverse,spec-kit,shell-guard,craft；shell-guard 默认关闭，范围冻结在 plan")
     result.add_argument("--client", choices=("pi", "codex", "claude", "auto", "none"), default="auto")
     result.add_argument("--agent-dir", help="显式 Pi agent 目录或 Codex HOME；Pi 不默写用户 profile，Codex reverse 按选定 scope 写入 AGENTS/Skills")
-    result.add_argument("--codex-skills-root", help="Codex 用户 Skills 根；默认使用当前用户实际 home 下的 .agents/skills，支持显式覆盖")
+    result.add_argument("--codex-skills-root", help="Codex 用户 Skills 根；默认使用实际 CODEX_HOME/skills，支持显式覆盖")
     result.add_argument("--client-config", help="显式 Pi mcp.json 或 Codex config.toml；与 --agent-dir 必须一致")
     result.add_argument("--project", help="独立成果项目；首次 init 必须为空/不存在")
     result.add_argument("--reverse-root", help="只读复用本地 reverse 工作副本，记录实际 commit/脏状态/摘要")

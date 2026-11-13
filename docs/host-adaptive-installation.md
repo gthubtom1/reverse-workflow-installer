@@ -13,7 +13,7 @@ Read `README.md`, `AGENTS.md`, this file, `components.json`, `docs/compatibility
 | Host | Primary configuration evidence | Host-owned entry resources |
 |---|---|---|
 | Pi CLI / Pi Web | `PI_CODING_AGENT_DIR`, Pi configuration schema, or the running Pi Web agent directory | Pi package, `mcp.json`, `settings.json`, user `AGENTS.md`, Pi skills, optional Pi profiles/extensions |
-| Codex CLI / Codex desktop / IDE | `CODEX_HOME` and `config.toml`, or an explicit Codex project | `CODEX_HOME/AGENTS.md`, `CODEX_HOME/config.toml`, `$HOME/.agents/skills`, project `.agents/skills`, project `.codex/config.toml` |
+| Codex CLI / Codex desktop / IDE | `CODEX_HOME` and `config.toml`, or an explicit Codex project | `CODEX_HOME/AGENTS.md`, `CODEX_HOME/config.toml`, `CODEX_HOME/skills`, optional project `.agents/skills`, project `.codex/config.toml` |
 | Claude Desktop | explicit `claude_desktop_config.json` | JSON MCP entries, project `CLAUDE.md`, project skills |
 | none | explicit `--client none` | no host configuration; only selected source/package checks |
 
@@ -43,7 +43,7 @@ The host entry points are thin adapters to this same reverse source:
 | Host | Reverse entry | What remains authoritative |
 |---|---|---|
 | Pi / Pi Web | Pi package `reverse-workflow` Skill and receipt pointer | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
-| Codex | project/user `.agents/skills/reverse-workflow`, with the optional Codex plugin as an additional entry | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
+| Codex | `CODEX_HOME/AGENTS.md` + `CODEX_HOME/skills/reverse-workflow`; optional project `.agents/skills/reverse-workflow` when a project is selected | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
 | Claude Desktop / supported Claude route | project Skill and `CLAUDE.md` bridge | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
 
 The reverse entry is the first professional workflow step. The route is:
@@ -82,13 +82,13 @@ The native Craft-Pi bundle and shell-guard are Pi-only selections. Keep their pa
 
 These Codex surfaces share the Codex host configuration for the selected `CODEX_HOME`. Use the actual `CODEX_HOME/config.toml` for MCP and the Codex `AGENTS.md` discovery chain for concise host guidance. Use the official Codex skill locations:
 
-- user Skills: `$HOME/.agents/skills/` (resolved from the target computer's actual user home; use `--codex-skills-root` for an explicit custom root);
+- user Skills: `CODEX_HOME/skills/` (resolved from the target computer's actual Codex home; use `--codex-skills-root` only for an explicit custom root);
 - repository Skills: `.agents/skills/` from the current directory up to the repository root;
 - project-scoped MCP: trusted project `.codex/config.toml` when the user selects that scope.
 
-For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge, the user Skill, and the project Skill. This is the selected Codex host scope; the bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. If an existing global file has user-owned content or a different installer receipt, stop and report the conflict rather than overwriting it.
+For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge and the user Skill. This is the selected Codex host scope; the bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. If a project is selected, also write its `.agents/skills/reverse-workflow` bridge for portability. If an existing global file has user-owned content or a different installer receipt, stop and report the conflict rather than overwriting it.
 
-Install the Codex reverse-workflow Skill in a location Codex actually discovers. Do not treat `CODEX_HOME/skills` as the Codex user Skills directory unless the current Codex documentation explicitly supports that path. The project `.agents/skills/reverse-workflow` entry may be used for a portable project installation. The reverse Codex plugin is optional; its presence does not replace the project Skill, MCP registration, or the enhanced reverse repository.
+Install the Codex reverse-workflow Skill in `CODEX_HOME/skills` or an explicitly selected Codex Skills root. The project `.agents/skills/reverse-workflow` entry is optional and only provides a portable project bridge; it is not the global source of the workflow. The reverse Codex plugin is optional; its presence does not replace the global Skill, MCP registration, or the enhanced reverse repository.
 
 Register REA through the official setup/registration path and preserve all unrelated Codex MCP tables. Install Spec Kit with the official Codex integration. If the user selects upstream Craft Anything for Codex, use its official Codex setup and doctor flow; preserve the `rebuild_start` approval and Craft consent boundaries. Do not install Pi profiles, shell-guard, or Craft-Pi native resources into Codex.
 
