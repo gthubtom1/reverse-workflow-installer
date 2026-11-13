@@ -107,6 +107,16 @@ def _resolve_spec_kit(manifest, fetch, version=None):
 
 def _resolve_reverse(manifest, fetch):
     api = manifest["reverse"]["api"]
+    policy = manifest["reverse"].get("policy", "latest-release-or-main-resolved-commit")
+    if policy not in ("main-resolved-commit", "latest-release-or-main-resolved-commit"):
+        raise InstallError("reverse source policy 不受支持")
+    if policy == "main-resolved-commit":
+        # Current enhanced contracts ship from the protected default branch.
+        # Freeze the resolved commit once; never fall back to an older release.
+        commit = fetch(api + "/commits/main").get("sha")
+        if not re.fullmatch(r"[a-f0-9]{40}", str(commit)):
+            raise InstallError("reverse main commit 身份无效")
+        return {"ref": "main", "commit": commit, "repository": manifest["reverse"]["repository"]}
     try:
         release = fetch(api + "/releases/latest")
     except InstallError as exc:

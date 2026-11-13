@@ -8,7 +8,7 @@
 
 ## R46 跨组件合同门（0.7.0）
 
-Craft 被选中时，组件名称或 VERSION 数字本身不能证明合格。plan 要求显式 `--reverse-root` 指向已具备执行合同的本地 reverse 源；正式 v1.9.0 的确切身份以 [pin](../releases/windows-x64.json) 为准，可先用独立 helper 获取。未提供显式合格来源时返回 `Craft needs-contract`；仍须验证 descriptor、版本和实际文件摘要，不以 tag 名替代能力门。普通 core/all 未选 Craft 时不要求此 descriptor；核心默认 latest 策略保持不变。
+Craft 被选中时，组件名称或 VERSION 数字本身不能证明合格。plan 要求显式 `--reverse-root` 指向已具备执行合同的本地 reverse 源；正式 v1.9.0 的确切身份以 [pin](../releases/windows-x64.json) 为准，可先用独立 helper 获取。未提供显式合格来源时返回 `Craft needs-contract`；仍须验证 descriptor、版本和实际文件摘要，不以 tag 名替代能力门。普通 core/all 未选 Craft 时不要求此 descriptor；当前核心 reverse 冻结增强 main 的确切 commit，Craft opt-in 仍要求独立显式来源与原 pin/descriptor 资格核验。
 
 同一 `scripts/craft.py:reverse_contract(root, expected=None)` validator 在 plan、apply 首次写入前及激活前、receipt verify、受管 entry 任务启动前执行。固定包根相对文件 `skills/reconstruction/references/execution-backend-contract.json` 必须为 schema_version 1、contract_id `reverse.r46.execution-backend`、contract_version 1，恰含这三项及 `min_reverse_version`/`capabilities`/`required_files` 六个字段。VERSION 必须是严格三段稳定 SemVer 且满足声明的 minimum >=1.9.0。
 
@@ -20,6 +20,10 @@ capabilities 必须恰为四项且无重复：`r46.accepted-research-v1`、`r46.
 - `skills/reconstruction/references/spec-kit-workflow.md`
 
 未知字段/schema/capability、重复 JSON 键或文件、缺项、畸形 hash、绝对/逃逸/其他路径、symlink/junction、VERSION 过低与字节漂移都拒绝。plan/receipt 的 `craft_reverse_contract` 保存包根、descriptor 原始 SHA256、VERSION/其原始 SHA256、四文件摘要；apply/verify/entry 与该冻结值比较，不能通过重新填写 descriptor hash 认领后改。无需硬编码开发机路径或某一轮四文件 hash。此声明不授予任务范围、不取代 full reverse source identity、原 Evidence 或独立验收，也不创建第二权威账本。
+
+## 冻结源码中的已知报告限制
+
+当前保留的 Craft-Pi executor 源快照在尚未产生 check report 的早期失败/取消路径中，`typed_check_report_valid` 可能为 `true`（`Ok(None)` 仅说明未发生解析错误）。接收者必须同时取得实际 check report v2、匹配的 owner/round/check plan、逐项 required 结果与 cleanup；不能仅凭该布尔值接收 candidate。现有 candidate 门另要求报告实际存在及 required checks 通过。本轮不改冻结源码、bundle、source manifest 或旧发布 pin 来掩盖这个字段问题；后续修复需沿可编辑 Craft 源链生成新身份再资格化。默认 Worker 路径不依赖此字段。这个静态发现不等于已证明当前发布二进制存在同样行为。
 
 ## Windows 目标路径预检
 

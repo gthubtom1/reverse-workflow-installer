@@ -128,6 +128,16 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 最后分别报告：已安装、已加载、已验证、未验证，以及当前对话是否真正进入了 reverse 原生路由。
 ```
 
+### 全局安装后创建成果项目
+
+当 Codex 计划没有 `--project` 时，receipt 的 `checks.project_init` 为 `not-selected`：全局 reverse 入口、REA 和 `specify` CLI 已准备，但不会在安装仓库或任意默认目录创建 `spec/plan/tasks`。之后真正开始一个独立业务项目时，先选择工具仓库之外的项目目录，读取 receipt 的 `runtime.specify`，再按官方 CLI 在该项目中初始化 Codex 原生资源：
+
+```text
+<SPECIFY_FROM_RECEIPT> init <独立成果项目> --integration codex --script py --non-interactive --ignore-agent-tools
+```
+
+该步骤只创建项目自己的 `.specify`、constitution、spec/plan/tasks 和 Codex 原生资源；它不重新安装全局 reverse，也不把项目资源写入 `CODEX_HOME/skills/reverse-workflow`。随后从全局 reverse 入口进入原生 router，在当前业务项目的 scope/case 下使用这些项目规格。若项目已有文件，先按官方 CLI 的实际兼容规则和用户授权处理，不让全局安装器静默覆盖。
+
 ## 需要独立复刻项目时
 
 填写意图和实际输入即可；技术工具与后端由智能体按原生合同选择。模型实际 provider/model/effort 按会话与运行证据核实，不从 requested 推断，未知保持 unknown；具体资格见安装版执行合同。

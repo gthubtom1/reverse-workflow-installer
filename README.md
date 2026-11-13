@@ -84,7 +84,7 @@ python scripts/install.py plan --components spec-kit --client pi --project ../sp
 
 已经有 AI 助手时，可以把本仓库链接发给它并说：
 
-> 请先阅读 README、AGENTS 和 [安装后快速开始](docs/quick-start.md)，把这套环境安装到当前智能体的独立配置目录，成果项目另建。先展示 plan，按我已有授权执行 --apply，安装后运行 verify 和 accept，最后分别报告静态安装、宿主加载和真实任务验证。
+> 请先读取 main 的 README、AGENTS 和宿主自适应安装流程，把这套环境安装为当前宿主可跨项目复用的全局系统。根据目标电脑实际配置选择独立安装根；先展示 plan，在已有授权内执行 --apply。Reverse 不选择成果项目，也不安装项目级 Reverse Skill；Spec Kit 先准备官方 CLI，实际做业务项目时再初始化项目资源。完成后分别报告静态安装、宿主加载和任务验证状态。
 
 需要提前具备 Python 3.11+、Git、uv、符合本次 REA `engines.node` 的 Node（含同一分发包的 npm），以及已能正常登录使用的 Pi 或 Codex。安装器不会安装智能体、模型账号、Java/Ghidra，也不会改系统 PATH。Node 太旧时可下载官方旁置分发包并用 `--node` 指定 node 可执行文件；不会替换当前宿主的 Node。
 
@@ -117,11 +117,11 @@ Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--c
 
 最后两项成对指定，分别对应 `UV_TOOL_DIR` 和 `UV_TOOL_BIN_DIR`。Linux 的 `--node` 指向实际 node 可执行文件。没有这些复用参数时，安装器用官方 npm `--prefix` 和 uv 隔离目录自行安装到 `root/versions/<冻结身份>/`。它不会把目录存在等同于安装就绪；版本不符或原包漂移会停止。
 
-REA/Spec Kit 首次新 plan 解析官方稳定包；已有 installed receipt 的 update 默认沿用 receipt 中的组件版本，避免 adapter/配置维护意外升级依赖。需要升级时显式使用 `--upgrade-components`，并重新核接口与组合兼容性；Spec Kit 也可用 `--spec-kit-version` 固定版本。reverse 使用指定增强仓库的正式 release，尚无 release 时解析 main 的确切 commit。不会静默装预发布版，也不会用旧兼容版本冒充最新。未来官方 CLI 或包布局变化导致检查不匹配时停止并报告缺口。
+REA/Spec Kit 首次新 plan 解析官方稳定包；已有 installed receipt 的 update 默认沿用 receipt 中的组件版本，避免 adapter/配置维护意外升级依赖。需要升级时显式使用 `--upgrade-components`，并重新核接口与组合兼容性；Spec Kit 也可用 `--spec-kit-version` 固定版本。reverse 默认从增强仓库受保护的 `main` 解析并冻结确切 commit，不因旧 `v1.9.0` 仍为 latest release 而漏掉当前核心修复。获取失败即停止，不退回旧 release。显式 `--reverse-root` 仍按本地实际身份只读复用；可选 Craft-Pi 的获取 helper 继续使用独立正式 pin，不把最新 reverse main 冒充旧 bundle 的已验证来源。不会静默装预发布版，也不会用旧兼容版本冒充最新。未来官方 CLI 或包布局变化导致检查不匹配时停止并报告缺口。
 
 ## 配置和项目里会发生什么
 
-REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。
+REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。Codex 的全局 AGENTS 使用带 receipt owner 的受管 section，保留用户正文；plan 检查已有 section/Skill 冲突并冻结输入，restore 保留区段外后续编辑。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。
 
 Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。显式选中 shell-guard 时，另注册其独立插件子目录；shell-guard 使用 AST 分类部分 Bash 命令并通过 `allow`、`trash`、`block` API 表达处理结果，不是操作系统沙箱。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
 
@@ -174,7 +174,7 @@ node --test tests/pi-grill-skills.test.mjs
 
 [兼容记录](docs/compatibility.md) 将文档支持、本机测试、宿主加载和完整任务分别列出。首版声明 Pi、Codex 和 Claude Desktop 的适配实现，不声称支持所有智能体，不保证自然语言每次自动加载技能、不保证任意目标等价。Pi 的 `grilling` 是独立用户级伴随技能，不属于核心安装事务；安装器把静态安装、宿主加载、MCP 验收、代表任务和对话触发分开记录；Node 下载、provider 安装、MCP 握手、代表任务及独立隔离交付由后续真实验收补齐。
 
-维护两仓库时请使用 [维护与发布闭环](docs/maintenance.md)：同时核对规则、入口、教程、离线回归、本机回执、远程 main 和 reverse 正式 release。默认安装优先正式 release，单独推送 main 不会让新电脑自动拿到尚未发行的改动。
+维护两仓库时请使用 [维护与发布闭环](docs/maintenance.md)：同时核对规则、入口、教程、适用检查、本机回执、两个远程 main 与可选资产 pin。当前核心 reverse 默认冻结增强 main 的确切 commit；合并修复后须实际核对解析身份，尚未合并的修复分支不会被默认安装读取。Craft-Pi 旧 release/pin 仍保持独立冻结身份。
 
 ## 来源与许可
 

@@ -5,7 +5,7 @@
 | auto 没有证据/宿主证据冲突 | 明确 `--client pi` 或 `--client codex` 并指定配置根；不输出环境值 |
 | Node engine 不满足 | 读 plan 的 node_engine；准备含 npm 的官方 Node 分发包，用 --node 指定可执行文件 |
 | 找不到 npm-cli.js/semver | 当前安装器支持官方 Node 分发布局；不混用另一个 Node 的 PATH npm |
-| GitHub 404 | reverse 的 latest-release 404 可按其既有策略解析 main；shell-guard 固定 tag 不回退 main。shell-guard 0.3.0 tag 不可用或身份不符时停止，不改装旧版本 |
+| GitHub 404 | 当前核心 reverse 必须从 main 取得确切 commit；404/403/网络失败即停止，不退回旧 release。shell-guard 固定 tag 不回退 main。shell-guard 0.3.0 tag 不可用或身份不符时停止，不改装旧版本 |
 | GitHub 403/429/网络错误 | 安装器会停止，不把失败当作没有 release。若已登录 GitHub CLI，可在当前进程中设置 `GH_TOKEN` 后重新运行 plan，例如 PowerShell：`$env:GH_TOKEN = (gh auth token); python scripts/install.py plan ...`；token 只作为进程环境使用，不写入 receipt 或日志。没有认证时等待限流恢复；不会静默切换版本 |
 | 配置或 reverse 漂移 | 旧计划不会覆盖新文件；审阅变化后重新 plan |
 | 旧 receipt 仍含 project-continuity | 新计划不会加载它；更新只在 receipt 能定位唯一、未过滤的 Pi 包注册时移除该注册。缺少 root、重复/过滤/hub 注册或其他同名注册时，先清理并重新 plan；旧包目录会保留在历史版本目录 |

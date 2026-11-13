@@ -477,7 +477,9 @@ class CraftTests(unittest.TestCase):
                 before = target.read_bytes() if target.exists() else None
                 atomic(target, (before or b"") + b"\nchanged after plan\n")
                 self.calls.clear()
-                with self.assertRaisesRegex(InstallError, "resource source inventory/hash drift"):
+                # Whole-installer source freeze rejects earlier than the
+                # narrower Craft resource inventory gate; no install commands run.
+                with self.assertRaisesRegex(InstallError, "安装器源码在 plan 后发生漂移"):
                     w.install(plan, self.args)
                 self.assertEqual(self.calls, [])
                 self.assertFalse((self.root / ".installer/receipt.json").exists())
