@@ -1,5 +1,7 @@
 ## 0.7.0 — 2026-11-09
 
+0.7.0 的历史 release 条目保留其当时的 Craft-Pi v0.1.0 身份；当前根级公开 pin 和最新 main 的 native Craft-Pi 身份为 v0.1.1，详见 `releases/windows-x64.json`。
+
 本条记录 0.7.0 的发行内容；正式版本身份以公开 tag/release 为准，活动安装与本批运行资格分别核对真实 receipt 和证据。
 
 - 新增默认关闭的 Pi Craft bundle 分发、按需 execution 资源、精确身份冻结、更新及原字节 journal 条件恢复；不扩大默认 all。
