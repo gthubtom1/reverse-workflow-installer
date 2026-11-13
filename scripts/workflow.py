@@ -103,6 +103,9 @@ def detect_client(client, config=None, env=None):
             if str(value.get("$schema", "")).startswith("https://pi.dev/schemas/"):
                 evidence.add("pi")
                 names.append("Pi configuration schema")
+            elif config.name == "claude_desktop_config.json" and isinstance(value.get("mcpServers"), dict):
+                evidence.add("claude")
+                names.append("Claude Desktop configuration name and mcpServers")
         elif config.name == "config.toml":
             value, _, _ = toml_parts(config.read_bytes())
             if any(k in value for k in ("approval_policy", "sandbox_mode", "model_reasoning_effort")):
@@ -110,7 +113,7 @@ def detect_client(client, config=None, env=None):
                 names.append("Codex configuration keys")
     if len(evidence) != 1:
         reason = "宿主证据冲突" if evidence else "没有明确宿主标记或配置 schema 证据"
-        raise InstallError(f"auto: {reason}；请指定 --client pi 或 --client codex，并提供 --agent-dir 或 --client-config。CLI 存在与模型名不代表宿主身份；未枚举环境值。")
+        raise InstallError(f"auto: {reason}；请指定 --client pi、--client codex 或 --client claude，并提供 --agent-dir 或 --client-config。CLI 存在与模型名不代表宿主身份；未枚举环境值。")
     return evidence.pop(), names
 
 
@@ -175,7 +178,12 @@ def scope(args):
         client, evidence = ("none", ["no host component selected"]) if args.client == "auto" else detect_client(args.client, explicit)
     if client == "none" and (args.agent_dir or explicit):
         raise InstallError("--client none 不能同时指定 agent/config；请选择宿主或省略这些参数")
+    if getattr(args, "codex_skills_root", None) and client != "codex":
+        raise InstallError("--codex-skills-root 仅适用于 Codex reverse Skill")
     agent = abs_path(args.agent_dir) if args.agent_dir else (explicit.parent if explicit else None)
+    codex_skills = None
+    if client == "codex" and "reverse" in components:
+        codex_skills = abs_path(getattr(args, "codex_skills_root", None)) if getattr(args, "codex_skills_root", None) else (Path.home() / ".agents" / "skills").resolve()
     if needs_agent(components, client) and agent is None:
         raise InstallError("所选组件需要 --agent-dir 或 --client-config；不会默认写用户 profile")
     config_name = {"pi": "mcp.json", "codex": "config.toml", "claude": "claude_desktop_config.json"}.get(client)
@@ -211,6 +219,12 @@ def scope(args):
                 raise InstallError(f"成果项目与工具/配置范围重叠: {tool}")
         if project == root or root.is_relative_to(project):
             raise InstallError("成果项目不能包含安装根")
+    if codex_skills:
+        for tool in [REPO, root / "versions", root / ".installer", agent, reverse, *[Path(p) for key, p in guard_options.items() if p and key in ("shell_guard_root", "replace_shell_guard_root", "everything_gui")]]:
+            if tool and (codex_skills == tool or codex_skills.is_relative_to(tool) or tool.is_relative_to(codex_skills)):
+                raise InstallError(f"Codex Skills 根不能与安装/宿主/源范围重叠: {tool}")
+        if project and (project == codex_skills or project.is_relative_to(codex_skills) or codex_skills.is_relative_to(project)):
+            raise InstallError("Codex Skills 根不能与成果项目重叠")
     if root == REPO or root.is_relative_to(REPO):
         raise InstallError("--root 必须在 installer 源码仓库之外")
     if bool(args.spec_kit_tools) != bool(args.spec_kit_bin):
@@ -225,7 +239,7 @@ def scope(args):
             raise InstallError("成果项目与复用工具目录重叠")
     detection = None if args.node else shutil.which("node")
     node = str(abs_path(args.node)) if args.node else (str(abs_path(detection)) if detection else None)
-    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **guard_options, **craft_options, **({"spec_kit_version": spec_pin} if explicit_spec_pin is not None else {})}
+    return {"components": components, "root": str(root), "client": client, "evidence": evidence, "agent_dir": str(agent) if agent else None, "codex_skills_root": str(codex_skills) if codex_skills else None, "client_config": str(config) if config else None, "project": str(project) if project else None, "reverse_root": str(reverse) if reverse else None, "node": node, "uv": shutil.which("uv"), "git": shutil.which("git"), **reuse, **guard_options, **craft_options, **({"spec_kit_version": spec_pin} if explicit_spec_pin is not None else {})}
 
 
 def reverse_identity(path):
@@ -519,7 +533,7 @@ def validate_plan(plan):
     if "project_continuity" in selected.get("components", []):
         raise InstallError("冻结计划仍选择已移除的 project-continuity；请重新 plan")
     checked = scope(SimpleNamespace(**{**selected, **plan["resource_selection"], "components": ",".join(selected["components"]), "node": selected.get("node"), "uv": selected.get("uv"), "git": selected.get("git")}))
-    for key in ("components", "root", "client", "agent_dir", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+    for key in ("components", "root", "client", "agent_dir", "codex_skills_root", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
         if checked.get(key) != selected.get(key):
             raise InstallError("冻结计划包含非规范路径或范围；重新 plan")
     if checked.get("spec_kit_version") != selected.get("spec_kit_version"):
@@ -656,7 +670,7 @@ def install(plan, args):
         return _install(plan, args)
 
 
-IDENTITY_KEYS = ("root", "client", "agent_dir", "client_config", "project")
+IDENTITY_KEYS = ("root", "client", "agent_dir", "codex_skills_root", "client_config", "project")
 ALL_COMPONENTS = list(COMPONENTS)
 
 
@@ -665,6 +679,9 @@ def normalized_identity(scope_value):
     identity = {}
     for key in IDENTITY_KEYS:
         raw = value.get(key)
+        if key == "codex_skills_root" and not raw and value.get("client") == "codex" and "reverse" in (value.get("components") or []):
+            # Legacy Codex receipts predate the explicit user Skills root.
+            raw = Path.home() / ".agents" / "skills"
         if key == "client":
             identity[key] = str(raw) if raw else None
         else:
@@ -997,7 +1014,10 @@ def _install(plan, args):
                 write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", pi_global_skill_text(receipt_path).encode(), client="Pi", legacy=legacy_skill, owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "codex":
             skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
-            write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
+            agents = (REPO / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
+            codex_skill_root = Path(selected["codex_skills_root"])
+            write_host_file(journal, ownership, agent / "AGENTS.md", agents, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
+            write_host_file(journal, ownership, codex_skill_root / "reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
             write_host_file(journal, ownership, project / ".agents/skills/reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "claude":
             skill = (REPO / "adapters/claude/skills/reverse-workflow/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
@@ -1271,9 +1291,12 @@ def verify(root):
             elif manual not in skills:
                 failures.append("Pi rea-manual skill registration missing")
     elif client == "codex" and "reverse" in selection:
-        global_skill = agent / "skills/reverse-workflow/SKILL.md"
+        global_agents = agent / "AGENTS.md"
+        if not global_agents.is_file() or str(root / ".installer/receipt.json") not in global_agents.read_text(encoding="utf-8"):
+            failures.append("Codex AGENTS.md missing or receipt path drift")
+        global_skill = Path(scope.get("codex_skills_root") or (Path.home() / ".agents" / "skills")) / "reverse-workflow/SKILL.md"
         if not global_skill.is_file() or str(root / ".installer/receipt.json") not in global_skill.read_text(encoding="utf-8"):
-            failures.append("Codex global skill missing or receipt path drift")
+            failures.append("Codex user Skill missing or receipt path drift")
         if not project or not (project / ".agents/skills/reverse-workflow/SKILL.md").is_file():
             failures.append("Codex project entry missing")
     elif client == "claude" and "reverse" in selection:

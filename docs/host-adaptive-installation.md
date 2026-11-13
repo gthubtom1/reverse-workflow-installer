@@ -82,11 +82,11 @@ The native Craft-Pi bundle and shell-guard are Pi-only selections. Keep their pa
 
 These Codex surfaces share the Codex host configuration for the selected `CODEX_HOME`. Use the actual `CODEX_HOME/config.toml` for MCP and the Codex `AGENTS.md` discovery chain for concise host guidance. Use the official Codex skill locations:
 
-- user Skills: `$HOME/.agents/skills/`;
+- user Skills: `$HOME/.agents/skills/` (resolved from the target computer's actual user home; use `--codex-skills-root` for an explicit custom root);
 - repository Skills: `.agents/skills/` from the current directory up to the repository root;
 - project-scoped MCP: trusted project `.codex/config.toml` when the user selects that scope.
 
-Keep the global Codex `AGENTS.md` short. It should point Codex to the reverse-workflow Skill, the installed receipt, the enhanced reverse `RULES.md`, the native router, and the applicable Spec Kit Skills. It must not duplicate all reverse rules, create a second router, or turn a technical method into a user decision. Write global guidance only when the user selected that scope and the existing file passes conflict/ownership checks; otherwise use project-level `AGENTS.md` or project Skills.
+For an explicit Codex reverse installation, write the short global `CODEX_HOME/AGENTS.md` bridge, the user Skill, and the project Skill. This is the selected Codex host scope; the bridge points to the receipt and the same reverse source and does not copy the full reverse rules into Codex. If an existing global file has user-owned content or a different installer receipt, stop and report the conflict rather than overwriting it.
 
 Install the Codex reverse-workflow Skill in a location Codex actually discovers. Do not treat `CODEX_HOME/skills` as the Codex user Skills directory unless the current Codex documentation explicitly supports that path. The project `.agents/skills/reverse-workflow` entry may be used for a portable project installation. The reverse Codex plugin is optional; its presence does not replace the project Skill, MCP registration, or the enhanced reverse repository.
 

@@ -74,6 +74,7 @@ class Fixture(unittest.TestCase):
         self.which = patch.object(w.shutil, "which", lambda name: str(self.base / name))
         self.which.start()
         self.args = cli.parser().parse_args(["install", "--root", str(self.root), "--agent-dir", str(self.agent), "--client", "pi", "--project", str(self.project), "--reverse-root", str(self.reverse), "--node", str(self.node), "--apply"])
+        self.args.codex_skills_root = str(self.base / "codex-skills")
         self.before = {"defaultModel": "keep-me", "packages": ["user-package"], "skills": ["user-skill"]}
         atomic(self.agent / "settings.json", encode_json(self.before))
         atomic(self.agent / "mcp.json", encode_json({"mcpServers": {"user": {"command": "user-owned"}}, "future": 7}))
@@ -526,8 +527,10 @@ class Fixture(unittest.TestCase):
         self.args.components = "reverse"
         self.args.client = "codex"
         receipt = self.install()
-        self.assertTrue((self.agent / "skills/reverse-workflow/SKILL.md").is_file())
+        self.assertTrue((self.agent / "AGENTS.md").is_file())
+        self.assertTrue((Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md").is_file())
         self.assertTrue((self.project / ".agents/skills/reverse-workflow/SKILL.md").is_file())
+        self.assertIn(str(self.root / ".installer/receipt.json"), (self.agent / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertEqual(receipt["scope"]["components"], ["reverse"])
         self.assertTrue(w.verify(self.root)["ok"])
 

@@ -66,7 +66,7 @@ python scripts/install.py install --root ../workflow --plan-file .local/plan.jso
 python scripts/install.py verify --root ../workflow
 ```
 
-Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--client codex --agent-dir ../workflow/codex-home`。启动宿主时，Pi 使用 `PI_CODING_AGENT_DIR` 指向同一 agent 目录，Codex 使用 `CODEX_HOME` 指向同一目录，并从成果项目工作。环境变量仅对该进程设置；无需修改系统设置。Pi Web/SDK 必须核对实际启动配置，不能把 CLI 示例当作 Web 已加载的证据。
+Codex 将第一行的 `--client pi --agent-dir ../workflow/pi-agent` 改为 `--client codex --agent-dir ../workflow/codex-home`。启动宿主时，Pi 使用 `PI_CODING_AGENT_DIR` 指向同一 agent 目录，Codex 使用 `CODEX_HOME` 指向同一目录，并从成果项目工作。Codex reverse 安装同时写入实际 `CODEX_HOME/AGENTS.md`、当前用户实际 home 下的 `.agents/skills/reverse-workflow` 和成果项目 `.agents/skills/reverse-workflow`；如果目标电脑使用自定义用户 Skills 根，显式增加 `--codex-skills-root <实际路径>`。不要把 `CODEX_HOME/skills` 当成官方用户 Skills 根。环境变量仅对该进程设置；无需修改系统设置。Pi Web/SDK 必须核对实际启动配置，不能把 CLI 示例当作 Web 已加载的证据。
 
 `plan` 输出完整 JSON：范围、来源、精确版本、Node 要求、命令摘要、现有配置摘要、缺少依赖和未验证项。`--output` 将 UTF-8 无 BOM 计划保存到指定文件。**install/update/restore 不带 `--apply` 都只预览**；plan 可以查询网络和读取 Git，不运行包管理器。冻结计划应用前检测配置和 reverse 工作副本漂移，变化后重新 plan。shell-guard 还冻结独立包身份与内容、远程 commit/Git tree、显式 Everything CLI 的文件摘要，以及开发注册迁移源的旧 hash。`--shell-guard-root` 只读复用精确 0.3.0 包；`--everything-es` 接受现存 CLI 的绝对路径；`--everything-gui` 接受现存 Everything GUI 的绝对路径，`--everything-autostart` 仅在 CLI 报告 IPC/服务不可用时允许插件启动该 GUI 并重试一次；`--replace-shell-guard-root` 只迁移准确的单个开发包注册。重复注册、hub 碰撞或漂移会拒绝。
 
