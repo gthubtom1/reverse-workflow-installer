@@ -1056,9 +1056,9 @@ def _install(plan, args):
             if "reverse" in selection:
                 write_host_file(journal, ownership, agent / "skills/reverse-workflow/SKILL.md", pi_global_skill_text(receipt_path).encode(), client="Pi", legacy=legacy_skill, owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "codex":
+            codex_skill_root = Path(selected["codex_skills_root"])
             skill = (REPO / "adapters/codex/SKILL.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).encode()
             agents = (REPO / "adapters/codex/AGENTS.md").read_text(encoding="utf-8").replace("{{RECEIPT}}", str(receipt_path)).replace("{{CODEX_SKILL_ENTRY}}", str(codex_skill_root / "reverse-workflow/SKILL.md")).encode()
-            codex_skill_root = Path(selected["codex_skills_root"])
             write_host_file(journal, ownership, agent / "AGENTS.md", agents, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
             write_host_file(journal, ownership, codex_skill_root / "reverse-workflow/SKILL.md", skill, client="Codex", owner_receipt=receipt_path, entries=entry_hashes)
         elif "reverse" in selection and client == "claude":
