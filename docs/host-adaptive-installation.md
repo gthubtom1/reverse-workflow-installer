@@ -1,5 +1,8 @@
 # Host adaptive installation flow
 
+**Source baseline:** new computer installations read the repository default branch `main`. Do not use the historical `v0.7.0` tag as the Codex global adapter source. The Codex global adaptation is included in main; the installer must record the actual main commit it reads in its plan and receipt.
+
+
 This document is the entry contract for an AI that installs the combined reverse workflow environment on a new computer. It selects an existing official integration for the detected host and records the result. It does not replace REA, Spec Kit, Craft Anything, Codex, Pi, Claude Desktop, or the enhanced reverse-skill repository.
 
 The official sources used by this flow are [REA](https://github.com/morluto/rea) and its [`rea-agents` setup documentation](https://github.com/morluto/rea#quick-start), [GitHub Spec Kit Codex integration](https://github.github.com/spec-kit/integrations/codex.html), [Craft Anything Codex integration](https://github.com/storytold/craft-anything/blob/main/docs/codex.md), [Codex AGENTS.md discovery](https://developers.openai.com/codex/agent-configuration/agents-md), [Codex Skills](https://developers.openai.com/codex/build-skills), and [Codex MCP](https://developers.openai.com/codex/mcp). Verify the applicable upstream source at plan time; these links are navigation, not a substitute for the actual version and host checks.

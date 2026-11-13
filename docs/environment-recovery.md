@@ -1,5 +1,10 @@
 # 给安装 AI 的公共整环境部署指南
 
+## 当前源码基线
+
+新电脑安装只读取本仓库默认分支 `main`。本次 Codex 全局适配已进入 `main`；安装 AI 必须先读取 README、AGENTS 和 [宿主自适应安装流程](host-adaptive-installation.md)，记录实际 main commit，再生成 plan。旧 `v0.7.0` tag 是历史 installer core 发布身份，不能作为本次 Codex 全局安装入口。Codex 全局资源写入目标机实际 `CODEX_HOME/AGENTS.md`、`CODEX_HOME/config.toml` 和 `CODEX_HOME/skills/reverse-workflow`。
+
+
 任何人都可以把本仓库链接交给能够读取仓库、执行命令的 AI 助手，由它根据**目标电脑的 OS、架构、已有工具、实际路径和目标宿主**部署公开工具能力。先读 README、AGENTS、[宿主自适应安装流程](host-adaptive-installation.md) 和本页，再使用下面链接中的既有安装路线。安装 AI 所在的宿主不自动等于要部署的目标宿主；账号由用户在目标机登录或配置。
 
 ## 可直接交给安装 AI

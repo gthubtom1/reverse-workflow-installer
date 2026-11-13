@@ -1,5 +1,7 @@
 # 执行安装的智能体
 
+**新电脑安装必须以仓库默认分支 `main` 为准。** 先读取仓库 README、[当前宿主自适应安装流程](docs/host-adaptive-installation.md)、[安装后快速开始](docs/quick-start.md)、components.json 和 docs/compatibility.md。不要 checkout 旧 `v0.7.0` tag 来安装 Codex；本次 Codex 全局适配位于 main，Codex 主入口是实际 `CODEX_HOME/AGENTS.md`、`CODEX_HOME/config.toml` 和 `CODEX_HOME/skills/reverse-workflow`。记录 plan 中实际读取到的 main commit。
+
 先读 README、[安装后快速开始](docs/quick-start.md)、components.json、docs/compatibility.md。写入范围由用户明确授权决定；已有授权内的确定步骤连续完成，不按每条命令重复索要许可。缺少宿主身份、登录或成果范围时只报告准确缺口。
 
 1. 只读探测 Python、Git、uv、Node/npm 与用户指定目录。不要枚举环境变量值，不以模型名或 CLI 是否安装判断宿主。auto 不确定时使用用户明确指定的 pi/codex。
