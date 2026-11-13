@@ -529,9 +529,10 @@ class Fixture(unittest.TestCase):
         self.args.components = "reverse"
         self.args.client = "codex"
         self.args.project = None
+        self.args.codex_skills_root = None
         receipt = self.install()
         self.assertTrue((self.agent / "AGENTS.md").is_file())
-        self.assertTrue((Path(self.args.codex_skills_root) / "reverse-workflow/SKILL.md").is_file())
+        self.assertTrue((self.agent / "skills/reverse-workflow/SKILL.md").is_file())
         self.assertFalse((self.project / ".agents/skills/reverse-workflow/SKILL.md").exists())
         self.assertIsNone(receipt["scope"]["project"])
         self.assertEqual(receipt["scope"]["components"], ["reverse"])

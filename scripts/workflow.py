@@ -84,7 +84,7 @@ def needs_agent(components, client):
     return "rea" in components or ("reverse" in components and client in ("pi", "codex", "claude")) or ("shell_guard" in components and client == "pi") or "craft" in components
 
 
-def detect_client(client, config=None, env=None):
+def detect_client(client, config=None, env=None, agent_dir=None):
     if client == "none":
         return "none", ["explicit --client none"]
     if client != "auto":
@@ -99,20 +99,26 @@ def detect_client(client, config=None, env=None):
     if env.get("CODEX_THREAD_ID"):
         evidence.add("codex")
         names.append("CODEX_THREAD_ID")
+    configs = []
     if config and config.exists():
-        if config.suffix == ".json":
-            value = load_json(config, {})
-            if str(value.get("$schema", "")).startswith("https://pi.dev/schemas/"):
+        configs.append(config)
+    elif agent_dir:
+        agent_dir = Path(agent_dir)
+        configs.extend(path for path in (agent_dir / "config.toml", agent_dir / "mcp.json", agent_dir / "claude_desktop_config.json") if path.exists())
+    for candidate in configs:
+        if candidate.suffix == ".json":
+            value = load_json(candidate, {})
+            if str(value.get("$schema", "")).startswith("https://pi.dev/schemas/") or (candidate.name == "mcp.json" and isinstance(value.get("mcpServers"), dict)):
                 evidence.add("pi")
-                names.append("Pi configuration schema")
-            elif config.name == "claude_desktop_config.json" and isinstance(value.get("mcpServers"), dict):
+                names.append("Pi configuration schema/name and mcpServers")
+            elif candidate.name == "claude_desktop_config.json" and isinstance(value.get("mcpServers"), dict):
                 evidence.add("claude")
                 names.append("Claude Desktop configuration name and mcpServers")
-        elif config.name == "config.toml":
-            value, _, _ = toml_parts(config.read_bytes())
-            if any(k in value for k in ("approval_policy", "sandbox_mode", "model_reasoning_effort")):
+        elif candidate.name == "config.toml":
+            value, _, _ = toml_parts(candidate.read_bytes())
+            if any(k in value for k in ("approval_policy", "sandbox_mode", "model_reasoning_effort")) or isinstance(value.get("mcp_servers"), dict):
                 evidence.add("codex")
-                names.append("Codex configuration keys")
+                names.append("Codex config.toml and Codex configuration tables")
     if len(evidence) != 1:
         reason = "宿主证据冲突" if evidence else "没有明确宿主标记或配置 schema 证据"
         raise InstallError(f"auto: {reason}；请指定 --client pi、--client codex 或 --client claude，并提供 --agent-dir 或 --client-config。CLI 存在与模型名不代表宿主身份；未枚举环境值。")
@@ -172,17 +178,18 @@ def scope(args):
     if any(guard_options.values()) and "shell_guard" not in components:
         raise InstallError("shell-guard 路径/配置参数需要 --with-shell-guard 或显式 shell-guard 组件")
     explicit = abs_path(args.client_config) if args.client_config else None
+    agent_hint = abs_path(args.agent_dir) if args.agent_dir else (explicit.parent if explicit else None)
     if needs_host(components):
         if args.client == "none":
             raise InstallError("所选组件需要宿主；请指定 --client pi 或 --client codex")
-        client, evidence = detect_client(args.client, explicit)
+        client, evidence = detect_client(args.client, explicit, agent_dir=agent_hint)
     else:
-        client, evidence = ("none", ["no host component selected"]) if args.client == "auto" else detect_client(args.client, explicit)
+        client, evidence = ("none", ["no host component selected"]) if args.client == "auto" else detect_client(args.client, explicit, agent_dir=agent_hint)
     if client == "none" and (args.agent_dir or explicit):
         raise InstallError("--client none 不能同时指定 agent/config；请选择宿主或省略这些参数")
     if getattr(args, "codex_skills_root", None) and client != "codex":
         raise InstallError("--codex-skills-root 仅适用于 Codex reverse Skill")
-    agent = abs_path(args.agent_dir) if args.agent_dir else (explicit.parent if explicit else None)
+    agent = agent_hint
     codex_skills = None
     if client == "codex" and "reverse" in components:
         codex_skills = abs_path(getattr(args, "codex_skills_root", None)) if getattr(args, "codex_skills_root", None) else (agent / "skills" if agent else (Path.home() / ".codex" / "skills").resolve())
@@ -222,9 +229,11 @@ def scope(args):
         if project == root or root.is_relative_to(project):
             raise InstallError("成果项目不能包含安装根")
     if codex_skills:
-        for tool in [REPO, root / "versions", root / ".installer", agent, reverse, *[Path(p) for key, p in guard_options.items() if p and key in ("shell_guard_root", "replace_shell_guard_root", "everything_gui")]]:
+        for tool in [REPO, root / "versions", root / ".installer", reverse, *[Path(p) for key, p in guard_options.items() if p and key in ("shell_guard_root", "replace_shell_guard_root", "everything_gui")]]:
             if tool and (codex_skills == tool or codex_skills.is_relative_to(tool) or tool.is_relative_to(codex_skills)):
-                raise InstallError(f"Codex Skills 根不能与安装/宿主/源范围重叠: {tool}")
+                raise InstallError(f"Codex Skills 根不能与安装/源范围重叠: {tool}")
+        if agent and codex_skills == agent:
+            raise InstallError("Codex Skills 根不能就是 CODEX_HOME 根；请选择 CODEX_HOME/skills")
         if project and (project == codex_skills or project.is_relative_to(codex_skills) or codex_skills.is_relative_to(project)):
             raise InstallError("Codex Skills 根不能与成果项目重叠")
     if root == REPO or root.is_relative_to(REPO):
@@ -246,10 +255,12 @@ def scope(args):
 
 def reverse_identity(path):
     path = Path(path)
-    required = ["RULES.md", "skills/config/routing.json", "skills/SKILL.md"]
+    required = ["RULES.md", "skills/config/routing.json", "skills/SKILL.md", "skills/MASTER-ROUTING.md", "skills/ops/scope-contract.md", "skills/ops/evidence-finding-path.md"]
     # Upstream's master skill can be at skills/SKILL.md or root SKILL.md.
+    master = "skills/SKILL.md"
     if not (path / "skills/SKILL.md").is_file() and (path / "SKILL.md").is_file():
-        required[-1] = "SKILL.md"
+        required[2] = "SKILL.md"
+        master = "SKILL.md"
     for name in required:
         if not (path / name).is_file():
             raise InstallError(f"reverse 工作副本缺少原生入口: {name}")
@@ -260,7 +271,7 @@ def reverse_identity(path):
     dirty = bool(run(["git", "-C", path, "status", "--porcelain", "--untracked-files=normal"], cwd=path))
     source = source_tree_hash(path)
     algorithm = "git-ls-files" if source is not None else "tree-walk"
-    return {"root": str(path.resolve()), "commit": commit, "dirty": dirty, "entry_hashes": {name: digest((path / name).read_bytes()) for name in required + routers}, "working_tree_sha256": source if source is not None else tree_hash(path, exclude_git=True), "source_hash_algorithm": algorithm, "routers": routers, "master": required[-1], "codex_plugin": str(path / "plugins/reverse-skill") if (path / "plugins/reverse-skill/.codex-plugin/plugin.json").is_file() else None}
+    return {"root": str(path.resolve()), "commit": commit, "dirty": dirty, "entry_hashes": {name: digest((path / name).read_bytes()) for name in required + routers}, "working_tree_sha256": source if source is not None else tree_hash(path, exclude_git=True), "source_hash_algorithm": algorithm, "routers": routers, "master": master, "codex_plugin": str(path / "plugins/reverse-skill") if (path / "plugins/reverse-skill/.codex-plugin/plugin.json").is_file() else None}
 
 
 def reverse_identity_matches(stored, current):
@@ -709,14 +720,14 @@ def config_rea_entry(client, config):
     return table.get("rea")
 
 
-def adapter_identity_key():
-    """Content address for shipped host adapters: source edits always get a fresh install path."""
+def adapter_identity_key(client="pi"):
+    """Content address only the adapter resources used by this host transaction."""
     hasher = hashlib.sha256()
-    base = REPO / "adapters"
+    base = REPO / "adapters" / client
     for item in sorted(base.rglob("*"), key=lambda p: p.relative_to(base).as_posix()):
         if item.is_file():
             hasher.update(item.relative_to(base).as_posix().encode() + b"\0" + item.read_bytes())
-    return digest(encode_json({"adapter": ADAPTER_VERSION, "sources": hasher.hexdigest()}))[:20]
+    return digest(encode_json({"adapter": ADAPTER_VERSION, "client": client, "sources": hasher.hexdigest()}))[:20]
 
 
 def ownership_key(path):
@@ -804,6 +815,9 @@ def _install(plan, args):
     installed = bool(previous.get("installed"))
     previous_selection = receipt_components(previous) if installed else []
     if installed:
+        previous_scope = previous.get("scope") or {}
+        if previous_scope.get("client") == "codex" and previous_scope.get("project") and not selected.get("project") and "reverse" in previous_selection:
+            raise InstallError("旧 Codex receipt 仍管理项目范围；全局化迁移不会静默删除项目入口。使用同一 project 完成保守更新，或选择新的安装 root 重新建立 CODEX_HOME 全局安装")
         if normalized_identity(previous.get("scope")) != normalized_identity(selected):
             raise InstallError("安装根已属于另一客户端/agent/项目范围；请选新 root，或 restore 后安装")
         removed = set(previous_selection) - set(selection)
@@ -1161,7 +1175,7 @@ def _install(plan, args):
             checks["official_setup_staged"] = "passed"
         if "spec_kit" in selection:
             checks["specify_version"] = "passed"
-        checks["project_init"] = "passed" if init_project else "preserved-existing"
+        checks["project_init"] = "created" if init_project else ("preserved-existing" if selected.get("project") else "not-selected")
         managed_shell_guard = copy.deepcopy(previous.get("shell_guard_config") or {})
         if selected.get("everything_es"):
             managed_shell_guard.update({"esPath": selected["everything_es"], "executable": plan["everything_es_identity"]})
@@ -1258,6 +1272,12 @@ def verify(root):
             failures.append("specify executable missing")
         elif hashes.get("specify_sha256") and digest(Path(specify).read_bytes()) != hashes["specify_sha256"]:
             failures.append("specify executable identity drift")
+        if project:
+            native = project / (".pi/prompts" if client == "pi" else (".claude" if client == "claude" else ".agents/skills"))
+            if not (project / ".specify").is_dir():
+                failures.append("Spec Kit project .specify directory missing")
+            if not native.is_dir() or not any(native.rglob("*.md")):
+                failures.append("Spec Kit project native resources missing")
     if "reverse" in selection:
         stored_reverse = receipt.get("reverse") or {}
         reverse_root = stored_reverse.get("root")
