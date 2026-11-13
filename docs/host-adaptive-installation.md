@@ -23,6 +23,40 @@ Resolve paths on the target computer. Do not copy paths from this repository, an
 
 ## 2. Use the official upstream entry for each component
 
+### The enhanced reverse-skill is the core workflow component
+
+`reverse` is a required core component for reverse-engineering, security-analysis, protocol, frontend-signature, reconstruction, behavior-comparison, version-tracking, and knowledge-maintenance tasks. It is not just a short prompt and it is not the same thing as REA.
+
+The reverse source identity includes the enhanced repository and its native resources:
+
+- `RULES.md` / `RULES_zh.md` as the behavior and authorization contract;
+- `skills/config/routing.json` as the routing source of truth;
+- `skills/MASTER-ROUTING.md` and `skills/SKILL.md` as the native router and master workflow;
+- `skills/scripts/master-route.ps1` / `master-route.sh` and case/scope scripts;
+- the selected domain Skills and `skills/ops/` Evidence, scope, lifecycle, role and handoff contracts;
+- the optional Codex plugin under `plugins/reverse-skill` when that source provides one.
+
+The installer must record the exact reverse release commit or an explicitly supplied read-only local source, source hashes, dirty state and router paths. It must make one host entry point that points back to that reverse source and the active receipt. It must not copy a second router, flatten domain Skills into a generic prompt, or replace reverse's case/Evidence authority with an installer workflow.
+
+The host entry points are thin adapters to this same reverse source:
+
+| Host | Reverse entry | What remains authoritative |
+|---|---|---|
+| Pi / Pi Web | Pi package `reverse-workflow` Skill and receipt pointer | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
+| Codex | project/user `.agents/skills/reverse-workflow`, with the optional Codex plugin as an additional entry | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
+| Claude Desktop / supported Claude route | project Skill and `CLAUDE.md` bridge | reverse `RULES`, native router, PRIMARY, scope, case and Evidence |
+
+The reverse entry is the first professional workflow step. The route is:
+
+```text
+reverse-workflow entry
+  -> reverse RULES and native router
+  -> PRIMARY and scope/case gate
+  -> selected domain Skill
+  -> REA only when that PRIMARY needs its bounded analysis tools
+```
+
+REA cannot replace reverse routing, and a successful REA MCP registration does not prove that the reverse Skill or router is loaded. A host installation that has REA and Spec Kit but no valid reverse source/entry is incomplete for this combined reverse workflow.
 The combined installer owns selection, isolation, version identity, transaction journaling, configuration preservation, and verification. The upstream project owns its setup semantics and resource layout.
 
 | Component | Official upstream route | Combined-installer boundary |
@@ -62,7 +96,7 @@ Register REA through the official setup/registration path and preserve all unrel
 
 Use the explicit `claude_desktop_config.json` and the project `CLAUDE.md`/Skills layout described by the official integration. Merge only the selected REA MCP entry and preserve unrelated JSON fields. Use the Claude project entry to point to the receipt, enhanced reverse router, and native workflow. Do not register Pi packages or Craft-Pi resources.
 
-## 3. Keep the combined workflow chain intact
+## 4. Keep the combined workflow chain intact
 
 The combined environment has one authority chain. Host adapters change where resources are installed; they do not create a second router or a second project workflow:
 
@@ -83,7 +117,7 @@ REA is the analysis and Evidence backend after PRIMARY selection. Spec Kit holds
 
 A host installation may therefore skip Craft while still providing the complete reverse/REA/Spec workflow. It may select upstream Craft's Codex MCP route without installing the Pi bundle. It may select the Pi `craft-pi` backend only when the Pi host, the frozen reverse contract, the explicit bundle, and the standalone Pi runtime are all present. A Craft candidate, Ready state, successful process exit, or installer receipt does not close the original case or prove business acceptance.
 
-## 4. Plan, apply, and verify on the real machine
+## 5. Plan, apply, and verify on the real machine
 
 The first verification pass is static and local. Confirm the host evidence, official route, selected component identities, resolved paths, resource ownership, plan schema, configuration merge, source hashes, and unsupported-component boundaries before any live host check. Do not run a real provider, model, target, or business scenario merely to prove that the installation document is internally consistent.
 
@@ -112,7 +146,7 @@ After apply, report four separate states:
 
 An installer exit code, copied file, Skill listing, MCP registration, Craft project state, or model self-report cannot upgrade one state into the next. Preserve unknowns and host-specific limits in the receipt/report.
 
-## 5. Stop conditions and recovery
+## 6. Stop conditions and recovery
 
 Stop before a side effect when the host is ambiguous, the target path is not owned by the user-selected scope, an existing managed file has later user edits, an official source cannot be resolved, a required runtime/provider is missing, or an optional backend is incompatible with the host. Explain the smallest missing input or the exact conflict.
 
