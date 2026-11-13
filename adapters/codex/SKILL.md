@@ -3,7 +3,7 @@ name: reverse-workflow
 description: 针对明确逆向或安全分析目标的二进制、APK、前端签名、协议与 API 安全分析，以及复刻、行为对比、版本追踪和知识维护入口；按活动回执接续 reverse-skill 原生工作流。
 ---
 
-这是成果项目中的统一入口。遇到上述专业任务时先进入本 skill，不要直接绕过它执行普通命令。
+这是 Codex 全局安装中的统一入口。遇到上述专业任务时先进入本 skill，不要直接绕过它执行普通命令。
 
 读取本机回执 `{{RECEIPT}}`，要求 `installed: true`。从 `reverse.root` 得到用户增强仓库的显式本地路径；先读其原 `RULES.md`。
 
@@ -15,4 +15,4 @@ description: 针对明确逆向或安全分析目标的二进制、APK、前端�
 
 原始 case 与 Evidence 保持权威。分析、原件修改、接入和重新打包按实际交付接续；独立复刻在行为证据与成功标准充分后进入 reconstruction/Spec Kit。简洁说明结果、未知项和实际验证范围。
 
-REA 由官方 setup 在回执的 Codex 配置根注册，保留全部工具。Spec Kit 使用当前成果项目中官方 `--integration codex` 实际生成的原生技能。恢复、追版、知识维护均继续原 reverse 中立流程。报告回执中的未验证状态，不把安装视为任务通过。
+REA 由官方 setup 在回执的 Codex 配置根注册，保留全部工具。Spec Kit CLI 由全局安装提供；只有用户明确选择独立成果项目时，才使用该项目中官方 `--integration codex` 实际生成的原生技能。恢复、追版、知识维护均继续原 reverse 中立流程。报告回执中的未验证状态，不把安装视为任务通过。

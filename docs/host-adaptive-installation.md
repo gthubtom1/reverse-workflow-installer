@@ -13,7 +13,7 @@ Read `README.md`, `AGENTS.md`, this file, `components.json`, `docs/compatibility
 | Host | Primary configuration evidence | Host-owned entry resources |
 |---|---|---|
 | Pi CLI / Pi Web | `PI_CODING_AGENT_DIR`, Pi configuration schema, or the running Pi Web agent directory | Pi package, `mcp.json`, `settings.json`, user `AGENTS.md`, Pi skills, optional Pi profiles/extensions |
-| Codex CLI / Codex desktop / IDE | `CODEX_HOME` and `config.toml`, or an explicit Codex project | `CODEX_HOME/AGENTS.md`, `CODEX_HOME/config.toml`, `CODEX_HOME/skills`, optional project `.agents/skills`, project `.codex/config.toml` |
+| Codex CLI / Codex desktop / IDE | `CODEX_HOME` and `config.toml`, or an explicit Codex project | `CODEX_HOME/AGENTS.md`, `CODEX_HOME/config.toml`, `CODEX_HOME/skills`, project `.codex/config.toml` only when explicitly selected |
 | Claude Desktop | explicit `claude_desktop_config.json` | JSON MCP entries, project `CLAUDE.md`, project skills |
 | none | explicit `--client none` | no host configuration; only selected source/package checks |
 

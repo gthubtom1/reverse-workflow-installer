@@ -13,7 +13,7 @@
 | 上游 Craft Anything Codex integration | 官方 `craft-anything-cli setup --client codex --yes`、`doctor --client codex`、Codex `config.toml` MCP entry、Codex approval 与 Craft consent | 上游 Codex 文档记录 setup、工具审批和 MCP discovery；真实账户构建与用户 provider 资格仍需在目标机验收 | 属于上游 Craft host integration；当前 core `craft` 组件不把它伪装成 Craft-Pi 或自动写入 Codex receipt |
 | Pi grilling 伴随技能 | 官方 `grilling`、`domain-modeling`、`grill-me`、`grill-with-docs` 保持原文；installer 只生成 `pi-grill-me`、`pi-grill-with-docs` wrapper | Node 离线夹具验证缺依赖时零写入、幂等、官方文件不变、wrapper 路径和引用一致 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
-| Codex | REA 官方 setup；Spec Kit 官方 skills integration；reverse 原插件路径契约 | 配置合并、全局/项目入口、子集扩展与升级反例 | 本机部署 verify 通过；Codex 新会话实际触发仍单独验收 |
+| Codex | REA 官方 setup；Spec Kit CLI 全局工具与可选 Codex project integration；global `CODEX_HOME/AGENTS.md`、`CODEX_HOME/skills` 与 reverse plugin path contract | 配置合并、全局入口、子集扩展与升级反例 | Codex 新会话实际触发仍单独验收 |
 | Claude Desktop | 显式 JSON MCP 配置、全局 skill 与项目 CLAUDE.md；不依赖 Claude CLI | provider 环境保留、子集/完整安装、入口升级与项目扩展反例 | 本机既有部署 verify 通过；Desktop 实际加载和新对话触发仍单独验收 |
 | 本机 accept 验收 | 官方 REA doctor、原 router 临时路由、官方 Spec Kit 临时 init | 按 receipt 选定组件验收 | Pi 基础验收通过；REA 工具目录完整。JADX 深度代码 provider 尚缺用户提供的桥接 JAR，不能声明 APK 深度分析已就绪 |
 
