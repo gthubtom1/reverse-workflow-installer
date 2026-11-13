@@ -1,10 +1,10 @@
 # 给安装 AI 的公共整环境部署指南
 
-任何人都可以把本仓库链接交给能够读取仓库、执行命令的 AI 助手，由它根据**目标电脑的 OS、架构、已有工具、实际路径和目标宿主**部署公开工具能力。先读 README、AGENTS 和本页，再使用下面链接中的既有安装路线。安装 AI 所在的宿主不自动等于要部署的目标宿主；账号由用户在目标机登录或配置。
+任何人都可以把本仓库链接交给能够读取仓库、执行命令的 AI 助手，由它根据**目标电脑的 OS、架构、已有工具、实际路径和目标宿主**部署公开工具能力。先读 README、AGENTS、[宿主自适应安装流程](host-adaptive-installation.md) 和本页，再使用下面链接中的既有安装路线。安装 AI 所在的宿主不自动等于要部署的目标宿主；账号由用户在目标机登录或配置。
 
 ## 可直接交给安装 AI
 
-> 请部署本仓推荐环境。先读 README、AGENTS 和 docs/environment-recovery.md，检测目标电脑 OS/架构、已有工具版本与路径，确认目标是 Pi Web、Pi、Codex 或其他受支持 client。按电脑能力选择兼容项，复用合格安装，简要说明安装范围后在已有授权内连续推进。缺用户账户只问实际缺项；跳过不支持的可选组件并说明，不把跳过当已安装。保留已有配置，同名内容冲突先报告；不要照抄示例机器路径、全局改 PATH 或新增安装框架。完成后分别报告安装、宿主加载和代表性能力检查结果。
+> 请部署本仓推荐环境。先读 README、AGENTS、[宿主自适应安装流程](host-adaptive-installation.md) 和 docs/environment-recovery.md，检测目标电脑 OS/架构、已有工具版本与路径，确认目标是 Pi Web、Pi、Codex 或其他受支持 client。先识别宿主和官方组件入口，再按电脑能力选择兼容项；复用合格安装，简要说明安装范围后在已有授权内连续推进。缺用户账户只问实际缺项；跳过不支持的可选组件并说明，不把跳过当已安装。保留已有配置，同名内容冲突先报告；不要照抄示例机器路径、全局改 PATH 或新增安装框架。完成后分别报告安装、宿主加载和代表性能力检查结果。
 
 ## 先确定机器与宿主
 
@@ -34,7 +34,7 @@
 
 | 能力 | 公开来源 / 安装路线 | 什么时候选择 |
 |---|---|---|
-| Craft 执行后端 | [精确 pin 获取](craft-acquisition.md)、[安装](craft-install.md)、[Windows x64 pin](../releases/windows-x64.json) | 现有 native 分发为 Windows x64；需明确选择、合格 bundle 和独立 Pi/Node。`all` 不包含；普通 Worker 默认，原 R46/Spec runner 只为合格批次 opt-in |
+| Craft 能力 | 上游 Craft Anything Codex/MCP 路线；我们的 `craft-pi` bounded execution backend | Codex 使用上游官方 `craft-anything-cli setup --client codex --yes` 与 `doctor --client codex`，保留 Codex approval/Craft consent；Pi 才可选择我们自己的 `craft-pi` bundle。两者必须分开记录，不能把 Craft-Pi receipt 当作上游 Craft Codex 支持 |
 | shell-guard 与 Everything | [shell-guard 指南](shell-guard-install.md)，固定 `shell-guard-v0.3.0`；[Everything GUI](https://www.voidtools.com/downloads/) 与独立 [es CLI](https://www.voidtools.com/support/everything/command_line_interface/) | Pi 需要命令检查时显式选；`all` 不包含。Everything 按 Windows 支持范围准备实际 CLI/GUI 路径和索引，安装器不安装 Everything |
 | 专业分析引擎 | REA 官方文档及对应分析工具指南；按实际任务准备 Java、Ghidra、JADX 所需引擎等 | 工具 schema 存在不代表引擎已安装；缺某引擎不阻塞其他适用工作流 |
 | 桌面操作 / 网页搜索 | [pi-computer-use](https://github.com/injaneity/pi-computer-use)、[pi-web-access](https://github.com/nicobailon/pi-web-access) | Pi 需要桌面或网络能力时安装；按目标 OS/helper/权限和所选包版本准备，搜索 provider 按需配置 |
