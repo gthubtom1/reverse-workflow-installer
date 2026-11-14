@@ -1,0 +1,18 @@
+--- a/crates/engine/src/execution_policy.rs
++++ b/crates/engine/src/execution_policy.rs
+@@ -268,9 +268,13 @@
+     }
+     pub fn validate_model(&self) -> Result<(), ToolError> {
+         let m = &self.model;
+-        if !m.allowed || m.backend_id.trim().is_empty() || m.permission_contract != "pi-rpc-bounded-v1"
++        let supported_permission =
++            (m.backend_id == "craft-pi-rpc-v1" && m.permission_contract == "pi-rpc-bounded-v1")
++                || (m.backend_id == "craft-codex-app-server-v1"
++                    && m.permission_contract == "codex-dynamic-bounded-v1");
++        if !m.allowed || m.backend_id.trim().is_empty() || !supported_permission
+             || [&m.expected.provider, &m.expected.model, &m.expected.effort].iter().any(|s| s.trim().is_empty() || s.as_str() == "auto") {
+-            return Err(refusal("model-policy", "Explicit model permission, provider/model/effort and Pi RPC permission support are required."));
++            return Err(refusal("model-policy", "Explicit model permission, provider/model/effort and a supported bounded backend permission are required."));
+         }
+         Ok(())
+     }

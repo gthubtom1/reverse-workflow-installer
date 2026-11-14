@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "base_commit": "0326b4de8051f85a0f3139cd82f88f76911e6a35",
+  "base_tree": "31e94ff75d8bf3f75cb195f6a6283a179671dd7c",
+  "base_policy_series_sha256": "61cf9b94c6cc3b28de8f5ea16e44ee9be7f92937bac91da880bda3bda4919a6c",
+  "lock_sha256": "bb00d8c23971ea4b595a10e50c1eadb44b2372b5d3859e9ea2933a9e5916a043",
+  "series": [
+    {
+      "file": "codex-permission.patch",
+      "sha256": "ef1bd71d4946a131f2dd649ad89257fbbe2702762e0f2a491e3ed4d1b676a7b5",
+      "bytes": 1149,
+      "sources": ["crates/engine/src/execution_policy.rs"]
+    }
+  ],
+  "source_inventory": [
+    {
+      "path": "crates/engine/src/execution_policy.rs",
+      "state": "modified-by-codex-delta",
+      "sha256": "46d2b3a7da5f8b4e255bdf9ae1910b8a1d3e61c1d2d50540154b58ae81cc301a",
+      "bytes": 36010
+    }
+  ],
+  "contract": "Only the exact Pi pair and exact Codex pair are accepted; arbitrary backend/permission combinations remain refused. Apply after the four reviewed base patches and before freezing the new Codex tree."
+}

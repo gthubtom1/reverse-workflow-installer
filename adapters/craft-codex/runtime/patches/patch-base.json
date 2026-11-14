@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "upstream": "https://github.com/storytold/craft-anything.git",
+  "base_commit": "0326b4de8051f85a0f3139cd82f88f76911e6a35",
+  "base_tree": "31e94ff75d8bf3f75cb195f6a6283a179671dd7c",
+  "old_four_patch_series_sha256": "61cf9b94c6cc3b28de8f5ea16e44ee9be7f92937bac91da880bda3bda4919a6c",
+  "old_four_patch_result_source": {
+    "path": "crates/engine/src/execution_policy.rs",
+    "sha256": "f6a1d0990bf0388b35a4a36059157f2e455e4f53a0cd0ac018e848c9b7cbb94f",
+    "bytes": 35748
+  },
+  "cargo_lock_sha256": "bb00d8c23971ea4b595a10e50c1eadb44b2372b5d3859e9ea2933a9e5916a043",
+  "delta_series": "patches/series.json",
+  "apply_order": [
+    "verify base_commit/base_tree and old four-patch source inventory",
+    "apply patches/codex-permission.patch",
+    "verify patches/series.json source_inventory and Cargo.lock"
+  ],
+  "permission_delta": {
+    "old": {"backend_id":"craft-pi-rpc-v1","permission_contract":"pi-rpc-bounded-v1"},
+    "new": {"backend_id":"craft-codex-app-server-v1","permission_contract":"codex-dynamic-bounded-v1"},
+    "arbitrary_pairs": "refused"
+  }
+}

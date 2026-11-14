@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "codex-stock-bounded-v1",
+  "runtime": {
+    "version": "0.167.0-alpha.4.1",
+    "protocol": "app-server-v2",
+    "cli_sha256": "83f5c2dd2ac2902e0d96ba5d8ccdd27d513f57df4a9ab73e06a5a518028e9a2f",
+    "os": "windows",
+    "arch": "x86_64"
+  },
+  "startup": {
+    "argv_prefix": ["app-server", "--stdio"],
+    "config": {
+      "agents.enabled": false,
+      "web_search": "disabled",
+      "approval_policy": "never",
+      "sandbox_mode": "read-only",
+      "project_doc_max_bytes": 0,
+      "skills.include_instructions": false,
+      "skills.bundled.enabled": false
+    },
+    "disable_features": [
+      "shell_tool", "unified_exec", "multi_agent", "multi_agent_v2",
+      "plugins", "hooks", "apps", "browser_use", "browser_use_external",
+      "computer_use", "image_generation", "view_image", "skill_search",
+      "plugin_discovery_prefetch", "goals", "code_mode_host", "code_mode",
+      "mcp_2026_07_28", "enable_mcp_apps"
+    ],
+    "enable_features": ["skip_host_skill_discovery", "omit_skill_descriptions"]
+  },
+  "thread": {
+    "environments": [],
+    "sandbox": "read-only",
+    "approvalPolicy": "never",
+    "ephemeral": true,
+    "allowProviderModelFallback": false,
+    "experimentalRawEvents": false,
+    "runtimeWorkspaceRoots": [],
+    "selectedCapabilityRoots": []
+  },
+  "turn": {
+    "environments": [],
+    "approvalPolicy": "never"
+  },
+  "dynamic_namespace": "craft_host",
+  "operations": [
+    "build_files_list", "build_file_read", "build_file_write",
+    "build_file_edit", "build_command_run", "build_checklist"
+  ],
+  "runtime_checks": [
+    "Freeze the actual Codex binary, reviewed config.toml or its absence, effective MCP-name inventory and all project configuration inputs before model execution.",
+    "Disable every actual MCP server before startup and verify effective MCP, plugin, hook and Skill controls without persisting credential-bearing config.",
+    "Use a single ephemeral thread and active turn; compare effective provider/model/effort/cwd and stop on rerouting.",
+    "Route only the six namespaced dynamic operations to the original bounded Engine; reject native approvals, permission requests, user-input requests and unexpected effect events.",
+    "Keep startup controls and empty environments on every thread/turn. Configuration layers must not re-enable delegation or redirect the approved provider.",
+    "Require actual usage, correlated terminal state, and owned Codex/MCP process and pipe cleanup before success."
+  ],
+  "observed_controls": {
+    "code_mode_exec": "handler disabled; its visible declaration is not an OS execution capability",
+    "direct_apply_patch": "rejected before file access because no execution environment is available",
+    "collaboration_spawn": "unsupported after agents.enabled=false; zero child model requests and child thread starts",
+    "dynamic_operation": "craft_host/build_files_list roundtrip observed at item/tool/call Gate",
+    "protected_fixture": "sentinel bytes unchanged",
+    "cleanup": "Windows owned Job empty, root exited, stdout/stderr closed"
+  },
+  "qualification_limits": [
+    "Extra inactive or resource-only helper declarations may remain visible; raw tool count is not the effect-permission contract.",
+    "No real provider/model, original business target, or business build acceptance is implied by local canned Responses verification.",
+    "Single-response and aggregate token/cost hard caps are unsupported; only explicitly accepted wall/refine limits and actual usage audit are supported.",
+    "Frozen engineering commands are not an operating-system sandbox against malicious application code."
+  ]
+}

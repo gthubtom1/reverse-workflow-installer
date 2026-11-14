@@ -1,0 +1,21 @@
+{
+  "name": "craft-codex-executor-entry",
+  "contract_version": 1,
+  "version": "0.1.1",
+  "transport": "local-native-process",
+  "backend_id": "craft-codex-app-server-v1",
+  "permission_contract": "codex-dynamic-bounded-v1",
+  "commands": {"inspect":["--inspect"],"version":["--version"],"execute":["--run","ABSOLUTE_PREPARED_EXECUTION_JSON"],"validate":["--validate","ABSOLUTE_HANDOFF_JSON"],"prepare":["--prepare","ABSOLUTE_HANDOFF_JSON"]},
+  "stdout": "one machine JSON result; candidate is never accepted",
+  "stderr": "machine JSON admission error",
+  "exit_codes": {"0":"inspect/version/validated/prepared or candidate","1":"executed failed/stopped/blocked-cleanup","2":"admission/config/runtime failure"},
+  "required_environment": ["CRAFT_CODEX_RUNTIME_PROFILE_SHA256","CRAFT_CODEX_RUNTIME_PROFILE","CRAFT_CODEX_CLI","CRAFT_CODEX_CLI_SHA256","CRAFT_CODEX_VERSION","CRAFT_CODEX_HOME_OR_CODEX_HOME","CRAFT_BUNDLE_ROOT","CRAFT_BUILDER_INSTRUCTIONS"],
+  "provider_manifest": {"kind":"codex-stock-bounded-v1","profile":"raw profile SHA/id + actual CLI SHA/version + fixed startup/thread/turn controls","auth":"native-codex-home path only; no apiKey or auth copy; config/read layer hashes and effective MCP IDs are memory-only","model":"provider/model/effort exact identity","budget":"audit-only; response_hard_cap is always unsupported"},
+  "policy": "Hashed AcceptedResearch policy v1; patched Craft RebuildRun; one Codex Builder; bounded dynamic MCP tools",
+  "handoff": "Typed deny-unknown v1; original authority/lead-decision/task-selection refs; prepare/validate zero model calls",
+  "return_summary": "Typed disposition, affected tasks, check reason codes and original refs; cleanup unknown remains blocked-cleanup",
+  "resume": "cross-run resume unsupported; host-created thread receipt only",
+  "stop": "owner stop marker; Codex turn/interrupt; terminal completion and owned-process cleanup required",
+  "runtime": {"entry":"bin/craft-codex-executor.exe","driver":"bin/codex-app-server-driver.exe","cli":"actual codex.exe app-server --stdio with profile-derived fixed overrides","protocol":"app-server-v2","mcp":"original bounded Engine MCP; thread-scoped status after config/read"},
+  "qualification": "development backend; native app-server and installer/package qualification are separate"
+}

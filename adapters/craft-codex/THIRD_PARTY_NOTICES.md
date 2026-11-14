@@ -1,0 +1,11 @@
+# Craft Codex execution — third-party notices
+
+This distribution contains the bounded Craft execution owner/driver and its Codex runtime profile. Component identities and the actual compiled dependency inventory are recorded separately; the bundle version does not identify an upstream Craft or Codex release.
+
+- The adapted Craft engine uses the fixed upstream commit and ordered policy patches recorded in the source manifest and build provenance. Its original `LICENSE-MIT`, `LICENSE-APACHE`, `ATTRIBUTION.md` and `NOTICE` are retained at the bundle root. The reviewed base-policy notices remain in `source/base/notices/`.
+- The installer-owned execution bridge, owner, entry and build integration use the original installer license retained in `licenses/cargo/owned/installer-MIT.txt` and `source/project/LICENSE`. The compiled Cargo inventory records the selected MIT option for these owned crates and their exact source association.
+- Codex is an external runtime supplied by the target computer. Its native binary, account, configuration and original distribution remain with their owner; this bundle does not redistribute or replace that binary. The runtime profile records the exact qualified version/binary digest and official controls used by the execution bridge. It does not claim that the installed binary was built from a particular public source tag.
+- `licenses/compiled-cargo-inventory.json` records the production owner/driver dependency grants and checksums. Only dependencies actually reported by the production compiler are counted as compiled. Source/test fixture files do not represent additional runtime qualification.
+- Any non-system runtime DLLs are included only with their recorded build/import identity and applicable original notices. Operating-system components are supplied by the operating system. No personal profile, authentication file, session or model credential is included.
+
+Original grant text is copied from the reviewed source/archive evidence and is not rewritten or given invented authorship. Metadata, checksums and an SPDX expression identify the associated material; they are not substitutes for its required grant or attribution. Missing required original notices block publication. Brand/trademark permission and real model or business acceptance are separate from these source and redistribution records.

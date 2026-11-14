@@ -1,0 +1,1 @@
+Copyright (c) 2026 gthubtom1. This project-owned Rust executor is distributed under the MIT option of its MIT OR Apache-2.0 declaration. Patched Craft upstream dependencies retain their own licenses and notices. The executor does not distribute Codex CLI, auth files, provider secrets, REA material or user profiles.

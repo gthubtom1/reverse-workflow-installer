@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "profile": "codex-stock-bounded-v1",
+  "scope": "Actual stock CLI with isolated home and local canned Responses only; no real model/provider/business target",
+  "version": "codex-cli 0.167.0-alpha.4.1",
+  "cli_sha256": "83f5c2dd2ac2902e0d96ba5d8ccdd27d513f57df4a9ab73e06a5a518028e9a2f",
+  "evidence_inventory_sha256": "8f8702cf83b89e06dcdf3611eecb54d3e70482a3f5f32f457f7e9cce8533232b",
+  "master_control_probe": {
+    "profile_input": "agents.enabled=false",
+    "spawn_handler_rejected": true,
+    "direct_apply_patch_rejected": true,
+    "child_provider_request_count": 0,
+    "child_thread_started_count": 0,
+    "sentinel_unchanged": true,
+    "allowed_dynamic_gate_observations": [["craft_host", "build_files_list"]],
+    "pass": true
+  },
+  "direct_apply_patch_result": "No usable execution environment is available. Wait for an environment to become available before using this tool.",
+  "spawn_result": "unsupported call: collaborationspawn_agent",
+  "code_mode_result_from_separate_handler_probe": "code-mode host is disabled",
+  "cleanup": {
+    "job_empty": true,
+    "stdout_closed": true,
+    "stderr_closed": true,
+    "process_exited": true,
+    "status": "verified"
+  },
+  "raw_tool_declarations_exactly_six": false,
+  "effect_control_probe_pass": true,
+  "limits": [
+    "The raw declaration inventory contains inactive/resource helper entries; it does not grant engineering permissions.",
+    "This record does not replace the real Rust driver and original owner/check/refine integration fixtures or per-task acceptance.",
+    "The evidence is specific to the recorded CLI digest and official control profile; other binaries require qualification.",
+    "No account authentication data or personal configuration is redistributed."
+  ]
+}

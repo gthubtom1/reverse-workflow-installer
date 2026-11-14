@@ -40,9 +40,11 @@ CODEX_HOME/skills/reverse-workflow/SKILL.md
 
 REA 提供分析与证据工具；reverse-skill 的原生 router 决定专业 PRIMARY；Spec Kit 在你的独立成果项目里维护规格、计划和任务；`grilling` 在 Pi 中负责方案决策树、隐含前提和结论审查。本仓库负责安装、范围明确的配置、更新与恢复，不修改 REA、Spec Kit 或 `grilling` 官方正文。
 
-可选 [Craft 本地 bundle](docs/craft-install.md) 提供隔离分发/更新/verify/restore 与 Pi 按需 execution 入口，默认关闭；普通 implementation-worker 继续默认，Craft 仅由原 R46/Spec runner 为明确批次 opt-in。需显式选择 Pi、reverse、Spec Kit，提供合格 bundle、独立 Pi Node/CLI/version，并通过 reverse descriptor/version/文件摘要与受管入口门。含 Craft 的冻结 plan 为 schema 2，普通核心 plan 与 receipt 为 schema 1；旧 verify/restore 不认证 Craft，使用新 reader。**源码、发行资产、安装、宿主加载和业务接受须分别取证**；安装/运行资格按实际身份与测试判断，不以 official latest 替代兼容补丁资产。
+可选 [Craft 本地 bundle](docs/craft-install.md) 复用原 R46 的 `accepted research → prepare → 单 Builder → build/check/refine → typed return`，通过 `--with-craft` 按实际 Pi/Codex 宿主选择驱动。Codex 使用[受控执行适配](docs/craft-codex.md)，不依赖 Pi 编码运行时；上游 Craft MCP 作为分析工具另行保留。用户要求完整版复刻流程时应选择该组件，不能仅安装 MCP 后报告完成。必须同时选择 reverse 与 Spec Kit，核宿主对应的 reverse descriptor、完整 bundle、驱动身份与受管 entry。含 Craft 的冻结 plan 为 schema 2，普通核心 plan 与 receipt 为 schema 1；旧 verify/restore 不认证 Craft，使用新 reader。**源码、发行资产、安装、宿主加载、离线协议检查和真实业务接受分别取证**。
 
 Craft 的后续入口：
+
+- [Codex 受控执行与安装](docs/craft-codex.md)：接续相同 Spec/owner/check loop，使用原生 app-server 动态工具和明确的模型、预算、取消与清理合同；不另建调查流程。
 
 - [上游维护手册](docs/craft-upstream-maintenance.md)与[新对话升级提示词](docs/craft-upgrade-prompt.md)：固定版本差异、最小适配、验证门和三层回滚。
 - [精确公开 pin 获取 Craft/reverse](docs/craft-acquisition.md)：正式 [Windows x64 pin](releases/windows-x64.json) 固定 [Craft-Pi v0.1.1](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-pi-v0.1.1) 与 [reverse v1.9.0](https://github.com/gthubtom1/reverse-skill/releases/tag/v1.9.0)。下载辅助脚本使用独立 [craft-acquisition-v0.1.1](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/craft-acquisition-v0.1.1) 或包含此修复的 main；安装器核心正式身份保持 [v0.7.0](https://github.com/gthubtom1/reverse-workflow-installer/releases/tag/v0.7.0)。先创建短父目录（如 `D:/cw`），再从辅助源码仓根运行 `python -B scripts/acquire_craft.py --pin-file releases/windows-x64.json --stage D:/cw/craft-0.1 --deadline-seconds 600`，stage 须不存在且绝对根不超过64个 UTF-16 units。辅助工具在网络/进程/写入前检查根路径，解压前再核实际成员预算；HTTP/1.1 是局部兼容选项，不保证网络 clone 必然成功。这里只获取已核包和源，Pi/Node 另用官方锁定流程。

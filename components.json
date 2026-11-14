@@ -24,7 +24,7 @@
     "policy": "explicit-verified-local-bundle; remote-artifact-unsupported-until-published",
     "base_commit": "0326b4de8051f85a0f3139cd82f88f76911e6a35",
     "optional": true,
-    "clients": ["pi"],
+    "clients": ["pi", "codex"],
     "requires": ["reverse", "spec_kit"]
   },
   "shell_guard": {
