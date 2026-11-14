@@ -24,7 +24,9 @@
 
 需要保留现有官方 Spec Kit 版本时，生成 plan 可用 `--spec-kit-version`；已有安装更新默认沿用 receipt 版本，需要主动升级才使用 `--upgrade-components`，详见 [固定官方版本](version-pins.md)。上游更新不会让旧安装被冒充成新版通过。
 
-### Pi Craft 可选执行后端
+### Pi / Codex 的 Craft 执行后端
+
+用户要求包含 Craft 的完整复刻流程时，安装 AI 必须选择 `--with-craft`。Codex 按 [Codex 受控执行指南](craft-codex.md) 准备其 bundle 和真实 Codex CLI；Pi 按下文原 pin 准备独立 Pi 运行时。两者接续相同的原 PRIMARY/REA 分析、Spec tasks、单 Builder、build/check/refine 和 typed return；上游 Craft MCP 单独连接不完成这条链。
 
 Craft 默认关闭，`all` 不会选择。普通 implementation-worker 仍是默认；只有原 R46/Spec implement runner 为依赖已满足的明确批次选择 Craft 且本机资格满足时才使用。正式 core v0.7.0、native Craft-Pi v0.1.1、reverse v1.9.0 分开发布，下载 helper 独立为 0.1.1：先按 [精确 pin 获取指南](craft-acquisition.md) 获取真实 bundle/reverse，再按 [本地 bundle 指南](craft-install.md) 提供独立 Pi Node/CLI/分发根和精确版本。核心 installer 只消费本地已核 bundle，没有直接 fetch flag。资产和 pin 存在不证明本机 provider、宿主加载或业务接受；新电脑全自动 fresh 网络最后记录为匿名 API 403、无 complete，已核 GET/hash 不等于完整换机实测。它不新增控制 profile，不接管原路由或独立验收。
 
@@ -121,7 +123,7 @@ Pi 可以先输入 `/skill:reverse-workflow`；如果宿主没有自动显示这
 
 请按 receipt 的实际选择范围检查当前环境；未选组件不要求存在：
 - 安装回执和已选择的核心组件身份（完整 core 为 REA、reverse、Spec Kit 三项）；
-- 若 receipt 选择 Craft，再核其 bundle、独立 Pi 分发和受管 resources 身份，不默认启用 Craft；
+- 若 receipt 选择 Craft，再核对应 Pi/Codex 的 bundle、运行时、受管 resources 与 entry 身份，以及单独记录的协议和清理验证；
 - 宿主 skill 是否加载；
 - REA MCP 是否完成握手并暴露完整工具；
 - reverse 原生 router 是否可运行；

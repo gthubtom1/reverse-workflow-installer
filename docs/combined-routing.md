@@ -49,8 +49,8 @@ Claude或其他宿主必须先实现其实际技能发现／自动启用／禁�
 
 ## Craft 安装和受控执行资格分开
 
-Codex官方 Craft MCP/app可以安装、发现并提供工具，但不等于现有Pi受控后端已经移植。原R46执行合同涉及已接受研究、固定任务／基线、单写者、预算、取消清理和typed返回接收。当前上游Codex路线没有取得这套资格时，必须记录为 `tool companion; execution backend unqualified`，仍由默认Worker执行实现；不能用独立 `rebuild_start` 偷换原runner。
+Codex 官方 Craft MCP/app 可提供分析工具。接续原 R46 的实现批次时，须安装并选择 [Codex 受控执行 bundle](craft-codex.md)，由 `craft-codex-app-server-v1` 复用 accepted research、固定任务/基线、单 Builder、build/check/refine 与 typed return 接收。只存在上游 MCP、没有 receipt 中的受控 backend 时仍记录 `tool companion; execution backend not installed`；不能用独立 `rebuild_start` 偷换原 runner。
 
 用户明确选择从Craft app单独发起其完整Study/Build流程时，它是另一项独立任务及其自身记录；不能与同一成果根的原Spec实现同时运行，也不能把结果自动记入原case为accepted。需要接回组合流程时由原lead核对身份和证据再接收。
 
-安装报告必须逐项说明所选后端资格和实际控制，不使用“完整版已适配”覆盖这个缺口。移除上游自动入口只解决路由归属，并不会生成未实现的Codex执行adapter。
+安装报告分别列出上游工具、路由控制、所选执行 backend、其离线协议/取消/清理验证与实际业务验收。移除上游自动入口解决入口归属；完整后半执行由独立安装的受控驱动提供。新宿主必须同时实现入口控制和这条执行链，不能复制另一个宿主的通过记录。

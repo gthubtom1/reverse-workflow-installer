@@ -19,6 +19,7 @@ from versions import COMPONENTS, InstallError, resolve, stable
 import package_utils as pu
 import shell_guard as sg
 import craft as cr
+import craft_codex as cc
 import routing_ownership as ro
 
 REPO = Path(__file__).resolve().parents[1]
@@ -128,6 +129,30 @@ def detect_client(client, config=None, env=None, agent_dir=None):
     return evidence.pop(), names
 
 
+def craft_profile(selected, contract=None):
+    """Select per scope/record, never change a process-global backend module."""
+    client = selected.get("client")
+    if client not in ("pi", "codex"):
+        if "craft" in selected.get("components", []) or contract is not None:
+            raise InstallError("Craft is supported only for explicitly selected Pi or Codex")
+        return cr
+    profile = cc if client == "codex" else cr
+    if contract is not None:
+        profile.gate(contract)
+    return profile
+
+
+def craft_record_profile(record):
+    contract = record.get("craft_contract")
+    client = (record.get("scope") or {}).get("client") or record.get("craft_client")
+    if client is None:
+        # Original Pi journals had only the contract. New records bind client too.
+        client = {cr.CONTRACT["name"]: "pi", cc.CONTRACT["name"]: "codex"}.get((contract or {}).get("name")) if isinstance(contract, dict) else None
+    profile = craft_profile({"client": client, "components": ["craft"]})
+    profile.gate(contract)
+    return profile
+
+
 def scope(args):
     raw = str(getattr(args, "components", "") or "").strip().lower()
     components = selected_components(args.components)
@@ -138,11 +163,11 @@ def scope(args):
     root = abs_path(args.root)
     previous = load_json(root / ".installer/receipt.json", {})
     if previous.get("craft") or "craft" in (previous.get("scope") or {}).get("components", []):
-        cr.gate(previous.get("craft_contract"))
+        craft_record_profile(previous)
         if "craft" not in components:
             components.append("craft")
     craft_options = {}
-    for key in ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution"):
+    for key in ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_codex_cli"):
         raw_path = getattr(args, key, None) or (previous.get("craft_source") or {}).get(key)
         if raw_path:
             cr.no_links(Path(raw_path).expanduser().absolute())
@@ -216,10 +241,14 @@ def scope(args):
     reverse = abs_path(args.reverse_root) if args.reverse_root else None
     if "shell_guard" in components and client != "pi":
         raise InstallError("shell-guard 插件仅适用于 Pi")
-    if "craft" in components and client != "pi":
-        raise InstallError("Craft is supported only for Pi")
-    if "craft" in components and not all(craft_options.values()):
-        raise InstallError("Craft unsupported artifact until published; provide --craft-bundle and explicit --craft-pi-node/--craft-pi-entry/--craft-pi-version/--craft-pi-distribution")
+    if "craft" in components:
+        craft_profile({"client": client, "components": components})
+        required = ("craft_bundle", "craft_codex_cli") if client == "codex" else ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_version", "craft_pi_distribution")
+        forbidden = ("craft_pi_node", "craft_pi_entry", "craft_pi_version", "craft_pi_distribution") if client == "codex" else ("craft_codex_cli",)
+        if any(craft_options[key] for key in forbidden):
+            raise InstallError("Craft runtime options do not match selected client")
+        if not all(craft_options[key] for key in required):
+            raise InstallError("Craft unsupported artifact until published; provide " + ", ".join("--" + key.replace("_", "-") for key in required))
     tools = [REPO, root / "versions", root / ".installer"]
     if craft_options["craft_bundle"]:
         bundle_path = Path(craft_options["craft_bundle"])
@@ -433,24 +462,33 @@ def _craft_target_path_preflight(selected, components, resources):
     root = Path(selected["root"])
     # Content-addressed version keys are 20 ASCII units; reserve retry -8 hex.
     version = root / "versions" / ("0" * 20 + "-00000000")
-    targets = [("craft-bundle/" + name, version / "craft-bundle" / name)
+    profile = craft_profile(selected)
+    bundle_dir = cc.BUNDLE_DIRECTORY if profile is cc else "craft-bundle"
+    resource_dir = cc.RESOURCE_DIRECTORY if profile is cc else "craft-pi"
+    targets = [(bundle_dir + "/" + name, version / bundle_dir / name)
                for name in components["craft"]["files"]]
-    targets += [("craft-pi/" + name, version / "craft-pi" / name)
+    targets += [(resource_dir + "/" + name, version / resource_dir / name)
                 for name in resources["files"]]
-    adapter = root / "adapters" / adapter_identity_key() / "pi"
-    targets += [("pi-adapter/" + p.relative_to(REPO / "adapters/pi").as_posix(),
-                 adapter / p.relative_to(REPO / "adapters/pi"))
-                for p in (REPO / "adapters/pi").rglob("*") if p.is_file()]
-    targets += [("pi-adapter/receipt-location.json", adapter / "receipt-location.json"),
-                ("version-complete", version / "complete.json"),
+    if profile is cc:
+        targets.extend(("codex-adapter/" + p.name, p) for p in (
+            Path(selected["agent_dir"]) / "AGENTS.md",
+            Path(selected["agent_dir"]) / "config.toml",
+            Path(selected["codex_skills_root"]) / "reverse-workflow/SKILL.md"))
+    else:
+        adapter = root / "adapters" / adapter_identity_key() / "pi"
+        targets += [("pi-adapter/" + p.relative_to(REPO / "adapters/pi").as_posix(),
+                     adapter / p.relative_to(REPO / "adapters/pi"))
+                    for p in (REPO / "adapters/pi").rglob("*") if p.is_file()]
+        targets.append(("pi-adapter/receipt-location.json", adapter / "receipt-location.json"))
+    targets += [("version-complete", version / "complete.json"),
                 ("receipt", root / ".installer/receipt.json")]
-    if selected.get("agent_dir"):
+    if selected.get("agent_dir") and profile is not cc:
         agent = Path(selected["agent_dir"])
         targets += [("pi-settings", agent / "settings.json"),
                     ("pi-global-skill", agent / "skills/reverse-workflow/SKILL.md")]
     tx = root / ".installer/transactions/20000101T000000Z-00000000"
     targets += [("transaction/" + name, tx / name) for name in
-                ("journal.json", "plan.json", "agent/mcp.json")]
+                ("journal.json", "plan.json", "agent/" + ("config.toml" if profile is cc else "mcp.json"))]
     def units(path):
         return len(str(path).encode("utf-16-le")) // 2
     failures = []
@@ -489,6 +527,7 @@ def installer_identity():
 
 def make_plan(args, fetch=None):
     selected = scope(args)
+    cr = craft_profile(selected)
     codex_entry_preflight(selected)
     previous = load_json(Path(selected["root"]) / ".installer/receipt.json", {})
     workflow_exclusions = list(getattr(args, "exclude_workflow_skill", []) or [])
@@ -524,10 +563,11 @@ def make_plan(args, fetch=None):
     if "craft" in selected["components"]:
         components["craft"] = craft_local
         craft_resources = craft_inputs
-        craft_runtime = cr.pi_runtime(selected, components["craft"], run)
+        craft_runtime = (cc.runtime_identity if cr is cc else cr.pi_runtime)(selected, components["craft"], run)
         craft_update = cr.update_record(load_json(Path(selected["root"]) / ".installer/receipt.json", {}), components["craft"])
         old_craft = load_json(Path(selected["root"]) / ".installer/receipt.json", {}).get("craft") or {}
-        cr.registration(sg.settings_at(selected["agent_dir"]), selected["agent_dir"], (old_craft.get("resources"),))
+        if cr is not cc:
+            cr.registration(sg.settings_at(selected["agent_dir"]), selected["agent_dir"], (old_craft.get("resources"),))
     retirement = retired_project_continuity_migration(selected)
     guard_migration = executable = gui_executable = None
     if "shell_guard" in selected["components"]:
@@ -580,8 +620,8 @@ def make_plan(args, fetch=None):
         commands.append(("核验只读 shell-guard 独立包与冻结 tree hash: " + component["root"]) if selected.get("shell_guard_root") else ("git clone --no-checkout " + component["repository"] + " <version>/agent-plugins-shell-guard; git checkout --detach " + component["commit"]))
         commands.append("仅注册 shell-guard 独立子目录；Everything 只合并明确提供的 esPath/guiPath/autostart；迁移按冻结旧注册/hash 条件替换")
     if "craft" in selected["components"]:
-        commands.append("Verify explicit Pi node/entry/version and exact local Craft bundle; copy to isolated version; journal execution resources and unique package registration")
-    return {"installer_source": installer_identity(), "craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "routing_control_status": ro.host_status(selected), "routing_ownership": routing, "resource_selection": {"exclude_workflow_skill": [str(ro.no_links(p).resolve()) for p in workflow_exclusions], "rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
+        commands.append("Verify explicit Codex CLI binary/version/hash against the reviewed stock runtime profile; journal the exact profile and two-binary bundle/resources; retain the single global reverse-workflow entry" if cr is cc else "Verify explicit Pi node/entry/version and exact local Craft bundle; copy to isolated version; journal execution resources and unique package registration")
+    return {"installer_source": installer_identity(), "craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "routing_control_status": ro.host_status(selected), "routing_ownership": routing, "resource_selection": {"exclude_workflow_skill": [str(ro.no_links(p).resolve()) for p in workflow_exclusions], "rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits(selected)}
 
 
 PI_RECEIPT_LINE = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
@@ -601,12 +641,17 @@ def pi_global_skill_text(receipt_path):
     return pi_adapt(source, receipt_path)
 
 
-def limits():
-    return {"host_resource_loading": "unverified", "mcp_handshake_and_tools_schema": "unverified", "reverse_real_task": "unverified", "spec_kit_real_workflow": "unverified", "provider_installation": "not_implemented", "portable_node_download": "not_implemented; use --node", "codex_plugin_registration": "not_implemented; global Codex Skill uses the receipt and optionally references an existing plugin", "existing_project_template_upgrade": "not_implemented; preserve existing project templates", "package_artifact_provenance": "official npm lock integrity checked; PyPI hashes recorded, uv resolution used, wheel not independently rehashed", "craft_runtime": "unverified; no provider, owner, policy, cancellation or task execution", "craft_public_distribution": "public Windows x64 pin and release asset verified; host/provider/business acceptance remains separate", "all_agents": "pi/codex/claude supported; host loading and real task validation remain unverified"}
+def limits(selected=None):
+    result = {"host_resource_loading": "unverified", "mcp_handshake_and_tools_schema": "unverified", "reverse_real_task": "unverified", "spec_kit_real_workflow": "unverified", "provider_installation": "not_implemented", "portable_node_download": "not_implemented; use --node", "codex_plugin_registration": "not_implemented; global Codex Skill uses the receipt and optionally references an existing plugin", "existing_project_template_upgrade": "not_implemented; preserve existing project templates", "package_artifact_provenance": "official npm lock integrity checked; PyPI hashes recorded, uv resolution used, wheel not independently rehashed", "craft_runtime": "unverified; no provider, owner, policy, cancellation or task execution", "craft_public_distribution": "public Windows x64 pin and release asset verified; host/provider/business acceptance remains separate", "all_agents": "pi/codex/claude supported; host loading and real task validation remain unverified"}
+    if selected and selected.get("client") == "codex" and "craft" in selected.get("components", []):
+        result["craft_public_distribution"] = "explicit Codex native bundle identity only; publication/release pin remains unverified"
+        result["craft_runtime"] = "unverified; exact external CLI and reviewed stock startup/thread/turn profile frozen; offline native entry inspection is separate from provider/model/permission/cleanup qualification"
+    return result
 
 
 def validate_plan(plan):
     selected = plan.get("scope") or {}
+    cr = craft_profile(selected, plan.get("craft_contract"))
     schema = 2 if "craft" in selected.get("components", []) else 1
     if type(plan.get("schema_version")) is not int or plan["schema_version"] != schema or plan.get("adapter_version") != ADAPTER_VERSION:
         raise InstallError("计划 schema/adapter 版本不兼容；Craft requires schema 2, core requires schema 1；重新 plan")
@@ -616,7 +661,7 @@ def validate_plan(plan):
     if plan.get("installer_source") != installer_identity():
         raise InstallError("安装器源码在 plan 后发生漂移；重新从当前 main 生成计划")
     checked = scope(SimpleNamespace(**{**selected, **plan["resource_selection"], "components": ",".join(selected["components"]), "node": selected.get("node"), "uv": selected.get("uv"), "git": selected.get("git")}))
-    for key in ("components", "root", "client", "agent_dir", "codex_skills_root", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
+    for key in ("components", "root", "client", "agent_dir", "codex_skills_root", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "everything_autostart", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version", "craft_codex_cli", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin"):
         if checked.get(key) != selected.get(key):
             raise InstallError("冻结计划包含非规范路径或范围；重新 plan")
     if checked.get("spec_kit_version") != selected.get("spec_kit_version"):
@@ -655,8 +700,8 @@ def validate_plan(plan):
     if "craft" in selected["components"]:
         cr.validate_plan(plan, manifest["craft"])
         cr.validate_resources(plan, REPO)
-        if cr.pi_runtime(selected, planned["craft"], run) != plan.get("craft_runtime"):
-            raise InstallError("Craft explicit Pi runtime drift since plan")
+        if (cc.runtime_identity if cr is cc else cr.pi_runtime)(selected, planned["craft"], run) != plan.get("craft_runtime"):
+            raise InstallError("Craft explicit runtime drift since plan")
     elif plan.get("craft_contract") or plan.get("craft_runtime") or plan.get("craft_resources") or plan.get("craft_reverse_contract"):
         raise InstallError("Unselected Craft contract/runtime in plan")
     if "shell_guard" in selected["components"]:
@@ -737,7 +782,7 @@ def recover_pending_transactions(root):
         if data.get("status") != "pending":
             continue
         if "craft_contract" in data:
-            cr.gate(data["craft_contract"])
+            craft_record_profile(data)
         preview = restore_journal(journal_path, apply=False, defer_receipt=root / ".installer/receipt.json")
         conflicts = [item for item in preview if item.get("conflicts")]
         if conflicts:
@@ -959,6 +1004,7 @@ def codex_entry_preflight(selected):
 
 def _install(plan, args):
     selected, components = plan["scope"], plan["components"]
+    cr = craft_profile(selected, plan.get("craft_contract"))
     selection = list(selected["components"])
     root = Path(selected["root"])
     agent = Path(selected["agent_dir"]) if selected.get("agent_dir") else None
@@ -987,7 +1033,7 @@ def _install(plan, args):
             if failures:
                 raise InstallError("活动 shell-guard 漂移；拒绝更新: " + "; ".join(failures))
         if "craft" in previous_selection:
-            errors = cr.failures(previous)
+            errors = craft_record_profile(previous).failures(previous)
             if errors:
                 raise InstallError("Active Craft drift; refusing update: " + "; ".join(errors))
         recorded_config = previous.get("managed_rea_config")
@@ -1020,6 +1066,7 @@ def _install(plan, args):
     journal = Journal(tx)
     if "craft" in selection:
         journal.data["craft_contract"] = copy.deepcopy(cr.CONTRACT)
+        journal.data["craft_client"] = client
         journal.save()
     atomic(tx / "plan.json", encode_json(plan))
     try:
@@ -1097,7 +1144,9 @@ def _install(plan, args):
         craft_installed = None
         if "craft" in selection:
             cr.reverse_contract(selected.get("reverse_root"), plan["craft_reverse_contract"])
-            craft_installed = cr.install_bundle(components["craft"], version_dir / "craft-bundle", journal)
+            craft_installed = cr.install_bundle(components["craft"], version_dir / (cc.BUNDLE_DIRECTORY if cr is cc else "craft-bundle"), journal)
+            if cr is cc and cc.profile_identity(craft_installed) != plan["craft_runtime"].get("profile"):
+                raise InstallError("Craft Codex copied runtime profile identity differs from frozen plan")
         desired_config = None
         managed_rea = None
         if "rea" in selection:
@@ -1199,7 +1248,7 @@ def _install(plan, args):
             write_host_file(journal, ownership, project / "CLAUDE.md", entry, client="Claude", owner_receipt=receipt_path, entries=entry_hashes)
         craft_data = None
         if "craft" in selection:
-            craft_resources = version_dir / "craft-pi"
+            craft_resources = version_dir / (cc.RESOURCE_DIRECTORY if cr is cc else "craft-pi")
             craft_files = cr.resource_files(REPO, receipt_path)
             if cr.resource_identity(craft_files) != plan["craft_resources"]:
                 raise InstallError("Craft execution resource source inventory/hash drift before write")
@@ -1207,7 +1256,10 @@ def _install(plan, args):
                 target = cr.no_links(craft_resources / name)
                 write_host_file(journal, ownership, target, data, client="Craft", owner_receipt=receipt_path, entries=entry_hashes)
             craft_data = {**craft_installed, "contract": copy.deepcopy(cr.CONTRACT), "resources": str(craft_resources),
-                          "resource_hashes": {k: digest(v) for k, v in craft_files.items()}, "pi_runtime": plan["craft_runtime"]}
+                          "resource_hashes": {k: digest(v) for k, v in craft_files.items()},
+                          (cc.RUNTIME_KEY if cr is cc else "pi_runtime"): plan["craft_runtime"]}
+            if cr is cc:
+                craft_data["entry"] = str(craft_resources / "entry.py")
         if client == "pi" and agent is not None and (adapter is not None or resources["exclude_rea_skill"] or retirement or "shell_guard" in selection):
             settings_path = agent / "settings.json"
             settings = load_json(settings_path, {})
@@ -1315,8 +1367,8 @@ def _install(plan, args):
                 raise InstallError("Craft installed bundle drift before receipt")
             cr.validate_plan(plan, manifest["craft"])
             cr.validate_resources(plan, REPO)
-            if cr.pi_runtime(selected, components["craft"], run) != plan["craft_runtime"]:
-                raise InstallError("Craft Pi runtime drift before receipt activation")
+            if (cc.runtime_identity if cr is cc else cr.pi_runtime)(selected, components["craft"], run) != plan["craft_runtime"]:
+                raise InstallError("Craft explicit runtime drift before receipt activation")
             complete["craft_sha256"] = craft_installed["sha256"]
         if "craft" in selection:
             journal.write(version_dir / "complete.json", encode_json(complete))
@@ -1367,7 +1419,7 @@ def _install(plan, args):
             "installer_source": plan.get("installer_source"),
             "craft_reverse_contract": plan.get("craft_reverse_contract"),
             "craft_contract": copy.deepcopy(cr.CONTRACT) if craft_data else None,
-            "craft_source": {key: selected[key] for key in ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version")} if craft_data else None,
+            "craft_source": {key: selected[key] for key in (cc.SOURCE_OPTIONS if cr is cc else ("craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_pi_version"))} if craft_data else None,
             "craft_update": plan.get("craft_update"),
             "shell_guard": guard,
             "shell_guard_config": managed_shell_guard,
@@ -1380,7 +1432,7 @@ def _install(plan, args):
             "managed_agents": managed_agents,
             "hashes": complete,
             "checks": checks,
-            "validation": limits(),
+            "validation": limits(selected),
             "config_diff": [{"path": e["path"], "before_sha256": e["before_sha256"], "after_sha256": e["after_sha256"]} for e in journal.data["files"]],
             "backup": str(journal.path),
         }
@@ -1457,7 +1509,10 @@ def verify(root):
         elif hashes.get("reverse_sha256") and hashes["reverse_sha256"] != stored_reverse.get("working_tree_sha256"):
             failures.append("reverse working copy identity drift")
     if "craft" in selection or receipt.get("craft"):
-        failures.extend(cr.failures(receipt))
+        try:
+            failures.extend(craft_record_profile(receipt).failures(receipt))
+        except (InstallError, TypeError, ValueError) as exc:
+            failures.append(str(exc))
     if "shell_guard" in selection:
         failures.extend(sg.failures(receipt, load_json(REPO / "components.json")["shell_guard"], run))
     resources = receipt.get("resource_selection") or {}
@@ -1530,6 +1585,15 @@ def accept(root):
     def check(name, ok, detail, fatal=True):
         result["checks"].append({"name": name, "ok": bool(ok), "detail": detail})
         if not ok and fatal: result["ok"] = False
+    if "craft" in selected:
+        result["unverified"].append("Craft native host/provider/model/effort, bounded tools, cancellation, cleanup and independent business acceptance; offline inspection does not qualify execution")
+        profile = craft_record_profile(receipt)
+        if profile is cc:
+            try:
+                inspection = profile.inspect_backend(receipt, run)
+                check("craft_codex_offline_entry_contract", True, {**inspection, "qualification": "offline metadata only; live execution unverified"})
+            except (InstallError, OSError, ValueError, KeyError, TypeError) as exc:
+                check("craft_codex_offline_entry_contract", False, str(exc))
     if "rea" in selected:
         node = receipt["runtime"]["node"]
         package = Path(receipt["paths"]["rea_package"])
@@ -1593,7 +1657,7 @@ def restore(root, transaction=None, apply=False):
     root = Path(root)
     receipt = load_json(root / ".installer/receipt.json", {})
     if receipt.get("craft") or "craft" in (receipt.get("scope") or {}).get("components", []):
-        cr.gate(receipt.get("craft_contract"))
+        craft_record_profile(receipt)
     transaction = transaction or receipt.get("transaction")
     if not transaction or not re.fullmatch(r"[A-Za-z0-9-]+", transaction):
         raise InstallError("需要有效的 --transaction，或活动 receipt")
@@ -1602,9 +1666,10 @@ def restore(root, transaction=None, apply=False):
         raise InstallError("找不到事务备份: " + transaction)
     if receipt.get("transaction") and transaction != receipt["transaction"]:
         raise InstallError("只允许恢复活动事务；请按最新到最旧依次回退，避免跨版本覆盖")
-    journal_contract = load_json(path).get("craft_contract")
+    journal_record = load_json(path)
+    journal_contract = journal_record.get("craft_contract")
     if journal_contract is not None:
-        cr.gate(journal_contract)
+        craft_record_profile(journal_record)
     if apply:
         with locked(root):
             return {"transaction": transaction, "applied": True, "files": restore_journal(path, apply=True, defer_receipt=root / ".installer/receipt.json")}

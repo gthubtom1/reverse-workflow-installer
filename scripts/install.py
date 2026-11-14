@@ -30,7 +30,8 @@ def parser():
     result.add_argument("--everything-es", help="Everything CLI 的现存绝对文件路径；仅写 shellGuard.everything.esPath")
     result.add_argument("--everything-gui", help="Everything GUI 的现存绝对文件路径；仅写 shellGuard.everything.guiPath")
     result.add_argument("--everything-autostart", action="store_true", help="明确允许 Everything IPC 失败时启动已配置 GUI 并重试一次")
-    result.add_argument("--with-craft", action="store_true", help="Pi optional Craft execution backend; requires explicit reverse/spec-kit")
+    result.add_argument("--with-craft", action="store_true", help="Optional Craft execution backend for selected Pi/Codex client; requires explicit reverse/spec-kit")
+    result.add_argument("--craft-codex-cli", help="Explicit actual native Codex CLI executable; freeze version and binary SHA256, no PATH fallback")
     result.add_argument("--craft-bundle", help="Explicit unpacked verified local Craft bundle (not a source checkout)")
     result.add_argument("--craft-pi-node", help="Explicit Node executable for standalone Pi; no PATH fallback")
     result.add_argument("--craft-pi-entry", help="Explicit official Pi CLI JavaScript entry")
@@ -71,7 +72,7 @@ def main(argv=None):
             raise InstallError("--upgrade-components 不能与已冻结 --plan-file 同时使用")
         if (arguments.with_shell_guard or arguments.shell_guard_root or arguments.replace_shell_guard_root or arguments.everything_es or arguments.everything_gui or arguments.everything_autostart) and arguments.command not in ("plan", "install", "update"):
             raise InstallError("shell-guard 选择参数只适用于 plan/install/update")
-        if (arguments.with_craft or arguments.craft_bundle or arguments.craft_pi_node or arguments.craft_pi_entry or arguments.craft_pi_distribution or arguments.craft_pi_version) and arguments.command not in ("plan", "install", "update"):
+        if (arguments.with_craft or arguments.craft_bundle or arguments.craft_pi_node or arguments.craft_pi_entry or arguments.craft_pi_distribution or arguments.craft_pi_version or arguments.craft_codex_cli) and arguments.command not in ("plan", "install", "update"):
             raise InstallError("Craft selection options only apply to plan/install/update")
         if arguments.command == "verify":
             result = workflow.verify(workflow.abs_path(arguments.root))
@@ -88,7 +89,7 @@ def main(argv=None):
                 if result["scope"]["root"] != str(workflow.abs_path(arguments.root)):
                     raise InstallError("--root 与冻结 plan 不一致")
                 # Configuration/client scope comes entirely from the frozen file.
-                for flag in ("agent_dir", "codex_skills_root", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution"):
+                for flag in ("agent_dir", "codex_skills_root", "client_config", "project", "reverse_root", "shell_guard_root", "replace_shell_guard_root", "everything_es", "everything_gui", "node", "rea_prefix", "spec_kit_tools", "spec_kit_bin", "craft_bundle", "craft_pi_node", "craft_pi_entry", "craft_pi_distribution", "craft_codex_cli"):
                     supplied = getattr(arguments, flag)
                     if supplied and flag == "everything_es":
                         workflow.sg.executable_identity(supplied)

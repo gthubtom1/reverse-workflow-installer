@@ -22,7 +22,7 @@ def platform(name):
 
 
 def inputs(root, files=None):
-    selected = {'components':['reverse','spec_kit','craft'], 'root':str(root)}
+    selected = {'client':'pi', 'components':['reverse','spec_kit','craft'], 'root':str(root)}
     components = {'craft':{'files':{name:'0'*64 for name in (files or [LONG_FILE])}}}
     resources = {'files':{'skills/reconstruction-execution/SKILL.md':'0'*64}}
     return selected, components, resources

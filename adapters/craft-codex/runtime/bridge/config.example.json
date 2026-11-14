@@ -1,0 +1,32 @@
+{
+  "contract_version": 1,
+  "model_provider": null,
+  "expected_provider": "gpt",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "codex": {
+    "program": "ABSOLUTE_CODEX_CLI",
+    "argv": ["app-server", "--stdio", "-c", "agents.enabled=false"],
+    "sha256": "PROFILE_RUNTIME_CLI_SHA256",
+    "version": "0.167.0-alpha.4.1",
+    "mode": "stock-app-server-stdio",
+    "auth_mode": "native-codex-home",
+    "config_mode": "native-profile"
+  },
+  "task_cwd": "ABSOLUTE_APP_ROOT",
+  "agent_dir": "ABSOLUTE_TURN_AGENT_ROOT",
+  "codex_home": "ABSOLUTE_CODEX_HOME",
+  "bundle_root": "ABSOLUTE_BUNDLE_ROOT",
+  "thread_receipt": "ABSOLUTE_THREAD_RECEIPT",
+  "instructions": "reviewed instructions",
+  "dynamic_tools": [{"type":"namespace","name":"craft_host","description":"bounded","tools":[]}],
+  "mcp": {"program":"ABSOLUTE_CRAFT_CODEX_EXECUTOR","argv":["mcp","--policy","ABSOLUTE_POLICY","--sha256","POLICY_SHA256","--workspace","ABSOLUTE_WORKSPACE","--config-root","ABSOLUTE_MCP_CONFIG_ROOT"],"expected_tools":["build_files_list","build_file_read","build_file_write","build_file_edit","build_command_run","build_checklist"]},
+  "environments": [],
+  "denied_native_tools": ["request_user_input"],
+  "disabled_mcp_names": [],
+  "runtime_profile_id": "codex-stock-bounded-v1",
+  "runtime_profile_sha256": "PROFILE_RAW_SHA256",
+  "config_inputs": [],
+  "cancel": {"marker":"ABSOLUTE_CANCEL_MARKER","run_id":"OWNER_RUN_ID","turn_id":"TURN_ID","generation":1,"token":"CANCEL_TOKEN"},
+  "deadlines": {"input_ms":5000,"command_ms":10000,"turn_ms":90000,"grace_ms":3000,"shutdown_ms":3000,"hard_kill_ms":3000}
+}

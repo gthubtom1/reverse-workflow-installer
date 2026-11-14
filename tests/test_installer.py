@@ -57,7 +57,8 @@ class Fixture(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(dir=LOCAL)
         self.base = Path(self.temp.name)
         self.source = self.base / "source"
-        shutil.copytree(REPO / "adapters", self.source / "adapters")
+        shutil.copytree(REPO / "adapters", self.source / "adapters",
+                        ignore=lambda directory, names: ["runtime"] if Path(directory).name in ("craft-pi", "craft-codex") and "runtime" in names else [])
         shutil.copyfile(REPO / "components.json", self.source / "components.json")
         self.repo_patch = patch.object(w, "REPO", self.source)
         self.repo_patch.start()

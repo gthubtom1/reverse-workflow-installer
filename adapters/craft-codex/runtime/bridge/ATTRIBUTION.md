@@ -1,0 +1,1 @@
+Copyright (c) 2026 gthubtom1. This project-owned Codex bridge is distributed under the MIT option of its MIT OR Apache-2.0 declaration. It contains no official Codex source, auth material or provider credentials. The Codex CLI is an external reviewed runtime selected by absolute path/hash/version; its normal profile performs authentication.
