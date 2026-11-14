@@ -298,6 +298,14 @@ def restore_journal(path, apply=False, defer_receipt=None):
             except InstallError:
                 conflicts.append("managed-section-modified")
                 result = current
+        elif entry["kind"] == "codex-skills" and current is not None:
+            try:
+                from routing_ownership import restore_disable
+                result, skill_conflicts = restore_disable(before, after, current)
+                conflicts.extend(skill_conflicts)
+            except InstallError:
+                conflicts.append("invalid-or-unsupported-skill-toml")
+                result = current
         elif entry["kind"] == "toml" and current is not None:
             try:
                 _, old, _ = toml_parts(before or b"")

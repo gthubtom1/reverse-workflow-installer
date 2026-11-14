@@ -10,10 +10,10 @@
 | 旧 project-continuity receipt | 新计划不再解析、加载或写入该组件；更新在 receipt 能唯一识别 Pi 包注册时移除注册，否则明确失败。旧包目录保留为历史缓存，不作为活动配置 | 新增离线回归覆盖唯一注册、过滤注册和重复注册 | 不代表插件仍受支持；需单独验证更新后的宿主加载 |
 | Pi shell-guard 0.3.0 | 独立 `@toti/pi-shell-guard`、唯一 `./index.ts`；使用 `src/readonly.mjs` AST/Node-helper 与随包固定的 ISC `unbash` 文件，不在目标机安装 npm 依赖。目标 `shell-guard-v0.3.0` 已发布并固定 commit/tree | 安装器离线回归覆盖默认关闭、Pi 限定、本地/远程身份冻结、旧回执更新、配置保留、准确迁移、重复/hub 拒绝、漂移和事务回退；插件107项测试、258项惰性Bash的实际SDK事件检查及Ubuntu/Windows CI通过 | 本次没有部署或修改真实 profile；宿主加载、拦截事件与 Everything 可用性未验证。常见只读 `for`/`if`/`test`/`echo`/`printf` 允许、单个字面项目内 `rm` 移到 TEMP；硬保护和 Everything 不变，且不弹确认窗口。不是沙箱；详见 [安装说明](shell-guard-install.md) |
 | Pi 可选 Craft-Pi bounded execution backend | 我们自己的 native `craft-pi` bundle、Pi RPC driver、独立 Pi/Node 分发和 R46/Spec execution contract；仅 Pi | 安装器离线回归覆盖 bundle、资源、合同、唯一注册、路径和事务恢复；真实 owner/provider/业务接受仍单独核验 | **仅 Pi 路线**。不要把这个组件解释成上游 Craft Anything 的全部宿主适配 |
-| 上游 Craft Anything Codex integration | 官方 `craft-anything-cli setup --client codex --yes`、`doctor --client codex`、Codex `config.toml` MCP entry、Codex approval 与 Craft consent | 上游 Codex 文档记录 setup、工具审批和 MCP discovery；真实账户构建与用户 provider 资格仍需在目标机验收 | 属于上游 Craft host integration；当前 core `craft` 组件不把它伪装成 Craft-Pi 或自动写入 Codex receipt |
+| 上游 Craft Anything Codex integration | 官方 MCP-only `craft-anything-cli setup --client codex --no-skill --yes`、`doctor --client codex`、Codex `config.toml` MCP entry、Codex approval 与 Craft consent；组合环境禁止同时启用其独立广域调查Skill | plan/apply/verify 对已知上游Craft/REA入口做冲突检查；显式 `--exclude-workflow-skill` 使用原生skills.config禁用，源hash冻结、恢复与用户改动冲突分别检查 | MCP健康、路由控制与R46后端资格分开。当前core `craft`仍仅Pi；Codex上游路线是工具伴随接入，未取得原R46受控执行资格 |
 | Pi grilling 伴随技能 | 官方 `grilling`、`domain-modeling`、`grill-me`、`grill-with-docs` 保持原文；installer 只生成 `pi-grill-me`、`pi-grill-with-docs` wrapper | Node 离线夹具验证缺依赖时零写入、幂等、官方文件不变、wrapper 路径和引用一致 | 本地检查只证明结构与适配内容一致；上游来源真实性需另有基线，对话触发单独验证 |
 | Pi | 当前安装版本文档的 skill-only package、资源精确排除、disable-model-invocation | manifest、配置与备份测试 | 实际加载、reload 后资源清单和显式 `/skill:reverse-workflow` 对话冒烟测试待验 |
-| Codex | REA 官方 setup；Spec Kit CLI 全局工具与可选 Codex project integration；global `CODEX_HOME/AGENTS.md`、`CODEX_HOME/skills` 与 reverse plugin path contract | 配置合并、全局入口、子集扩展与升级反例 | Codex 新会话实际触发仍单独验收 |
+| Codex | REA 官方 setup；Spec Kit CLI 全局工具与可选 Codex project integration；global `CODEX_HOME/AGENTS.md`、`CODEX_HOME/skills` 与 reverse plugin path contract；[唯一入口控制](combined-routing.md) | 配置合并、全局入口、子集扩展与升级反例；已知上游Skill冲突拒绝、原生禁用／漂移／重新启用／恢复的定向检查 | Codex新进程需核reverse-workflow启用及上游独立Skill已禁用；不据catalog声称真实对话／受控Craft批次通过 |
 | Claude Desktop | 显式 JSON MCP 配置、全局 skill 与项目 CLAUDE.md；不依赖 Claude CLI | provider 环境保留、子集/完整安装、入口升级与项目扩展反例 | 本机既有部署 verify 通过；Desktop 实际加载和新对话触发仍单独验收 |
 | 本机 accept 验收 | 官方 REA doctor、原 router 临时路由、官方 Spec Kit 临时 init | 按 receipt 选定组件验收 | Pi 基础验收通过；REA 工具目录完整。JADX 深度代码 provider 尚缺用户提供的桥接 JAR，不能声明 APK 深度分析已就绪 |
 
@@ -27,6 +27,6 @@ CI 配置提供 Windows/Ubuntu × Python 3.11/3.12/3.13，未触发的 job 不�
 
 每次真实验收应在本机私有记录中补上：精确宿主版本、三个核心组件身份、Pi 伴随技能目录与适配状态（如使用 Pi）、运行时版本、加载路径/资源清单、MCP 握手和 tools/schema、provider 状态、原 router 输出、实际 Spec Kit 模板执行、代表任务结果、第二会话恢复和显式入口触发结果。receipt 中的 `unverified` 不会因文件存在、`verify` 通过或安装器退出 0 自动转为 passed。
 
-不自动安装 Node/provider；不自动注册 Codex 插件；不自动升级已有项目模板。既有带特殊引号/数组表形式的 REA TOML 配置暂不支持自动编辑，明确拒绝。语义/等价/隔离验收均不属于安装静态检查。
+不自动安装 Node/provider；不自动注册 Codex 插件；不自动升级已有项目模板。新增宿主必须交付自身资源发现、自动入口控制、plan/apply/verify/恢复和新进程检查后才能称组合适配支持；不能借Pi/Codex的通过记录或仅靠上游MCP setup放行。[组合路由归属](combined-routing.md)明确范围与限制。既有带特殊引号/数组表形式的 REA TOML 配置暂不支持自动编辑，明确拒绝。语义/等价/隔离验收均不属于安装静态检查。
 
 官方接口变化时停止切换。维护者更新适配与有意义反例后才能扩大声明范围；不要静默改用较旧稳定版本或删除检查。

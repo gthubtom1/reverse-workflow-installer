@@ -14,6 +14,8 @@ CODEX_HOME/skills/reverse-workflow/SKILL.md
 
 旧的 `v0.7.0` release/tag 是之前的 installer core 发布身份，不是本次 Codex 全局适配的源码入口。新电脑安装不要 checkout 旧 tag，也不要从旧 release README 推断 Codex 路径；直接读取最新 `main`，并在 plan/receipt 中记录实际读取到的 main commit。installer core 的版本字段仍可保持 `0.7.0`，因为本次是 main 上的宿主适配更新；这不表示应回退到旧 tag。
 
+**组合安装必须保持一个路由入口。** REA setup 使用 `--skill=false`；Codex 的上游 Craft MCP setup 使用所选版本支持的 `--no-skill`。已有上游广域 Skill 时，plan 会检查已知入口冲突；用明确的 `--exclude-workflow-skill <准确SKILL.md>` 迁移到 Codex 原生禁用，保留官方文件。回执、verify 和重装沿用该选择；新增或重新启用入口会重新报冲突。其他宿主需自己的资源控制与验收，不因 MCP 能连接就默认宣布完整组合适配，详见[组合路由归属](docs/combined-routing.md)。
+
 安装 AI 不得把本机路径、旧 receipt、旧 release、项目级 Skill 或旧备份当作当前安装基线。它必须根据目标电脑实际的 `CODEX_HOME`、Pi agent 根、OS、架构、工具和配置证据动态适配。
 
 **把官方仓库链接交给安装 AI时，入口顺序固定为：**
@@ -121,7 +123,7 @@ REA/Spec Kit 首次新 plan 解析官方稳定包；已有 installed receipt 的
 
 ## 配置和项目里会发生什么
 
-REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。Codex 的全局 AGENTS 使用带 receipt owner 的受管 section，保留用户正文；plan 检查已有 section/Skill 冲突并冻结输入，restore 保留区段外后续编辑。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。
+REA 先在事务暂存配置副本内执行官方 `setup --client <实际client> --skill=false --dry-run --json`，再执行相同范围的 `--yes --json`。只把其 REA 配置合并到你指定的配置根，保留其他 MCP、模型和资源。Codex 的全局 AGENTS 使用带 receipt owner 的受管 section，保留用户正文；plan 检查已有 section/Skill 冲突并冻结输入，restore 保留区段外后续编辑。MCP 保留完整 tools，不注册第二个分析 router。`--skill=false` 表示 REA 作为 MCP 工具接入；统一工作流入口由 reverse-workflow 提供，不要把 REA 自己的 skill 缺失状态误解为 MCP 未安装。Craft 工具也由原 PRIMARY 或选定 runner 使用；Codex 不启用其独立广域调查 Skill，不另起 brief/plan/finding 接管原 case。工具目录齐全不等于 R46 执行后端已经适配，安装报告必须分别列出原生入口控制与后端资格。
 
 Pi 注册本仓库的 skill-only package，只有一个组合入口和短 prompt，manifest 的 extensions/themes 均为空。显式选中 shell-guard 时，另注册其独立插件子目录；shell-guard 使用 AST 分类部分 Bash 命令并通过 `allow`、`trash`、`block` API 表达处理结果，不是操作系统沙箱。Pi 的自动 skill 选择受宿主和模型行为影响，不能把 package 注册等同于每个新对话都会自动进入工作流；专业任务优先显式使用 `/skill:reverse-workflow`，并在新宿主启动后完成 `accept` 与对话冒烟测试。若旧宽泛 REA skill 已自动加载，在 plan 用可重复的 `--exclude-rea-skill <准确SKILL路径>` 作资源排除；不修改原文、不删除原文件。需要单独调用 REA 时可加 `--rea-manual`，它仅在 Pi 声明 `disable-model-invocation: true`。排除与实际加载效果仍需宿主验证。
 
@@ -142,7 +144,7 @@ python scripts/install.py restore --root ../workflow --apply
 
 带 `--plan-file` 可保证展示与应用使用同一版本。已有 installed receipt 的直接 update 默认复用 receipt 中的 REA/Spec Kit 版本；只有显式增加 `--upgrade-components` 才重新解析官方稳定版本，升级前应核对兼容性。直接 `--apply` 则在该次调用开始解析并冻结一次。更新使用并列版本目录、先生成再切换，保留旧组件。旧 receipt 中若仍有 project-continuity，更新会按 receipt 识别唯一注册并移除；缺少唯一身份、出现重复或 hub 注册时停止。已经选中的 shell-guard 在 update 中继续保留，本地包复用路径也会沿用；旧 receipt 不会因此自动启用它。shell-guard 的 Everything 配置只合并明确提供且由 receipt 管理的 `esPath`、`guiPath` 和 `autostart` 字段，保留用户其他配置。首次新项目与现有项目是明确不同状态；不要换一个项目却复用已归属其他范围的 root。
 
-本机回执、精确 paths/版本、配置 diff 摘要及完整恢复备份位于 `root/.installer/`。备份可能包含你原配置中的秘密，属于本地私有数据，禁止发布。`installed: true` **只表示包与指定配置事务已完成**。`verify` 核包、运行时、reverse 和注册身份，不启动宿主/MCP；它返回的 `validation` 保留加载、握手/schema、真实任务等未验证项。失败事务不会写成功回执，已有活动安装会回退保留。
+本机回执、精确 paths/版本、配置 diff 摘要及完整恢复备份位于 `root/.installer/`。备份可能包含你原配置中的秘密，属于本地私有数据，禁止发布。`installed: true` **只表示包与指定配置事务已完成**。`verify` 核包、运行时、reverse 和注册身份，并检查已实现宿主适配范围内的已知上游自动入口冲突；它不启动宿主/MCP；它返回的 `validation` 保留加载、握手/schema、真实任务等未验证项。失败事务不会写成功回执，已有活动安装会回退保留。
 
 restore 默认撤销最近活动事务；按字段/资源进行条件恢复，用户后续改动保留并列为 conflict。项目中已由你编辑的文件不会覆盖。旧包、缓存和备份保留，不自动卸载/删目录。详见 [更新与恢复](docs/updates.md)、[故障排查](docs/troubleshooting.md)。
 

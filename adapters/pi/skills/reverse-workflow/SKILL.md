@@ -16,3 +16,5 @@ description: 针对明确逆向或安全分析目标的二进制、APK、前端�
 重要的目标、产品行为、范围和交付取舍由用户决定，常规技术方法在既定边界内自主处理。已有回答继续有效；Grilling 按明确访谈请求或真实决策需要使用官方技能。具体交互依据原 `skills/ops/guided-operator-contract.md` 与 `skills/ops/beginner-operator-guidance.md`。
 
 本入口提供指令适配。安装记录、工具输出和真实业务验收分别核对；隔离能力、授权及完成证据以实际环境和原契约为准。
+
+组合环境中的 REA/Craft 是由原 PRIMARY 或 Spec runner 选择的工具／后端，不是另一个自动路由入口。不要启用上游广域调查 Skill 来替换本入口，或让它另建 brief/plan/findings 接管原 case/Evidence。Craft-Pi 的 reconstruction-execution 保持逐批显式选择和原链验收；其他上游 Craft 宿主接入不能继承它的资格。发现额外自动入口时按安装器的宿主资源控制修复；配置排除、真实资源发现、执行后端资格分别核实。

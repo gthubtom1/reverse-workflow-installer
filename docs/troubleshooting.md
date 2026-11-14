@@ -25,6 +25,9 @@
 | accept 的 reverse router 检查失败 | 先检查 reverse 工作副本 dirty/commit 和原生 master-route；不要在 installer 中复制第二套路由 |
 | accept 的 Spec Kit init 检查失败 | 检查官方 specify 版本、client integration 和临时目录权限；不要把失败模板写入用户成果项目 |
 | Pi 旧 REA 技能仍竞争 | 按宿主资源清单找准 SKILL 路径，重新 plan --exclude-rea-skill 精确排除；不编辑官方原文 |
+| Codex 报 Active upstream workflow Skill conflicts | 用报出的准确SKILL.md审阅来源，再显式 `--exclude-workflow-skill <准确路径>` 生成plan并更新；通过原生skills.config禁用，官方正文不改。只禁用已知上游广域入口，不禁用reverse-workflow |
+| 上游setup后再度竞争／verify报路由漂移 | 按[组合路由归属](combined-routing.md)核资源清单和source hash；重新plan接受新版Skill身份及控制，不忽略新冲突。新安装上游Craft使用支持的--no-skill；MCP工具保留，不能凭目录255/108等计数确认路由 |
+| 换宿主时无对应入口控制 | 明确unsupported／未资格化，不套用Codex TOML或Pi过滤字段。按组合宿主准入合同补发现、控制、事务恢复和真实清单证据后再宣布支持 |
 | Pi 的 grilling 没出现或 wrapper 异常 | 核官方 `grilling` / `domain-modeling` 路径及独立 `--output-root`；按 [wrapper 指南](pi-grilling-wrappers.md) 运行生成/verify 并重载。旧 companion 漂移只报告、不改写；所有权冲突先核用户修改，不强制覆盖。 |
 | grilling 提出了本来可以查证的事实问题 | 让它先暂停提问，要求 agent/subagent/REA 查文件、跑工具或比对字节；事实返回后再继续方案 frontier |
 | 每个阶段都要求回复编号或“继续” | 汇报不是审批：当前目标、授权与预算内的事实检查和技术路线自动推进。沿用已答问题，不为选工具或形成结论重开 grilling；仅新目标取舍、授权或用户独有材料才暂停 |

@@ -16,3 +16,5 @@ description: 针对明确逆向或安全分析目标的二进制、APK、前端�
 原始 case 与 Evidence 保持权威。分析、原件修改、接入和重新打包按实际交付接续；独立复刻在行为证据与成功标准充分后进入 reconstruction/Spec Kit。简洁说明结果、未知项和实际验证范围。
 
 REA 由官方 setup 在回执的 Codex 配置根注册，保留全部工具。Spec Kit CLI 由全局安装提供；只有用户明确选择独立成果项目时，才使用该项目中官方 `--integration codex` 实际生成的原生技能。恢复、追版、知识维护均继续原 reverse 中立流程。报告回执中的未验证状态，不把安装视为任务通过。
+
+组合任务的入口与记录归属只有这一条原链。PRIMARY 可按实际问题选择 REA 或 Craft 的有限工具操作；保留工具原件、ID与限制，作为原 case 的支持材料。不要因上游 Craft 工具可见而另开其调查、brief/plan/finding/handoff，覆盖原 Evidence、Spec tasks 或自动调用 rebuild_start。上游广域 Skill 的宿主禁用记录由安装器 plan/receipt/verify 管理；遇到新启用的竞争入口先报告配置缺口。Codex 上游 Craft 仅安装为工具伴随组件时，不具备原 R46 受控执行后端资格；实现批次仍交原 Spec runner 和默认 Worker，只有实际后端合格并被 runner 明确选择后才替换该批写者。
