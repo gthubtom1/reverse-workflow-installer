@@ -19,6 +19,7 @@ from versions import COMPONENTS, InstallError, resolve, stable
 import package_utils as pu
 import shell_guard as sg
 import craft as cr
+import routing_ownership as ro
 
 REPO = Path(__file__).resolve().parents[1]
 ADAPTER_VERSION = "0.2.0"  # Transaction protocol; old receipts remain readable.
@@ -187,6 +188,9 @@ def scope(args):
         client, evidence = detect_client(args.client, explicit, agent_dir=agent_hint)
     else:
         client, evidence = ("none", ["no host component selected"]) if args.client == "auto" else detect_client(args.client, explicit, agent_dir=agent_hint)
+    workflow_exclusions = getattr(args, "exclude_workflow_skill", []) or []
+    if workflow_exclusions and (client != "codex" or "reverse" not in components):
+        raise InstallError("--exclude-workflow-skill requires Codex and reverse; Pi uses --exclude-rea-skill; other hosts require their own native adapter")
     if client == "none" and (args.agent_dir or explicit):
         raise InstallError("--client none 不能同时指定 agent/config；请选择宿主或省略这些参数")
     if getattr(args, "codex_skills_root", None) and client != "codex":
@@ -194,6 +198,9 @@ def scope(args):
     agent = agent_hint
     codex_skills = None
     if client == "codex" and "reverse" in components:
+        for raw_path in (args.agent_dir, args.client_config, getattr(args, "codex_skills_root", None), args.project):
+            if raw_path:
+                ro.no_links(raw_path)
         codex_skills = abs_path(getattr(args, "codex_skills_root", None)) if getattr(args, "codex_skills_root", None) else (agent / "skills" if agent else (Path.home() / ".codex" / "skills").resolve())
     if needs_agent(components, client) and agent is None:
         raise InstallError("所选组件需要 --agent-dir 或 --client-config；不会默认写用户 profile")
@@ -483,6 +490,9 @@ def installer_identity():
 def make_plan(args, fetch=None):
     selected = scope(args)
     codex_entry_preflight(selected)
+    previous = load_json(Path(selected["root"]) / ".installer/receipt.json", {})
+    workflow_exclusions = list(getattr(args, "exclude_workflow_skill", []) or [])
+    routing = ro.plan(selected, workflow_exclusions, previous.get("routing_ownership"))
     manifest = load_json(REPO / "components.json")
     craft_local = craft_inputs = None
     if "craft" in selected["components"]:
@@ -545,8 +555,13 @@ def make_plan(args, fetch=None):
             Path(selected["agent_dir"]) / "AGENTS.md",
             Path(selected["codex_skills_root"]) / "reverse-workflow/SKILL.md",
         ])
+    if routing:
+        input_paths.extend(Path(item["path"]) for item in routing["disabled_skills"])
     inputs = {str(p): digest(p.read_bytes()) if p.exists() else None for p in input_paths}
     commands = []
+    if routing:
+        for item in routing["disabled_skills"]:
+            commands.append(("Keep existing native Skill disable: " if item["native_disabled"] else "Journal Codex native [[skills.config]] enabled=false: ") + item["path"])
     if "rea" in selected["components"]:
         if selected["client"] == "claude":
             commands.append("事务内自动合并 Claude Desktop JSON 的 mcpServers.rea；不调用 REA setup，保留其他字段")
@@ -566,7 +581,7 @@ def make_plan(args, fetch=None):
         commands.append("仅注册 shell-guard 独立子目录；Everything 只合并明确提供的 esPath/guiPath/autostart；迁移按冻结旧注册/hash 条件替换")
     if "craft" in selected["components"]:
         commands.append("Verify explicit Pi node/entry/version and exact local Craft bundle; copy to isolated version; journal execution resources and unique package registration")
-    return {"installer_source": installer_identity(), "craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "resource_selection": {"rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
+    return {"installer_source": installer_identity(), "craft_reverse_contract": craft_reverse, "craft_contract": copy.deepcopy(cr.CONTRACT) if "craft" in selected["components"] else None, "craft_resources": craft_resources, "craft_runtime": craft_runtime, "craft_update": craft_update, "installer_version": INSTALLER_VERSION, "retired_project_continuity": retirement, "shell_guard_migration": guard_migration, "everything_es_identity": executable, "everything_gui_identity": gui_executable, "schema_version": 2 if "craft" in selected["components"] else 1, "adapter_version": ADAPTER_VERSION, "scope": selected, "components": components, "config_inputs": inputs, "missing_prerequisites": missing, "commands": commands, "routing_control_status": ro.host_status(selected), "routing_ownership": routing, "resource_selection": {"exclude_workflow_skill": [str(ro.no_links(p).resolve()) for p in workflow_exclusions], "rea_manual": args.rea_manual, "exclude_rea_skill": [str(abs_path(p)) for p in args.exclude_rea_skill]}, "limits": limits()}
 
 
 PI_RECEIPT_LINE = "读取此技能目录相对路径 `../../receipt-location.json`，再读取其中 `receipt` 指向的本机 JSON。"
@@ -618,6 +633,10 @@ def validate_plan(plan):
             Path(selected["agent_dir"]) / "AGENTS.md",
             Path(selected["codex_skills_root"]) / "reverse-workflow/SKILL.md",
         ])
+    previous = load_json(Path(selected["root"]) / ".installer/receipt.json", {})
+    routing = ro.validate(plan.get("routing_ownership"), selected, plan["resource_selection"].get("exclude_workflow_skill", []), previous.get("routing_ownership"))
+    if routing and plan.get("routing_ownership") is not None:
+        expected_configs.extend(Path(item["path"]) for item in routing["disabled_skills"])
     if set(plan["config_inputs"]) != {str(p) for p in expected_configs}:
         raise InstallError("冻结计划的配置输入范围不一致")
     manifest = load_json(REPO / "components.json")
@@ -1253,6 +1272,13 @@ def _install(plan, args):
             if observed != plan["config_inputs"][str(config)]:
                 raise InstallError("MCP 配置在激活前发生漂移；事务回退")
             journal.write(config, desired_config, "json" if client in ("pi", "claude") else "toml")
+        routing_paths = [item["path"] for item in (plan.get("routing_ownership") or {}).get("disabled_skills", [])]
+        if routing_paths:
+            current_config = ro.config_bytes(selected)
+            expected_config = desired_config if desired_config is not None else (before_config or b"")
+            if current_config != expected_config:
+                raise InstallError("Codex Skill configuration drift before activation; transaction rollback")
+            journal.write(config, ro.disable(current_config, routing_paths), "codex-skills")
         for source in generated_files:
             target = project / source.relative_to(generated)
             if target.exists() and target.read_bytes() != source.read_bytes():
@@ -1346,6 +1372,8 @@ def _install(plan, args):
             "shell_guard": guard,
             "shell_guard_config": managed_shell_guard,
             "adapter": {"root": str(adapter) if adapter else None, "key": adapter_key, "codex_plugin_reference": (reverse or {}).get("codex_plugin")},
+            "routing_control_status": ro.host_status(selected),
+            "routing_ownership": ro.activated(plan.get("routing_ownership")),
             "resource_selection": resources,
             "entry_hashes": entry_hashes,
             "managed_rea_config": managed_rea,
@@ -1356,6 +1384,9 @@ def _install(plan, args):
             "config_diff": [{"path": e["path"], "before_sha256": e["before_sha256"], "after_sha256": e["after_sha256"]} for e in journal.data["files"]],
             "backup": str(journal.path),
         }
+        routing_failures = ro.failures({"scope": selected, "routing_ownership": ro.activated(plan.get("routing_ownership"))})
+        if routing_failures:
+            raise InstallError("Routing ownership drift before receipt: " + "; ".join(routing_failures))
         journal.write(receipt_path, encode_json(receipt), "file")
         journal.finish("committed")
         return receipt
@@ -1371,7 +1402,7 @@ def verify(root):
     receipt = load_json(root / ".installer/receipt.json", {})
     if not receipt.get("installed"):
         raise InstallError("没有活动 installed receipt；先 install --apply，或检查失败事务")
-    failures = []
+    failures = ro.failures(receipt)
     selection = set(receipt_components(receipt))
     paths = receipt.get("paths", {})
     hashes = receipt.get("hashes", {})
@@ -1481,7 +1512,7 @@ def verify(root):
             observed = None
         if observed != expected:
             failures.append("installer entry drift: " + str(path))
-    return {"ok": not failures, "failures": failures, "transaction": receipt["transaction"], "validation": receipt.get("validation", limits()), "note": "verify 只核选定组件身份和实际配置；不会启动宿主/MCP或声称真实任务通过"}
+    return {"ok": not failures, "failures": failures, "routing_control_status": ro.host_status(scope), "transaction": receipt["transaction"], "validation": receipt.get("validation", limits()), "note": "verify 只核选定组件身份和实际配置；不会启动宿主/MCP或声称真实任务通过"}
 
 
 def accept(root):
@@ -1489,6 +1520,9 @@ def accept(root):
     receipt = load_json(root / ".installer/receipt.json", {})
     if not receipt.get("installed"):
         raise InstallError("没有活动 installed receipt；先 install --apply")
+    static = verify(root)
+    if not static["ok"]:
+        return {"ok": False, "root": str(root), "checks": [{"name": "static_verify", "ok": False, "detail": static["failures"]}], "unverified": [], "note": "Static verification failed; acceptance commands were not executed"}
     selected = set(receipt.get("scope", {}).get("components", ["rea", "spec_kit", "reverse"]))
     result = {"ok": True, "root": str(root), "components": sorted(selected), "checks": [], "unverified": []}
     if "shell_guard" in selected:

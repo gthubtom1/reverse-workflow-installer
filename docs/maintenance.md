@@ -10,6 +10,7 @@
 | 用户沟通方式 | Pi skill 与短 prompt、Claude/Codex 入口、quick-start、usage、playbook；阶段汇报不能被模板变成每步审批 |
 | Pi 用户级原则与 profiles | `resources/pi-agent-profiles/`、profile/skill 安装说明与目标用户入口；同时核对活动 adapter 的短 prompt/skill 来源。正文、frontmatter 与宿主开关分别核对，活动资源通过安装事务更新 |
 | 安装/更新/恢复 | 冻结 plan、上一事务的文件归属、receipt、verify、配置保留、组件子集与完整安装的离线反例测试 |
+| 上游Skill / 新宿主适配 | [组合路由归属](combined-routing.md)：唯一任务入口、原case/Evidence/Spec owner；上游setup不启用广域竞争Skill；宿主原生禁用、冻结身份、plan/apply/verify/恢复、重新启用检测和新进程资源清单；工具目录／执行资格／业务结果分开。新宿主未实现控制不得宣称组合适配合格 |
 | shell-guard 分发 | Pi 可选默认关闭；0.3.0 AST adapter 与精确文件清单、ISC vendor 来源、独立包 name/version/index/runtime/src、最终 commit/tree/hash、旧回执、准确迁移、CLI/GUI/自动启动配置保留、重复/hub 拒绝、漂移/回退反例和 shell-guard-install/README/quick-start/updates/compatibility/troubleshooting |
 | Craft bundle 分发 | Pi 显式可选，all 不扩大，依赖不静默补选；全量文件/hash/固定 base/有序 patch/OS/arch/contract/min_reader，显式 Pi Node/入口/version；隔离副本、按需 skill/instructions/entry、唯一注册、旧 receipt/未知 reader、失败重试/pending/用户后改/多事务条件恢复；正式资产按 [pin](../releases/windows-x64.json) 与独立 [获取 helper](craft-acquisition.md) 核身份，不预填未来资产；见 [指南](craft-install.md) |
 | grilling wrapper | 独立输出目录、所有权/hash、链接与手改冲突 fixture；四个官方技能文件保持只读，旧门面漂移单独报告 |
@@ -29,6 +30,6 @@
 
 Craft 当前正式身份为 core v0.7.0、native Craft-Pi v0.1.1、reverse v1.9.0；独立获取 helper 为 `craft-acquisition-v0.1.1`，不是核心版本升级。以 [正式 pin](../releases/windows-x64.json) 核 tag/commit/资产摘要，按 [获取指南](craft-acquisition.md) 实际下载并校验 Craft/reverse；核心 installer 仍只消费本地 bundle，没有直接 fetch flag。新版本须重新 freeze/build、核全量 hash/许可与兼容/升级/回退，并走受保护 PR/发布门，不移动 immutable 旧 tag。资产存在不证明本机 Pi/provider、宿主加载或业务接受；fresh 网络最后一次匿名 API 403、无 complete 的边界保留，不能把 GET/hash 检查写成完整换机通过。旧 0.6.1 verify 忽略新组件，不认证 Craft，新入口必须使用能力 gate。
 
-`verify` 通过表示静态安装一致，`accept` 表示本机工具基本运行通过。只有真实目标的证据和测试才能说明功能正确；尚无证据时保持 unknown。
+`verify` 通过表示已检查范围内的静态安装和已知入口控制一致，`accept` 表示本机工具基本运行通过。上游setup或Skill升级后必须重新verify，并按真实宿主清单确认reverse-workflow启用、竞争Skill未启用。工具伴随接入不等于所选宿主已具备R46执行后端资格；缺资格明确unqualified，不能把官方完整rebuild顶替原Spec runner。只有真实目标的证据和测试才能说明功能正确；尚无证据时保持 unknown。
 
 Pi 用户级技能的检查只证明目录、frontmatter 和本地门面内容满足适配要求；没有上游基线时，它不能证明官方正文来源真实。更新外部技能后执行适配和检查，再 reload 宿主。

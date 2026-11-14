@@ -46,6 +46,7 @@ def parser():
     result.add_argument("--plan-file", help="install/update 使用之前保存的完整冻结 plan JSON；不重新解析 latest")
     result.add_argument("--transaction", help="restore 指定事务 ID；默认活动 receipt 的事务")
     result.add_argument("--exclude-rea-skill", action="append", default=[], help="Pi 按准确绝对资源路径排除已有宽泛 REA skill；可重复")
+    result.add_argument("--exclude-workflow-skill", action="append", default=[], help="Codex reverse: disable an exact known upstream SKILL.md through native skills.config; repeatable")
     result.add_argument("--rea-manual", action="store_true", help="Pi 注册仅显式调用的 rea-manual")
     result.add_argument("--apply", action="store_true", help="install/update/restore 的显式写入与执行开关")
     return result
@@ -62,6 +63,8 @@ def main(argv=None):
             raise InstallError("--output 只适用于 plan")
         if arguments.spec_kit_version is not None and arguments.command not in ("plan", "install", "update"):
             raise InstallError("--spec-kit-version 只适用于 plan/install/update")
+        if arguments.exclude_workflow_skill and arguments.command not in ("plan", "install", "update"):
+            raise InstallError("--exclude-workflow-skill only applies to plan/install/update")
         if arguments.upgrade_components and arguments.command not in ("plan", "install", "update"):
             raise InstallError("--upgrade-components 只适用于 plan/install/update")
         if arguments.upgrade_components and arguments.plan_file:
@@ -117,7 +120,7 @@ def main(argv=None):
                         raise InstallError("--spec-kit-version 需要选择 spec-kit 组件")
                     if arguments.spec_kit_version != result["components"].get("spec_kit", {}).get("version"):
                         raise InstallError("--spec-kit-version 与冻结 plan 不一致")
-                if arguments.rea_manual or arguments.exclude_rea_skill:
+                if arguments.rea_manual or arguments.exclude_rea_skill or arguments.exclude_workflow_skill:
                     raise InstallError("资源选择已冻结在 plan 中；请重新 plan 后再使用 --plan-file")
                 workflow.validate_plan(result)
             else:

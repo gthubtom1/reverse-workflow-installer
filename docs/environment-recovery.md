@@ -39,7 +39,7 @@
 
 | 能力 | 公开来源 / 安装路线 | 什么时候选择 |
 |---|---|---|
-| Craft 能力 | 上游 Craft Anything Codex/MCP 路线；我们的 `craft-pi` bounded execution backend | Codex 可按上游官方 setup/doctor 准备 MCP；standalone setup 的 `rebuild_start` 默认返回 `consent_required`，须从 app 同意，或由用户另行明确选择 `--allow-run`（安装器不静默增加）。该 Codex 路线尚未取得我们的完整 R46 bounded backend 资格，默认实现继续 Worker。Pi 才可选择 `craft-pi`；分别记录身份与资格 |
+| Craft 能力 | 上游 Craft Anything Codex/MCP 路线；我们的 `craft-pi` bounded execution backend | Codex 可按[组合路由归属](combined-routing.md)使用上游官方 `setup --client codex --no-skill` 准备 MCP，不启用其独立调查 Skill；已有 Skill 由核心plan显式原生禁用并在verify复查。standalone setup 的 `rebuild_start` 默认返回 `consent_required`，须从 app 同意，或由用户另行明确选择 `--allow-run`（安装器不静默增加）。该 Codex 路线尚未取得我们的完整 R46 bounded backend 资格，默认实现继续 Worker。Pi 才可选择 `craft-pi`；分别记录身份与资格 |
 | shell-guard 与 Everything | [shell-guard 指南](shell-guard-install.md)，固定 `shell-guard-v0.3.0`；[Everything GUI](https://www.voidtools.com/downloads/) 与独立 [es CLI](https://www.voidtools.com/support/everything/command_line_interface/) | Pi 需要命令检查时显式选；`all` 不包含。Everything 按 Windows 支持范围准备实际 CLI/GUI 路径和索引，安装器不安装 Everything |
 | 专业分析引擎 | REA 官方文档及对应分析工具指南；按实际任务准备 Java、Ghidra、JADX 所需引擎等 | 工具 schema 存在不代表引擎已安装；缺某引擎不阻塞其他适用工作流 |
 | 桌面操作 / 网页搜索 | [pi-computer-use](https://github.com/injaneity/pi-computer-use)、[pi-web-access](https://github.com/nicobailon/pi-web-access) | Pi 需要桌面或网络能力时安装；按目标 OS/helper/权限和所选包版本准备，搜索 provider 按需配置 |
@@ -62,6 +62,6 @@ Pi package 使用官方 `pi install npm:<包名>@<所选精确版本>`，或在 
 
 ## 在目标电脑做最小验收
 
-先运行核心组件既有 `verify`、`accept`，再按目标宿主文档 reload 或启动新会话，核对实际 agent/skills/Plugins/MCP 路径。选择适用的一个只读 MCP 请求、技能发现和小型代表任务，分别记录 **已安装、已加载、已运行**；静态复制和退出码不能替代宿主或业务检查。
+先运行核心组件既有 `verify`、`accept`，新增上游setup后再次verify。检查[唯一任务入口](combined-routing.md)：新宿主应发现启用的reverse-workflow，已识别的上游广域Skill不得同时启用；缺本宿主原生控制时报告unsupported。再按目标宿主文档 reload 或启动新会话，核对实际 agent/skills/Plugins/MCP 路径。选择适用的一个只读 MCP 请求、技能发现和小型代表任务，分别记录 **已安装、已加载、已运行**；静态复制和退出码不能替代宿主或业务检查。
 
 只对选中的能力验证，不为一个文档或小功能重装整个环境。失败时说明具体缺项、跳过项与下一步；不能把“任意 AI 可按本指南部署”写成“任意 OS/硬件都已实测兼容”。本页提供公共部署路线，本次文档维护未实际在所有平台安装运行。

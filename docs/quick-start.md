@@ -68,6 +68,8 @@ Grilling 是可选伴随技能，不属于 Python 核心组件事务；安装器
 
 ## 安装完成后的四步
 
+先核[组合任务的唯一入口](combined-routing.md)：reverse-workflow保持启用，REA和上游Craft的独立广域调查Skill不同时自动接管。Codex已有冲突时通过 `--exclude-workflow-skill <准确SKILL.md>` 的plan/update原生禁用，保留官方文件；新装上游Craft MCP使用官方支持的 `--no-skill`。后加setup／升级后再次verify。路由归属、工具连接、受控实现后端资格分别报告，不用“都装上了”代替三者。
+
 在安装器仓库根目录执行。把 `../workflow` 换成实际安装根：
 
 ```text
