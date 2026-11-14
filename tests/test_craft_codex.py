@@ -212,11 +212,15 @@ class CraftCodexTests(unittest.TestCase):
             plan = self.plan()
             before = target.read_bytes()
             atomic(target, before + b"changed")
+            if target == self.codex:
+                self.codex.chmod(0o755)
             self.calls.clear()
             with self.subTest(target=target), self.assertRaises(InstallError):
                 w.install(plan, self.args)
             self.assertFalse((self.root / ".installer/receipt.json").exists())
             atomic(target, before)
+            if target == self.codex:
+                self.codex.chmod(0o755)
 
     def test_codex_descriptor_rejects_pi_caps_and_freezes_common_files(self):
         self.assertEqual(cc.reverse_contract(self.reverse)["descriptor"], cc.REVERSE_DESCRIPTOR)
@@ -412,6 +416,7 @@ class CraftCodexTests(unittest.TestCase):
 
     def test_cli_bytes_must_match_reviewed_profile_even_when_version_would_match(self):
         atomic(self.codex, b"unreviewed binary with the same claimed version")
+        self.codex.chmod(0o755)
         with self.assertRaisesRegex(InstallError, "CLI binary differs from reviewed stock profile"):
             self.plan()
         self.assertFalse(any(command[-1:] == ["--version"] for command in self.calls))
