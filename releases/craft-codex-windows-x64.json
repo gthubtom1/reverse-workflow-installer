@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "craft-codex-windows-x64",
+  "craft": {
+    "repository": "https://github.com/gthubtom1/reverse-workflow-installer",
+    "tag": "craft-codex-v0.1.0",
+    "commit": "3c7426db8aaaacbd2f46911c6641f8a17b959e6d",
+    "asset": "craft-codex-windows-x64-0.1.0.zip",
+    "asset_id": 747243564,
+    "sha256": "2910909210d3db0157af2081379bcdc3331257f922056e88646bbae87c99bdc1",
+    "manifest_sha256": "800e9518fe9772b1978c502becbae8e9ceb16642f950c70e261b20ef3512f91c"
+  },
+  "reverse": {
+    "repository": "https://github.com/gthubtom1/reverse-skill",
+    "commit": "ce675096e6a2cd4789a76f9bd618feddc2b6f333",
+    "descriptor_sha256": "5f52e944ebe4f20d1c29ddf166b8c47befaedd9e52480803321f3994b960b79e"
+  },
+  "codex": {
+    "version": "0.167.0-alpha.4.1",
+    "protocol": "app-server-v2"
+  }
+}
